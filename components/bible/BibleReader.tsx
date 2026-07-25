@@ -182,6 +182,7 @@ export default function BibleReader({
 
   const mainChapterNavRef = useRef<HTMLDivElement>(null)
   const [isMainChapterOpen, setIsMainChapterOpen] = useState(false)
+  const [isBookMenuOpen, setIsBookMenuOpen] = useState(false)
 
   // ── Stable clear-selection callback ──────────────────────────────
   const clearSelection = useCallback(() => {
@@ -631,7 +632,13 @@ export default function BibleReader({
               <div className="mb-7">
                 {/* Book + chapter dropdown nav label */}
                 <div ref={mainChapterNavRef} className="relative flex items-center gap-1 mb-1.5">
-                  <span className="text-sm font-medium text-slate-500">{currentBookName}</span>
+                  <button
+                    onClick={() => setIsBookMenuOpen(true)}
+                    className="flex items-center gap-0.5 text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors lg:pointer-events-none lg:hover:text-slate-500"
+                  >
+                    {currentBookName}
+                    <ChevronDown className="w-3 h-3 text-slate-400 lg:hidden" />
+                  </button>
                   <span className="text-slate-300 select-none">/</span>
                   <button
                     onClick={() => setIsMainChapterOpen(v => !v)}
@@ -647,6 +654,27 @@ export default function BibleReader({
                     </div>
                   )}
                 </div>
+                {/* Mobile-only book menu — desktop uses the left sidebar */}
+                {isBookMenuOpen && (
+                  <div className="fixed inset-0 z-[300] lg:hidden">
+                    <div className="absolute inset-0 bg-black/40" onClick={() => setIsBookMenuOpen(false)} />
+                    <div
+                      className="absolute inset-y-0 left-0 w-[85%] max-w-xs bg-white shadow-xl flex flex-col"
+                      onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setIsBookMenuOpen(false) }}
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 flex-shrink-0">
+                        <p className="text-sm font-semibold text-slate-700 truncate">{currentBookName}</p>
+                        <button onClick={() => setIsBookMenuOpen(false)} className="p-1 -mr-1 text-slate-400 hover:text-slate-700">
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
+                        <BookSidebar books={books} currentBook={currentBook} language={language} version={version} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* "1 of 36 · N verses" — uniform size */}
                 <p className="text-sm text-slate-500">
                   {currentChapter}{t("bible_of")}{chapterNumbers.length} · {verses.length} {t("bible_verses")}
