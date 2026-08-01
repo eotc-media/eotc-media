@@ -1,8 +1,42 @@
 import type { MetadataRoute } from "next"
+import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { SITE_URL } from "@/lib/seo"
 
-export const revalidate = 86400 // regenerate once a day
+// Never prerendered at build (the DB isn't reachable then). The entry list is
+// cached for a day via unstable_cache, so repeat crawler hits don't re-query.
+export const dynamic = "force-dynamic"
+
+const getSitemapEntries = unstable_cache(
+  async () =>
+    Promise.all([
+      prisma.hmHymn.findMany({
+        select: { slug: true, updatedAt: true },
+        orderBy: { clicksCount: "desc" },
+        take: 20000,
+      }),
+      prisma.smSermon.findMany({
+        where: { approvalStatus: { name: "Accepted" } },
+        select: { slug: true, updatedAt: true },
+        orderBy: { clicksCount: "desc" },
+        take: 20000,
+      }),
+      prisma.cbBook.findMany({
+        select: { slug: true, updatedAt: true },
+        take: 5000,
+      }),
+      prisma.hmChannel.findMany({ select: { id: true, updatedAt: true } }),
+      prisma.smChannel.findMany({ select: { id: true, updatedAt: true } }),
+      prisma.hmSinger.findMany({ select: { id: true, updatedAt: true } }),
+      prisma.blVerse.findMany({
+        select: { bookId: true, chapter: true },
+        distinct: ["bookId", "chapter"],
+        orderBy: [{ bookId: "asc" }, { chapter: "asc" }],
+      }),
+    ]),
+  ["sitemap-entries"],
+  { revalidate: 86400 }
+)
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
@@ -20,45 +54,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/sermons/channels`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
   ]
 
-  let hymns: { slug: string; updatedAt: Date }[] = []
-  let sermons: { slug: string; updatedAt: Date }[] = []
-  let books: { slug: string; updatedAt: Date }[] = []
-  let hymnChannels: { id: number; updatedAt: Date }[] = []
-  let sermonChannels: { id: number; updatedAt: Date }[] = []
-  let singers: { id: number; updatedAt: Date }[] = []
-  let bibleChapters: { bookId: number; chapter: number }[] = []
-
-  try {
-    ;[hymns, sermons, books, hymnChannels, sermonChannels, singers, bibleChapters] =
-      await Promise.all([
-        prisma.hmHymn.findMany({
-          select: { slug: true, updatedAt: true },
-          orderBy: { clicksCount: "desc" },
-          take: 20000,
-        }),
-        prisma.smSermon.findMany({
-          where: { approvalStatus: { name: "Accepted" } },
-          select: { slug: true, updatedAt: true },
-          orderBy: { clicksCount: "desc" },
-          take: 20000,
-        }),
-        prisma.cbBook.findMany({
-          select: { slug: true, updatedAt: true },
-          take: 5000,
-        }),
-        prisma.hmChannel.findMany({ select: { id: true, updatedAt: true } }),
-        prisma.smChannel.findMany({ select: { id: true, updatedAt: true } }),
-        prisma.hmSinger.findMany({ select: { id: true, updatedAt: true } }),
-        prisma.blVerse.findMany({
-          select: { bookId: true, chapter: true },
-          distinct: ["bookId", "chapter"],
-          orderBy: [{ bookId: "asc" }, { chapter: "asc" }],
-        }),
-      ])
-  } catch {
-    // Database unavailable (e.g. at build time) — fall back to static routes only
-    return staticRoutes
-  }
+  // If the DB is unreachable, let this throw: a 5xx tells crawlers "retry later"
+  // and they keep the previous sitemap. Returning 200 with only the static
+  // routes would instead announce that the other ~40k URLs no longer exist.
+  const [hymns, sermons, books, hymnChannels, sermonChannels, singers, bibleChapters] =
+    await getSitemapEntries()
 
   const hymnRoutes: MetadataRoute.Sitemap = hymns.map(h => ({
     url: `${SITE_URL}/hymns/${encodeURIComponent(h.slug)}`,

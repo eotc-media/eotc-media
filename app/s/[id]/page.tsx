@@ -1,4 +1,4 @@
-import { redirect, notFound } from "next/navigation"
+import { permanentRedirect, notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 
 // Short share link: /s/123 → the canonical /sermons/<slug> page.
@@ -12,5 +12,5 @@ export default async function ShortSermonLink({ params }: { params: Promise<{ id
   const sermon = await prisma.smSermon.findUnique({ where: { id: n }, select: { slug: true } })
   if (!sermon) notFound()
 
-  redirect(`/sermons/${sermon.slug}`)
+  permanentRedirect(`/sermons/${sermon.slug}`)
 }
