@@ -190,7 +190,7 @@ export default async function Home() {
                 </Link>
               )}
               <Link
-                href="/contact"
+                href="/?feedback=1"
                 className="inline-flex items-center justify-center px-7 py-2.5 bg-neutral-800 text-neutral-200 rounded-lg font-semibold text-sm hover:bg-neutral-700 transition-colors border border-neutral-700"
               >
                 Contact us

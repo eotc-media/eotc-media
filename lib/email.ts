@@ -110,6 +110,10 @@ export function buildEmailHtml({
   unsubscribeUrl: string
   variant?: EmailVariant
 }): string {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://eotcmedia.com"
+  const feedbackUrl = `${siteUrl}/?feedback=1`
+  const githubUrl = "https://github.com/ayenewdemeke/eotc-media"
+
   const bodyStyles = `<style>
     .bc p{margin:0 0 10px}.bc ul{margin:0 0 10px;padding-left:20px;list-style:disc}
     .bc ol{margin:0 0 10px;padding-left:20px;list-style:decimal}.bc li{margin:0 0 4px}
@@ -125,18 +129,26 @@ export function buildEmailHtml({
 <html lang="am">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">${bodyStyles}</head>
 <body style="margin:0;padding:24px 16px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#222222">
-  <div style="max-width:560px;margin:0 auto">
+  <div style="max-width:680px">
     <p style="margin:0 0 20px;font-size:13px;color:#666666">EOTC Media</p>
 
     <h2 style="margin:0 0 10px;font-size:17px;color:#111827;line-height:1.4" dir="auto">${subjectAm}</h2>
     <p style="margin:0 0 12px;font-size:15px;color:#333333" dir="auto">{{params.greetingAm}}</p>
     <div class="bc" style="font-size:15px;color:#333333;line-height:1.75" dir="auto">${bodyAm}</div>
+    <p style="margin:14px 0 0;font-size:13px;color:#555555" dir="auto">
+      <a href="${feedbackUrl}" style="color:#1a3a5c">አስተያየትዎን ይጻፉ</a> ·
+      <a href="${githubUrl}" style="color:#1a3a5c">በGitHub ከእኛ ጋር ይተባበሩ</a>
+    </p>
 
     <div style="border-top:1px solid #e5e7eb;margin:22px 0"></div>
 
     <h2 style="margin:0 0 10px;font-size:17px;color:#111827;line-height:1.4">${subjectEn}</h2>
     <p style="margin:0 0 12px;font-size:15px;color:#333333">{{params.greetingEn}}</p>
     <div class="bc" style="font-size:15px;color:#333333;line-height:1.75">${bodyEn}</div>
+    <p style="margin:14px 0 0;font-size:13px;color:#555555">
+      <a href="${feedbackUrl}" style="color:#1a3a5c">Write your feedback</a> ·
+      <a href="${githubUrl}" style="color:#1a3a5c">Collaborate with us on GitHub</a>
+    </p>
 
     <p style="margin:28px 0 0;font-size:12px;color:#999999">
       You're receiving this as a member of EOTC Media.
@@ -167,6 +179,10 @@ export function buildEmailHtml({
           <h2 style="margin:0 0 16px;font-size:18px;color:#111827;line-height:1.4" dir="auto">${subjectAm}</h2>
           <p style="margin:0 0 12px;font-size:15px;color:#374151" dir="auto">{{params.greetingAm}}</p>
           <div class="bc" style="font-size:15px;color:#374151;line-height:1.8" dir="auto">${bodyAm}</div>
+          <p style="margin:14px 0 0;font-size:13px;color:#4b5563" dir="auto">
+            <a href="${feedbackUrl}" style="color:#1a3a5c">አስተያየትዎን ይጻፉ</a> ·
+            <a href="${githubUrl}" style="color:#1a3a5c">በGitHub ከእኛ ጋር ይተባበሩ</a>
+          </p>
         </td></tr>
 
         <!-- Divider -->
@@ -178,6 +194,10 @@ export function buildEmailHtml({
           <h2 style="margin:0 0 16px;font-size:18px;color:#111827;line-height:1.4">${subjectEn}</h2>
           <p style="margin:0 0 12px;font-size:15px;color:#374151">{{params.greetingEn}}</p>
           <div class="bc" style="font-size:15px;color:#374151;line-height:1.8">${bodyEn}</div>
+          <p style="margin:14px 0 0;font-size:13px;color:#4b5563">
+            <a href="${feedbackUrl}" style="color:#1a3a5c">Write your feedback</a> ·
+            <a href="${githubUrl}" style="color:#1a3a5c">Collaborate with us on GitHub</a>
+          </p>
         </td></tr>
 
         <!-- CTA -->
@@ -230,5 +250,10 @@ export function buildEmailText({
       .replace(/\n{3,}/g, "\n\n")
       .trim()
 
-  return `${subjectAm}\n\n{{params.greetingAm}}\n\n${strip(bodyAm)}\n\n----\n\n${subjectEn}\n\n{{params.greetingEn}}\n\n${strip(bodyEn)}\n\n—\nYou're receiving this as a member of EOTC Media.\nUnsubscribe: ${unsubscribeUrl}`
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://eotcmedia.com"
+  const links =
+    `አስተያየትዎን ይጻፉ / Write your feedback: ${siteUrl}/?feedback=1\n` +
+    `ከእኛ ጋር ይተባበሩ / Collaborate with us: https://github.com/ayenewdemeke/eotc-media`
+
+  return `${subjectAm}\n\n{{params.greetingAm}}\n\n${strip(bodyAm)}\n\n----\n\n${subjectEn}\n\n{{params.greetingEn}}\n\n${strip(bodyEn)}\n\n${links}\n\n—\nYou're receiving this as a member of EOTC Media.\nUnsubscribe: ${unsubscribeUrl}`
 }

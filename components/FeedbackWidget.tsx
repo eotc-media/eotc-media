@@ -18,6 +18,16 @@ export default function FeedbackWidget() {
   const ref = useRef<HTMLDivElement>(null)
   const { t } = useLocale()
 
+  // Allow linking straight to the feedback form (e.g. from the newsletter):
+  // /?feedback=1 opens the widget on arrival. Read from location rather than
+  // useSearchParams so the root layout stays statically renderable.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (new URLSearchParams(window.location.search).get("feedback") === "1") {
+      setOpen(true)
+    }
+  }, [])
+
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
