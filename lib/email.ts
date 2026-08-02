@@ -47,10 +47,19 @@ export async function sendCampaign(opts: {
 
   for (let i = 0; i < recipients.length; i += BREVO_BATCH) {
     const chunk = recipients.slice(i, i + BREVO_BATCH)
-    const messageVersions = chunk.map(r => ({
-      to: [{ email: r.email, ...(r.name ? { name: r.name } : {}) }],
-      params: { unsubscribeUrl: r.unsubscribeUrl },
-    }))
+    const messageVersions = chunk.map(r => {
+      // Greet by first name where we have one; fall back to a bare greeting so
+      // the line never reads "Hi ," for members with no name on record.
+      const firstName = r.name?.trim().split(/\s+/)[0] ?? ""
+      return {
+        to: [{ email: r.email, ...(r.name ? { name: r.name } : {}) }],
+        params: {
+          unsubscribeUrl: r.unsubscribeUrl,
+          greetingAm: firstName ? `ሰላም ${firstName},` : "ሰላም,",
+          greetingEn: firstName ? `Hi ${firstName},` : "Hello,",
+        },
+      }
+    })
 
     try {
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -120,11 +129,13 @@ export function buildEmailHtml({
     <p style="margin:0 0 20px;font-size:13px;color:#666666">EOTC Media</p>
 
     <h2 style="margin:0 0 10px;font-size:17px;color:#111827;line-height:1.4" dir="auto">${subjectAm}</h2>
+    <p style="margin:0 0 12px;font-size:15px;color:#333333" dir="auto">{{params.greetingAm}}</p>
     <div class="bc" style="font-size:15px;color:#333333;line-height:1.75" dir="auto">${bodyAm}</div>
 
     <div style="border-top:1px solid #e5e7eb;margin:22px 0"></div>
 
     <h2 style="margin:0 0 10px;font-size:17px;color:#111827;line-height:1.4">${subjectEn}</h2>
+    <p style="margin:0 0 12px;font-size:15px;color:#333333">{{params.greetingEn}}</p>
     <div class="bc" style="font-size:15px;color:#333333;line-height:1.75">${bodyEn}</div>
 
     <p style="margin:28px 0 0;font-size:12px;color:#999999">
@@ -154,6 +165,7 @@ export function buildEmailHtml({
         <tr><td style="padding:32px 32px 24px">
           <p style="margin:0 0 6px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;color:#6b7280">አማርኛ</p>
           <h2 style="margin:0 0 16px;font-size:18px;color:#111827;line-height:1.4" dir="auto">${subjectAm}</h2>
+          <p style="margin:0 0 12px;font-size:15px;color:#374151" dir="auto">{{params.greetingAm}}</p>
           <div class="bc" style="font-size:15px;color:#374151;line-height:1.8" dir="auto">${bodyAm}</div>
         </td></tr>
 
@@ -164,6 +176,7 @@ export function buildEmailHtml({
         <tr><td style="padding:24px 32px 32px">
           <p style="margin:0 0 6px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;color:#6b7280">English</p>
           <h2 style="margin:0 0 16px;font-size:18px;color:#111827;line-height:1.4">${subjectEn}</h2>
+          <p style="margin:0 0 12px;font-size:15px;color:#374151">{{params.greetingEn}}</p>
           <div class="bc" style="font-size:15px;color:#374151;line-height:1.8">${bodyEn}</div>
         </td></tr>
 
@@ -217,5 +230,5 @@ export function buildEmailText({
       .replace(/\n{3,}/g, "\n\n")
       .trim()
 
-  return `${subjectAm}\n\n${strip(bodyAm)}\n\n----\n\n${subjectEn}\n\n${strip(bodyEn)}\n\n—\nYou're receiving this as a member of EOTC Media.\nUnsubscribe: ${unsubscribeUrl}`
+  return `${subjectAm}\n\n{{params.greetingAm}}\n\n${strip(bodyAm)}\n\n----\n\n${subjectEn}\n\n{{params.greetingEn}}\n\n${strip(bodyEn)}\n\n—\nYou're receiving this as a member of EOTC Media.\nUnsubscribe: ${unsubscribeUrl}`
 }
