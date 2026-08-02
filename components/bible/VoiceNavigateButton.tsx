@@ -26,6 +26,11 @@ const NOISE_MULTIPLIER = 2.5
 const MIN_SPEECH_RMS = 0.015
 // How often to measure the level.
 const VAD_TICK_MS = 100
+// Give up on the server round-trip rather than spinning forever. Comfortably
+// longer than the route's own model timeout, so its error message wins first.
+const REQUEST_TIMEOUT_MS = 20000
+// Clear a failure message on its own so the control returns to a usable state.
+const ERROR_AUTO_CLEAR_MS = 5000
 
 export default function VoiceNavigateButton({ language, version, className = "", variant = "icon" }: Props) {
   const router = useRouter()
@@ -50,6 +55,17 @@ export default function VoiceNavigateButton({ language, version, className = "",
 
   // Release the mic if the user navigates away mid-recording
   useEffect(() => stopAudioWatchers, [stopAudioWatchers])
+
+  // Don't leave the button parked in the error state
+  useEffect(() => {
+    if (uiState !== "error") return
+    const id = setTimeout(() => {
+      stateRef.current = "idle"
+      setUiState("idle")
+      setErrorMsg("")
+    }, ERROR_AUTO_CLEAR_MS)
+    return () => clearTimeout(id)
+  }, [uiState])
 
   const startListening = useCallback(async () => {
     let stream: MediaStream
@@ -91,7 +107,18 @@ export default function VoiceNavigateButton({ language, version, className = "",
         fd.append("language", language)
         fd.append("version", version)
 
-        const res = await fetch("/api/bible/voice-navigate", { method: "POST", body: fd })
+        const controller = new AbortController()
+        const abortTimer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+        let res: Response
+        try {
+          res = await fetch("/api/bible/voice-navigate", {
+            method: "POST",
+            body: fd,
+            signal: controller.signal,
+          })
+        } finally {
+          clearTimeout(abortTimer)
+        }
         const data = await res.json()
         if (res.ok && data.url) {
           stateRef.current = "idle"
@@ -103,7 +130,12 @@ export default function VoiceNavigateButton({ language, version, className = "",
           setUiState("error")
         }
       } catch (err) {
-        setErrorMsg(err instanceof Error ? err.message : "Connection error")
+        const timedOut = err instanceof DOMException && err.name === "AbortError"
+        setErrorMsg(
+          timedOut
+            ? (language === "amharic" ? "ጊዜው አልፏል። እንደገና ይሞክሩ።" : "Took too long. Please try again.")
+            : err instanceof Error ? err.message : "Connection error"
+        )
         stateRef.current = "error"
         setUiState("error")
       }

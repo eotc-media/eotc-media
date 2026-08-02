@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-export const maxDuration = 60
+// Keep the function well under the client's abort window so a stalled model
+// call comes back as a clean error instead of hanging the request.
+export const maxDuration = 30
+const GEMINI_TIMEOUT_MS = 15000
 
 let genAI: GoogleGenerativeAI | null = null
 let cachedBooks: { id: number; englishName: string; amharicName: string | null; oromifaName: string | null }[] | null = null
@@ -68,9 +71,14 @@ If nothing intelligible or no verse found: {"error": "no verse found"}`
 
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
-    const result = await model.generateContent([
-      { inlineData: { mimeType: audioMimeType, data: audioBase64 } },
-      { text: prompt },
+    const result = await Promise.race([
+      model.generateContent([
+        { inlineData: { mimeType: audioMimeType, data: audioBase64 } },
+        { text: prompt },
+      ]),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('gemini-timeout')), GEMINI_TIMEOUT_MS)
+      ),
     ])
     const text = result.response.text().trim().replace(/```json\n?|\n?```/g, '').trim()
     const parsed = JSON.parse(text)
