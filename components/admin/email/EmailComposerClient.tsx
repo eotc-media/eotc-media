@@ -42,7 +42,7 @@ export default function EmailComposerClient() {
   useEffect(() => {
     fetch("/api/admin/email/users")
       .then(r => r.json())
-      .then((data: Member[]) => setTotalCount(data.length))
+      .then((data: { users: Member[]; total: number }) => setTotalCount(data.total))
       .catch(() => {})
   }, [])
 
@@ -53,7 +53,7 @@ export default function EmailComposerClient() {
     searchTimer.current = setTimeout(() => {
       fetch(`/api/admin/email/users?q=${encodeURIComponent(q)}`)
         .then(r => r.json())
-        .then((data: Member[]) => setSearchResults(data))
+        .then((data: { users: Member[]; total: number }) => setSearchResults(data.users))
         .catch(() => {})
         .finally(() => setSearching(false))
     }, 300)
