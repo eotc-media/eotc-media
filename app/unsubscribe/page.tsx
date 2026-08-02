@@ -37,8 +37,7 @@ function UnsubscribeContent() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
-        <p className="text-lg font-bold text-gray-800 mb-1">EOTC Media</p>
-        <p className="text-sm text-gray-400 mb-8">Ethiopian Orthodox Tewahedo Church</p>
+        <p className="text-lg font-bold text-gray-800 mb-8">EOTC Media</p>
 
         {status === "idle" && (
           <>
