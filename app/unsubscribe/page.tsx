@@ -11,8 +11,15 @@ function UnsubscribeContent() {
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle")
   const [errorMsg, setErrorMsg] = useState("")
 
+  // Only flag a missing token up front — unsubscribing itself waits for an
+  // explicit click, so an accidental tap (or a link-scanning bot) can't remove
+  // someone from the list.
   useEffect(() => {
-    if (!token) { setStatus("error"); setErrorMsg("Invalid unsubscribe link."); return }
+    if (!token) { setStatus("error"); setErrorMsg("Invalid unsubscribe link.") }
+  }, [token])
+
+  function confirmUnsubscribe() {
+    if (!token) return
     setStatus("loading")
     fetch("/api/unsubscribe", {
       method: "POST",
@@ -25,7 +32,7 @@ function UnsubscribeContent() {
         else { setStatus("error"); setErrorMsg(data.error ?? "Something went wrong.") }
       })
       .catch(() => { setStatus("error"); setErrorMsg("Network error. Please try again.") })
-  }, [token])
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -33,6 +40,29 @@ function UnsubscribeContent() {
         <p className="text-lg font-bold text-gray-800 mb-1">EOTC Media</p>
         <p className="text-sm text-gray-400 mb-8">Ethiopian Orthodox Tewahedo Church</p>
 
+        {status === "idle" && (
+          <>
+            <p className="text-lg font-semibold text-gray-800 mb-2">Unsubscribe from emails?</p>
+            <p className="text-sm text-gray-500 mb-1">
+              You will no longer receive emails from EOTC Media.
+            </p>
+            <p className="text-xs text-gray-400 mb-7" dir="auto">
+              ከEOTC Media ኢሜይሎች መውጣት ይፈልጋሉ?
+            </p>
+            <button
+              onClick={confirmUnsubscribe}
+              className="w-full h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors cursor-pointer"
+            >
+              Yes, unsubscribe me
+            </button>
+            <a
+              href="/"
+              className="block mt-3 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              Cancel
+            </a>
+          </>
+        )}
         {status === "loading" && (
           <>
             <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
