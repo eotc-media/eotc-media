@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { CheckCircle, XCircle, Loader2, RefreshCw } from "lucide-react"
 import { ScrollableSelect } from "@/components/ui/scrollable-select"
+import { useLocale } from "@/lib/i18n/LocaleContext"
 import type { QzQuestion, QzChoice, QzCategory, QzSubCategory, QzLanguage, QzDifficulty } from "@/types/models/quiz"
 
 interface Props {
@@ -22,6 +23,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export default function QuizBatchClient({ categories, subCategories, languages, difficulties }: Props) {
+  const { t } = useLocale()
   const [languageId, setLanguageId] = useState("")
   const [categoryId, setCategoryId] = useState("")
   const [subCategoryId, setSubCategoryId] = useState("")
@@ -124,36 +126,44 @@ export default function QuizBatchClient({ categories, subCategories, languages, 
             value={languageId || "_"}
             onValueChange={v => handleLanguageChange(v === "_" ? "" : v)}
             options={[
-              { value: "_", label: "All languages" },
+              { value: "_", label: t("quiz_select_language") },
               ...languages.map(l => ({ value: String(l.id), label: l.name })),
             ]}
+            searchable
+            searchPlaceholder={t("search_placeholder")}
             className="w-full sm:w-[145px]"
           />
           <ScrollableSelect
             value={categoryId || "_"}
             onValueChange={v => handleCategoryChange(v === "_" ? "" : v)}
             options={[
-              { value: "_", label: "All categories" },
+              { value: "_", label: t("quiz_select_category") },
               ...filteredCategories.map(c => ({ value: String(c.id), label: c.name })),
             ]}
+            searchable
+            searchPlaceholder={t("search_placeholder")}
             className="w-full sm:w-[185px]"
           />
           <ScrollableSelect
             value={subCategoryId || "_"}
             onValueChange={v => setSubCategoryId(v === "_" ? "" : v)}
             options={[
-              { value: "_", label: "All sub-categories" },
+              { value: "_", label: t("quiz_select_subcategory") },
               ...filteredSubCategories.map(sc => ({ value: String(sc.id), label: sc.name })),
             ]}
+            searchable
+            searchPlaceholder={t("search_placeholder")}
             className="w-full sm:w-[185px]"
           />
           <ScrollableSelect
             value={difficultyId || "_"}
             onValueChange={v => setDifficultyId(v === "_" ? "" : v)}
             options={[
-              { value: "_", label: "All difficulties" },
+              { value: "_", label: t("quiz_select_difficulty") },
               ...difficulties.map(d => ({ value: String(d.id), label: d.name })),
             ]}
+            searchable
+            searchPlaceholder={t("search_placeholder")}
             className="w-full sm:w-[145px]"
           />
         </div>
@@ -185,7 +195,7 @@ export default function QuizBatchClient({ categories, subCategories, languages, 
             className="ml-auto flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
-            Try Again
+            Try again
           </button>
         </div>
       )}

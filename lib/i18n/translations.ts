@@ -64,6 +64,12 @@ export const translations = {
     book_select_subcategory: "Select sub-category",
 
     // ── Quiz sidebar ─────────────────────────────
+    quiz_search_placeholder: "Search questions…",
+    quiz_select_language:    "Select language",
+    quiz_select_category:    "Select category",
+    quiz_select_subcategory: "Select sub-category",
+    quiz_select_difficulty:  "Select difficulty",
+
     quiz_all:   "All questions",
     quiz_rooms: "Group rooms",
     quiz_my:    "My questions",
@@ -279,6 +285,12 @@ export const translations = {
     book_select_subcategory: "ምድብ ይምረጡ",
 
     // ── Quiz sidebar ─────────────────────────────
+    quiz_search_placeholder: "ጥያቄዎች ፈልግ...",
+    quiz_select_language:    "ቋንቋ ይምረጡ",
+    quiz_select_category:    "የምድብ አይነት ይምረጡ",
+    quiz_select_subcategory: "ምድብ ይምረጡ",
+    quiz_select_difficulty:  "ደረጃ ይምረጡ",
+
     quiz_all:   "ሁሉም ጥያቄዎች",
     quiz_rooms: "የቡድን ክፍሎች",
     quiz_my:    "የእርስዎ ጥያቄዎች",

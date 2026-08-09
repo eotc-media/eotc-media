@@ -3,13 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Search } from "lucide-react"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { ScrollableSelect } from "@/components/ui/scrollable-select"
 import { CbLanguage, CbCategory, CbSubCategory } from "@/types/models/book"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 
@@ -74,15 +68,32 @@ export default function BookSearchFilters({
 
   const visibleCategories = activeLanguage
     ? categories.filter(c => (categoriesByLanguage[activeLanguage] ?? []).includes(c.id))
-    : categories
+    : []
 
   const visibleSubCategories = activeCategory
     ? subCategories.filter(sc => sc.categoryId === parseInt(activeCategory))
     : []
 
-  const sel = (s: string) => s || "_"
   const apply = (key: string, raw: string) => applyFilter(key, raw === "_" ? "" : raw)
-  const triggerCls = "h-9 text-sm bg-slate-50 border-slate-200 focus:ring-0 cursor-pointer"
+
+  const languageOptions = [
+    { value: "_", label: t("book_select_language") },
+    ...languages.map(l => ({ value: String(l.id), label: l.name })),
+  ]
+  const categoryOptions = [
+    { value: "_", label: t("book_select_category") },
+    ...visibleCategories.map(c => ({ value: String(c.id), label: c.name })),
+  ]
+  const subCategoryOptions = [
+    { value: "_", label: t("book_select_subcategory") },
+    ...visibleSubCategories.map(sc => ({ value: String(sc.id), label: sc.name })),
+  ]
+  const sortOptions = [
+    { value: "newest", label: t("sort_newest_first") },
+    { value: "oldest", label: t("sort_oldest_first") },
+    { value: "popular", label: t("sort_most_liked") },
+    { value: "title", label: t("sort_name_az") },
+  ]
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -98,53 +109,36 @@ export default function BookSearchFilters({
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:contents">
-        <Select value={sel(activeLanguage)} onValueChange={raw => apply("language", raw)}>
-          <SelectTrigger className={`${triggerCls} w-full sm:w-[145px]`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_">{t("book_select_language")}</SelectItem>
-            {languages.map(lang => (
-              <SelectItem key={lang.id} value={String(lang.id)}>{lang.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={sel(activeCategory)} onValueChange={raw => apply("category", raw)}>
-          <SelectTrigger className={`${triggerCls} w-full sm:w-[185px]`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_">{t("book_select_category")}</SelectItem>
-            {visibleCategories.map(cat => (
-              <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={sel(activeSubCategory)} onValueChange={raw => apply("subCategory", raw)}>
-          <SelectTrigger className={`${triggerCls} w-full sm:w-[185px]`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_">{t("book_select_subcategory")}</SelectItem>
-            {visibleSubCategories.map(sc => (
-              <SelectItem key={sc.id} value={String(sc.id)}>{sc.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={activeSort || "newest"} onValueChange={raw => applyFilter("sort", raw === "newest" ? "" : raw)}>
-          <SelectTrigger className={`${triggerCls} w-full sm:w-[160px]`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">{t("sort_newest_first")}</SelectItem>
-            <SelectItem value="oldest">{t("sort_oldest_first")}</SelectItem>
-            <SelectItem value="popular">{t("sort_most_liked")}</SelectItem>
-            <SelectItem value="title">{t("sort_name_az")}</SelectItem>
-          </SelectContent>
-        </Select>
+        <ScrollableSelect
+          value={activeLanguage || "_"}
+          onValueChange={raw => apply("language", raw)}
+          options={languageOptions}
+          searchable
+          searchPlaceholder={t("search_placeholder")}
+          className="w-full sm:w-[145px]"
+        />
+        <ScrollableSelect
+          value={activeCategory || "_"}
+          onValueChange={raw => apply("category", raw)}
+          options={categoryOptions}
+          searchable
+          searchPlaceholder={t("search_placeholder")}
+          className="w-full sm:w-[185px]"
+        />
+        <ScrollableSelect
+          value={activeSubCategory || "_"}
+          onValueChange={raw => apply("subCategory", raw)}
+          options={subCategoryOptions}
+          searchable
+          searchPlaceholder={t("search_placeholder")}
+          className="w-full sm:w-[185px]"
+        />
+        <ScrollableSelect
+          value={activeSort || "newest"}
+          onValueChange={raw => applyFilter("sort", raw === "newest" ? "" : raw)}
+          options={sortOptions}
+          className="w-full sm:w-[160px]"
+        />
       </div>
     </div>
   )
