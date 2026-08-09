@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { CheckCircle, XCircle, Loader2, RefreshCw } from "lucide-react"
+import { ScrollableSelect } from "@/components/ui/scrollable-select"
 import type { QzQuestion, QzChoice, QzCategory, QzSubCategory, QzLanguage, QzDifficulty } from "@/types/models/quiz"
 
 interface Props {
@@ -114,43 +115,49 @@ export default function QuizBatchClient({ categories, subCategories, languages, 
   const answeredCount = Object.keys(answers).length
   const unansweredCount = questions.length - answeredCount
 
-  const selCls = "h-9 px-3 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 bg-white cursor-pointer"
-
   return (
     <div>
-      {/* Filters */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6">
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500">Language</label>
-            <select value={languageId} onChange={e => handleLanguageChange(e.target.value)} className={selCls}>
-              <option value="">All Languages</option>
-              {languages.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500">Category</label>
-            <select value={categoryId} onChange={e => handleCategoryChange(e.target.value)} className={selCls}>
-              <option value="">All Categories</option>
-              {filteredCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500">Sub-category</label>
-            <select value={subCategoryId} onChange={e => setSubCategoryId(e.target.value)} className={selCls} disabled={filteredSubCategories.length === 0}>
-              <option value="">All Sub-categories</option>
-              {filteredSubCategories.map(sc => <option key={sc.id} value={sc.id}>{sc.name}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500">Difficulty</label>
-            <select value={difficultyId} onChange={e => setDifficultyId(e.target.value)} className={selCls}>
-              <option value="">All Difficulties</option>
-              {difficulties.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-          </div>
-          {loading && <Loader2 className="w-5 h-5 animate-spin text-slate-400" />}
+      {/* Filters — same ScrollableSelect row the hymn/sermon pages use */}
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="grid grid-cols-2 gap-2 sm:contents">
+          <ScrollableSelect
+            value={languageId || "_"}
+            onValueChange={v => handleLanguageChange(v === "_" ? "" : v)}
+            options={[
+              { value: "_", label: "All languages" },
+              ...languages.map(l => ({ value: String(l.id), label: l.name })),
+            ]}
+            className="w-full sm:w-[145px]"
+          />
+          <ScrollableSelect
+            value={categoryId || "_"}
+            onValueChange={v => handleCategoryChange(v === "_" ? "" : v)}
+            options={[
+              { value: "_", label: "All categories" },
+              ...filteredCategories.map(c => ({ value: String(c.id), label: c.name })),
+            ]}
+            className="w-full sm:w-[185px]"
+          />
+          <ScrollableSelect
+            value={subCategoryId || "_"}
+            onValueChange={v => setSubCategoryId(v === "_" ? "" : v)}
+            options={[
+              { value: "_", label: "All sub-categories" },
+              ...filteredSubCategories.map(sc => ({ value: String(sc.id), label: sc.name })),
+            ]}
+            className="w-full sm:w-[185px]"
+          />
+          <ScrollableSelect
+            value={difficultyId || "_"}
+            onValueChange={v => setDifficultyId(v === "_" ? "" : v)}
+            options={[
+              { value: "_", label: "All difficulties" },
+              ...difficulties.map(d => ({ value: String(d.id), label: d.name })),
+            ]}
+            className="w-full sm:w-[145px]"
+          />
         </div>
+        {loading && <Loader2 className="w-5 h-5 animate-spin text-slate-400" />}
       </div>
 
       {/* Score banner */}
@@ -268,20 +275,20 @@ export default function QuizBatchClient({ categories, subCategories, languages, 
 
           {/* Submit bar */}
           {!submitted && (
-            <div className="sticky bottom-0 mt-6 bg-white border-t border-slate-200 py-4 flex items-center justify-between gap-4">
-              <p className="text-sm text-slate-500">
-                {answeredCount} of {questions.length} answered
-                {unansweredCount > 0 && (
-                  <span className="text-amber-600 ml-1">({unansweredCount} remaining)</span>
-                )}
-              </p>
+            <div className="sticky bottom-0 mt-6 bg-white border-t border-slate-200 py-4 pr-36 flex items-center justify-between gap-4">
               <button
                 onClick={handleSubmit}
                 disabled={answeredCount === 0}
                 className="px-6 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors cursor-pointer"
               >
-                Submit Answers
+                Submit answers
               </button>
+              <p className="hidden sm:block text-sm text-slate-500">
+                {answeredCount} of {questions.length} answered
+                {unansweredCount > 0 && (
+                  <span className="text-amber-600 ml-1">({unansweredCount} remaining)</span>
+                )}
+              </p>
             </div>
           )}
         </>
