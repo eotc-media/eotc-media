@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { fetchTranscript } from '@/lib/generate-lyrics'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateFromYoutubeVideo } from '@/lib/generate-lyrics'
+
+// Reading a whole video takes longer than reading a subtitle file did.
+export const maxDuration = 60
+
+const PROMPT = `Listen to this religious sermon video and write a concise description (2-4 sentences) summarising its main topic and message. Write in the language spoken in the video; do not translate. Output only the description, with no extra commentary.`
 
 export async function POST(
   _req: NextRequest,
@@ -21,22 +25,12 @@ export async function POST(
   })
   if (!sermon) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const rawText = await fetchTranscript(sermon.videoId)
-  if (!rawText) return NextResponse.json({ error: 'No subtitles found for this video' }, { status: 422 })
-
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'GEMINI_API_KEY is not configured' }, { status: 500 })
-
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
-  const prompt = `You are given raw subtitle text from a religious sermon video. Write a concise description (2-4 sentences) summarizing the main topic and message of the sermon. Preserve the original language. Output only the description, no extra commentary.
-
-Raw subtitle text:
-${rawText}`
-
-  const result = await model.generateContent(prompt)
-  const description = result.response.text().trim()
-
-  return NextResponse.json({ description })
+  try {
+    const description = await generateFromYoutubeVideo(sermon.videoId, PROMPT)
+    return NextResponse.json({ description })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[generate-description]', sermon.videoId, msg)
+    return NextResponse.json({ error: `Could not generate description. ${msg}` }, { status: 502 })
+  }
 }

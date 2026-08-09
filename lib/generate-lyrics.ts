@@ -1,57 +1,73 @@
-import { YoutubeTranscript } from 'youtube-transcript'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+// Lyrics/description generation reads the video with Gemini directly, by handing
+// it the YouTube URL.
+//
+// This replaced subtitle scraping (youtube-transcript). That approach worked on
+// the old shared host but not here: YouTube blocks its timedtext endpoint from
+// datacenter IP ranges, which is exactly what Vercel functions run on, so every
+// production request came back empty. Reading the video through Gemini needs no
+// proxy, and also works for videos that have no subtitles at all.
+//
+// Caveats: the video must be public or unlisted, and only one video per request.
 
-const LANG_PRIORITY = ['am', 'ti', 'om', 'en']
+const GEMINI_MODEL = 'gemini-2.5-flash'
+const GEMINI_TIMEOUT_MS = 55_000
 
-export async function fetchTranscript(videoId: string): Promise<string | null> {
-  for (const lang of LANG_PRIORITY) {
-    try {
-      const segments = await YoutubeTranscript.fetchTranscript(videoId, { lang })
-      if (segments.length > 0) {
-        return segments.map(s => s.text).join(' ')
-      }
-    } catch {
-      // try next language
-    }
-  }
-  // fallback: try without language preference
+/**
+ * Run `prompt` against a YouTube video and return the model's text.
+ * Throws with a readable message on misconfiguration, timeout, or API error.
+ */
+export async function generateFromYoutubeVideo(videoId: string, prompt: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not configured')
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS)
+
+  let res: Response
   try {
-    const segments = await YoutubeTranscript.fetchTranscript(videoId)
-    if (segments.length > 0) {
-      return segments.map(s => s.text).join(' ')
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { file_data: { file_uri: `https://www.youtube.com/watch?v=${videoId}` } },
+                { text: prompt },
+              ],
+            },
+          ],
+        }),
+      }
+    )
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('The video took too long to process. Try a shorter video.')
     }
-  } catch {
-    // no transcript available
+    throw err
+  } finally {
+    clearTimeout(timer)
   }
-  return null
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(`Gemini ${res.status}: ${detail.slice(0, 300)}`)
+  }
+
+  const data = await res.json()
+  const text: string | undefined = data?.candidates?.[0]?.content?.parts
+    ?.map((p: { text?: string }) => p.text ?? '')
+    .join('')
+    .trim()
+
+  if (!text) throw new Error('The model returned no text for this video.')
+  return text
 }
 
-export async function formatLyricsWithGemini(rawText: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
-
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
-
-  const prompt = `You are given raw subtitle text extracted from a religious hymn video. Format it as clean, properly structured lyrics HTML.
-
-Rules:
-
-Contextual Correction: Use your knowledge of the hymn and the language (Amharic or English) to correct subtitle artifacts, misspellings, or nonsensical phrases while maintaining the original meaning.
-
-Structure: Use <p> tags for each verse or stanza and <br> for line breaks within a verse.
-
-Cleanup: Remove timestamps, duplicate lines, and technical artifacts.
-
-Preservation: Keep the original language; do not translate.
-
-Output: Do not add any explanation or preamble. Output only the HTML.
-
-Raw subtitle text:
-${rawText}`
-
-  const result = await model.generateContent(prompt)
-  const text = result.response.text().trim()
-  // Strip markdown code-block wrappers if present (e.g. ```html ... ```)
+/** Strip ```html fences the model sometimes wraps output in. */
+export function stripCodeFence(text: string): string {
   return text.replace(/^```(?:html)?\n?/i, '').replace(/\n?```$/i, '').trim()
 }
