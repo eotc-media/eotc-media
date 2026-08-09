@@ -34,24 +34,21 @@ export async function getBooksFilterData() {
 
   const languages = sortLanguages(languagesRaw)
 
-  // Build categoriesByLanguage from a union of (a) existing book associations
-  // and (b) the structural language assigned to a category. (a) keeps the
-  // public filter working for categories that already have books; (b) surfaces
-  // newly created categories the admin has assigned to a language even before
-  // any book uses them.
-  const rows = await prisma.$queryRaw<Array<{ category_id: number; language_id: number }>>`
-    SELECT DISTINCT bc.category_id, bl.language_id
-    FROM cb_book_category bc
-    INNER JOIN cb_book_language bl ON bc.book_id = bl.book_id
-  `
+  // A category belongs to whichever language it was assigned, and nothing else.
+  //
+  // This used to also union in pairs derived from books:
+  //   SELECT DISTINCT bc.category_id, bl.language_id FROM cb_book_category bc
+  //   JOIN cb_book_language bl ON bc.book_id = bl.book_id
+  // which cross-multiplies a book's languages against its categories. One book
+  // tagged both English and Amharic was enough to list every Amharic category
+  // under English, so the language filter appeared not to narrow anything.
   const categoriesByLanguage: Record<string, number[]> = {}
-  const add = (languageId: number, categoryId: number) => {
-    const key = String(languageId)
+  for (const cat of categories) {
+    if (!cat.languageId) continue
+    const key = String(cat.languageId)
     if (!categoriesByLanguage[key]) categoriesByLanguage[key] = []
-    if (!categoriesByLanguage[key].includes(categoryId)) categoriesByLanguage[key].push(categoryId)
+    categoriesByLanguage[key].push(cat.id)
   }
-  for (const row of rows) add(row.language_id, row.category_id)
-  for (const cat of categories) if (cat.languageId) add(cat.languageId, cat.id)
 
   return { languages, categories, subCategories, categoriesByLanguage }
 }
