@@ -74,7 +74,7 @@ export default async function HymnPage({ params }: PageProps) {
     channelId: hymn.channel?.id,
     singerIds: hymn.singers?.map(s => s.id) ?? [],
     userId,
-  }, 10)
+  }, 12)
 
   return (
     <div className="min-h-screen bg-white">

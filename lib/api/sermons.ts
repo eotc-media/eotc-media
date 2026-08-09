@@ -227,7 +227,7 @@ export async function getSermon(
 export async function getRelatedSermons(
   sermonId: number,
   categoryIds: number[],
-  limit = 8
+  limit = 12
 ): Promise<SmSermon[]> {
   const where: Record<string, unknown> = {
     NOT: { id: sermonId },

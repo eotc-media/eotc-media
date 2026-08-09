@@ -64,7 +64,7 @@ export default async function SermonPage({ params }: PageProps) {
   const { sermon, isFavorited } = result
 
   const categoryIds = sermon.categories?.map(c => c.id) ?? []
-  const related = await getRelatedSermons(sermon.id, categoryIds, 8)
+  const related = await getRelatedSermons(sermon.id, categoryIds, 12)
 
   return (
     <div className="min-h-screen bg-white">

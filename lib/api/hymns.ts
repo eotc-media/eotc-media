@@ -339,7 +339,7 @@ export async function getRelatedHymns(
     singerIds: number[]
     userId?: number
   },
-  limit = 10
+  limit = 12
 ): Promise<HmHymn[]> {
   const { hymnId, categoryIds, subCategoryIds, languageIds, channelId, singerIds, userId } = ctx
 
