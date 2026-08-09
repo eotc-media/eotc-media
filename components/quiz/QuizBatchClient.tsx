@@ -39,10 +39,12 @@ export default function QuizBatchClient({ categories, subCategories, languages, 
   const [submitted, setSubmitted] = useState(false)
   const [score, setScore] = useState(0)
 
+  // Cascade like hymns and books: nothing to pick until a language narrows it.
+  // Categories with no language of their own stay available once one is chosen.
   const filteredCategories = useMemo(
     () => languageId
       ? categories.filter(c => c.languageId == null || c.languageId === parseInt(languageId))
-      : categories,
+      : [],
     [categories, languageId]
   )
 
