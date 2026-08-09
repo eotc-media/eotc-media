@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { sortLanguages } from '@/lib/language-order'
 import {
   QzQuestion, QzCategory, QzSubCategory, QzLanguage,
   QzDifficulty, QzQuestionType, QzApprovalStatus, QzChoice,
@@ -56,7 +57,7 @@ export async function getQuestionsFilterData(): Promise<{
     prisma.qzLanguage.findMany({ orderBy: { id: 'asc' } }),
     prisma.qzDifficulty.findMany({ orderBy: { id: 'asc' } }),
   ])
-  return { categories, subCategories, languages, difficulties }
+  return { categories, subCategories, languages: sortLanguages(languages), difficulties }
 }
 
 export async function getQuestions({

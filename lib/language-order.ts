@@ -1,10 +1,12 @@
 // Canonical display order for Ethiopian Bible/church languages.
 // Anything not listed falls back to the end, sorted alphabetically.
-// Aliases are normalised so spelling variants still match (e.g. Geez/Ge'ez,
-// Tigrigna/Tigrinya, Afaan Oromo/Oromifa).
-const ORDER: string[] = ["english", "amharic", "geez", "tigrigna", "oromo"]
+// Aliases cover both spelling variants (Geez/Ge'ez, Tigrigna/Tigrinya,
+// Afaan Oromo/Oromifa) and the native-script names actually stored in the
+// database — without those, entries like "አማርኛ" match nothing and sort last.
+const ORDER: string[] = ["amharic", "english", "geez", "tigrigna", "oromo"]
 
 const ALIASES: Record<string, string> = {
+  // Latin
   "english": "english",
   "amharic": "amharic",
   "geez": "geez",
@@ -15,11 +17,21 @@ const ALIASES: Record<string, string> = {
   "tigrinya": "tigrigna",
   "tigrina": "tigrigna",
   "afaan oromo": "oromo",
+  "afaan oromoo": "oromo",
   "afan oromo": "oromo",
   "oromo": "oromo",
   "oromifa": "oromo",
   "oromiffa": "oromo",
   "oromigna": "oromo",
+  // Ge'ez script
+  "አማርኛ": "amharic",
+  "ኣምሓርኛ": "amharic",
+  "እንግሊዝኛ": "english",
+  "ግዕዝ": "geez",
+  "ትግርኛ": "tigrigna",
+  "ኦሮምኛ": "oromo",
+  "ኦሮሚኛ": "oromo",
+  "አፋን ኦሮሞ": "oromo",
 }
 
 function rank(name: string): number {

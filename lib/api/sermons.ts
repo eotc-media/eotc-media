@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { sortLanguages } from '@/lib/language-order'
 import { SmSermon, SmCategory, SmSubCategory, SmLanguage, SmPreacher } from '@/types/models/sermon'
 
 const PAGE_SIZE = 24
@@ -74,7 +75,7 @@ export const getSermonsFilterData = unstable_cache(
   categoriesByLanguage: Record<string, number[]>
 }> => {
   const [categories, subCategories, languages, preachers, catLangRows] = await Promise.all([
-    prisma.smCategory.findMany({ orderBy: { id: 'asc' }, select: { id: true, name: true } }),
+    prisma.smCategory.findMany({ orderBy: { id: 'asc' }, select: { id: true, name: true, languageId: true } }),
     prisma.smSubCategory.findMany({ orderBy: { id: 'asc' } }),
     prisma.smLanguage.findMany({ orderBy: { id: 'asc' } }),
     prisma.smPreacher.findMany({ orderBy: { name: 'asc' } }),
@@ -84,13 +85,23 @@ export const getSermonsFilterData = unstable_cache(
       INNER JOIN sm_language_sermon ls ON sc.sermon_id = ls.sermon_id
     `,
   ])
+  // A category belongs to the language it was assigned. The sermon-derived rows
+  // above cross-multiply each sermon's languages against its categories, so on
+  // their own they list Amharic categories under English as soon as one sermon
+  // carries both; they are now only consulted for categories that have no
+  // language of their own, so nothing becomes unreachable.
   const categoriesByLanguage: Record<string, number[]> = {}
-  for (const { category_id, language_id } of catLangRows) {
-    const key = String(language_id)
+  const add = (languageId: number, categoryId: number) => {
+    const key = String(languageId)
     if (!categoriesByLanguage[key]) categoriesByLanguage[key] = []
-    if (!categoriesByLanguage[key].includes(category_id)) categoriesByLanguage[key].push(category_id)
+    if (!categoriesByLanguage[key].includes(categoryId)) categoriesByLanguage[key].push(categoryId)
   }
-  return { categories, subCategories, languages, preachers, categoriesByLanguage }
+  const unassigned = new Set(categories.filter(c => !c.languageId).map(c => c.id))
+  for (const cat of categories) if (cat.languageId) add(cat.languageId, cat.id)
+  for (const { category_id, language_id } of catLangRows) {
+    if (unassigned.has(category_id)) add(language_id, category_id)
+  }
+  return { categories, subCategories, languages: sortLanguages(languages), preachers, categoriesByLanguage }
   },
   ["sermons-filter-data"],
   { revalidate: 1800 }

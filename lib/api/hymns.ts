@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { sortLanguages } from '@/lib/language-order'
 import { HmHymn, HmCategory, HmSubCategory, HmLanguage, HmSinger, HmComment } from '@/types/models/hymn'
 
 const PAGE_SIZE = 24
@@ -96,7 +97,7 @@ export const getHymnsFilterData = unstable_cache(
     if (!singersByLanguage[key]) singersByLanguage[key] = []
     singersByLanguage[key].push(singer_id)
   }
-  return { categories, subCategories, languages, singers, singersByLanguage }
+  return { categories, subCategories, languages: sortLanguages(languages), singers, singersByLanguage }
   },
   ["hymns-filter-data"],
   { revalidate: 1800 }

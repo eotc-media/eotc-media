@@ -1,6 +1,7 @@
 export interface SmCategory {
   id: number
   name: string
+  languageId?: number | null
 }
 
 export interface SmSubCategory {

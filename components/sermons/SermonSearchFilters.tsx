@@ -69,7 +69,7 @@ export default function SermonSearchFilters({
 
   const visibleCategories = activeLanguage
     ? categories.filter(c => (categoriesByLanguage[activeLanguage] ?? []).includes(c.id))
-    : categories
+    : []
 
   const visibleSubCategories = activeCategory
     ? subCategories.filter(sc => sc.categoryId === parseInt(activeCategory))
