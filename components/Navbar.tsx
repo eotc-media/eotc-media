@@ -28,7 +28,6 @@ export default function Navbar() {
   const router = useRouter()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
   const { data: session, status } = useSession()
   const user = session?.user || null
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -62,12 +61,6 @@ export default function Navbar() {
       document.body.style.overflow = ""
     }
   }, [isMobileMenuOpen])
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
-  }, [])
 
   const isActive = (link: { href: string; activePrefix?: string }) =>
     pathname?.startsWith(link.activePrefix ?? link.href)
@@ -109,13 +102,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav
-        className={`fixed top-0 w-full h-16 z-50 transition-all duration-300 ${
-          scrolled
-            ? "bg-white/95 backdrop-blur-md shadow-md border-b border-gray-200"
-            : "bg-white border-b border-gray-200"
-        }`}
-      >
+      <nav className="fixed top-0 w-full h-16 z-50 bg-white border-b border-gray-200">
         <div className="max-w-full mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo + Desktop Navigation grouped on the left */}

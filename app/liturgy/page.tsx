@@ -1,12 +1,12 @@
 import type { Metadata } from "next"
-import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import Navbar from "@/components/Navbar"
 import { LiturgyReader } from "@/components/liturgy/LiturgyReader"
 
-// Rendered per request so the build never needs the DB, but the liturgy content
-// — identical for everyone and admin-edited only — is cached for 30 min via
-// unstable_cache, so repeat/bot traffic doesn't re-query the DB every time.
+// Rendered per request, and read live so an admin edit shows up immediately —
+// the same behaviour as the hymn, sermon and book pages. (This content was
+// previously held in a 30-minute unstable_cache to cut database egress, which
+// meant edits took up to an hour to appear.)
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
@@ -26,28 +26,24 @@ export const metadata: Metadata = {
   },
 }
 
-const getLiturgyData = unstable_cache(
-  async () => {
-    const [sections, roles] = await Promise.all([
-      prisma.ltSection.findMany({
-        orderBy: { orderIndex: "asc" },
-        include: {
-          texts: {
-            orderBy: { orderIndex: "asc" },
-            include: { role: true },
-          },
+async function getLiturgyData() {
+  const [sections, roles] = await Promise.all([
+    prisma.ltSection.findMany({
+      orderBy: { orderIndex: "asc" },
+      include: {
+        texts: {
+          orderBy: { orderIndex: "asc" },
+          include: { role: true },
         },
-      }),
-      prisma.ltRole.findMany({
-        orderBy: { orderIndex: "asc" },
-      }),
-    ])
+      },
+    }),
+    prisma.ltRole.findMany({
+      orderBy: { orderIndex: "asc" },
+    }),
+  ])
 
-    return { sections, roles }
-  },
-  ["liturgy-data"],
-  { revalidate: 1800 }
-)
+  return { sections, roles }
+}
 
 export default async function LiturgyPage() {
   const { sections, roles } = await getLiturgyData()
