@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Play, Pause, Music, BookOpenText, Check, Languages, ChevronDown } from "lucide-react"
+import { Play, Pause, Music, BookOpenText, Check, ChevronDown } from "lucide-react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 
 // ── Types ──────────────────────────────────────────────
@@ -259,7 +259,10 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
           : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
       }`}
     >
-      <Languages className="h-4 w-4" />
+      <span className="flex items-baseline gap-[1px] leading-none select-none" aria-hidden="true">
+        <span className="text-[15px] font-semibold">ሀ</span>
+        <span className="text-[11px] font-semibold">A</span>
+      </span>
       <span className="hidden xl:inline">{t("liturgy_language_btn")}</span>
       <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold ${
         openMenu === which ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
@@ -279,8 +282,8 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
         {/* ─── Sections — sidebar on desktop; on mobile it also carries the
              settings control, so nothing needs its own band ─── */}
         <aside className="
-          flex flex-row items-center gap-2 px-4 py-2 border-b border-slate-100
-          lg:flex-col lg:items-stretch lg:gap-0.5 lg:border-b-0 lg:border-r lg:sticky lg:top-16 lg:self-start lg:h-[calc(100vh-4rem)] lg:overflow-y-auto lg:px-3 lg:py-4
+          sticky top-16 z-30 bg-white flex flex-row items-center gap-2 px-4 py-2 border-b border-slate-100
+          lg:flex-col lg:items-stretch lg:gap-0.5 lg:border-b-0 lg:border-r lg:self-start lg:h-[calc(100vh-4rem)] lg:overflow-y-auto lg:px-3 lg:py-4
         ">
           <div
             ref={sectionTabsRef}
@@ -309,7 +312,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
 
           {/* Desktop control floats in the gutter beside the text, taking no row */}
           <div
-            className="hidden lg:block absolute right-6 top-6 z-30"
+            className="hidden lg:block fixed right-6 top-20 z-30"
             ref={openMenu === "desktop" ? menuRef : undefined}
           >
             <div className="relative">
