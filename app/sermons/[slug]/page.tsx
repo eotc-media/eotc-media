@@ -2,10 +2,11 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { auth } from "@/auth"
-import { getSermon, getRelatedSermons } from "@/lib/api/sermons"
+import { getSermon, getRelatedSermons, getSermonsFilterData } from "@/lib/api/sermons"
 import { absoluteUrl, jsonLd } from "@/lib/seo"
 import Navbar from "@/components/Navbar"
 import SermonPlayer from "@/components/sermons/SermonPlayer"
+import SermonSearchFilters from "@/components/sermons/SermonSearchFilters"
 import ShareButton from "@/components/ShareButton"
 import { bestThumbCandidates } from "@/lib/thumbnails"
 import SermonFavoriteButton from "@/components/sermons/SermonFavoriteButton"
@@ -64,6 +65,7 @@ export default async function SermonPage({ params }: PageProps) {
   const { sermon, isFavorited } = result
 
   const categoryIds = sermon.categories?.map(c => c.id) ?? []
+  const filterData = await getSermonsFilterData()
   const related = await getRelatedSermons(sermon.id, categoryIds, 12)
 
   return (
@@ -102,6 +104,17 @@ export default async function SermonPage({ params }: PageProps) {
       <Navbar />
       <div className="pt-16">
         <div className="max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-11 pt-4 pb-8">
+
+          {/* Search stays reachable from the detail page; filters behind a toggle */}
+          <div className="mb-4">
+            <SermonSearchFilters
+              categories={filterData.categories}
+              subCategories={filterData.subCategories}
+              languages={filterData.languages}
+              categoriesByLanguage={filterData.categoriesByLanguage}
+              collapsible
+            />
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_402px] gap-6 items-start">
 

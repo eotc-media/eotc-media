@@ -50,6 +50,7 @@ export const translations = {
 
     // ── Search & filters (generic) ───────────────
     search_placeholder: "Search…",
+    filters_btn:        "Filters",
     filter_all:         "All",
     filter_language:    "Language",
     filter_category:    "Category",
@@ -271,6 +272,7 @@ export const translations = {
 
     // ── Search & filters (generic) ───────────────
     search_placeholder: "ፈልግ…",
+    filters_btn:        "ማጣሪያዎች",
     filter_all:         "ሁሉም",
     filter_language:    "ቋንቋ",
     filter_category:    "ምድብ",

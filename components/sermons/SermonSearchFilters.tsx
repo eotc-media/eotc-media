@@ -2,8 +2,9 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Search } from "lucide-react"
+import { Search, SlidersHorizontal } from "lucide-react"
 import { ScrollableSelect } from "@/components/ui/scrollable-select"
+import { useLocale } from "@/lib/i18n/LocaleContext"
 import { SmCategory, SmSubCategory, SmLanguage } from "@/types/models/sermon"
 
 interface SermonSearchFiltersProps {
@@ -12,6 +13,8 @@ interface SermonSearchFiltersProps {
   languages: SmLanguage[]
   categoriesByLanguage: Record<string, number[]>
   basePath?: string
+  /** Show only the search box, with the dropdowns behind a Filters toggle. */
+  collapsible?: boolean
 }
 
 export default function SermonSearchFilters({
@@ -20,8 +23,10 @@ export default function SermonSearchFilters({
   languages,
   categoriesByLanguage,
   basePath = "/sermons",
+  collapsible = false,
 }: SermonSearchFiltersProps) {
   const router = useRouter()
+  const { t } = useLocale()
   const searchParams = useSearchParams()
 
   const activeLanguage = searchParams.get("language") ?? ""
@@ -30,6 +35,7 @@ export default function SermonSearchFilters({
   const activeSearch = searchParams.get("search") ?? ""
 
   const [searchValue, setSearchValue] = useState(activeSearch)
+  const [showFilters, setShowFilters] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const composingRef = useRef(false)
 
@@ -90,48 +96,90 @@ export default function SermonSearchFilters({
     ...visibleSubCategories.map(sc => ({ value: String(sc.id), label: sc.name })),
   ]
 
+  const activeFilterCount = [activeLanguage, activeCategory, activeSubCategory].filter(Boolean).length
+
+  const searchBox = (
+    <div className={`relative ${collapsible ? "flex-1 min-w-0" : "w-full sm:flex-1 sm:min-w-[150px] sm:max-w-[240px]"}`}>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+      <input
+        type="text"
+        placeholder="ስብከት ፈልግ..."
+        value={searchValue}
+        onChange={e => handleSearchChange(e.target.value)}
+        onCompositionStart={() => { composingRef.current = true }}
+        onCompositionEnd={e => { composingRef.current = false; handleSearchChange(e.currentTarget.value) }}
+        className="w-full h-9 pl-9 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-400 focus:bg-white transition-colors placeholder:text-slate-400"
+      />
+    </div>
+  )
+
+  const dropdowns = (
+    <>
+      <ScrollableSelect
+        value={activeLanguage || "_"}
+        onValueChange={raw => applyFilter("language", raw === "_" ? "" : raw)}
+        options={languageOptions}
+        searchable
+        searchPlaceholder="ፈልግ…"
+        className={collapsible ? "w-full" : "w-full sm:w-[145px]"}
+      />
+      <ScrollableSelect
+        value={activeCategory || "_"}
+        onValueChange={raw => applyFilter("category", raw === "_" ? "" : raw)}
+        options={categoryOptions}
+        searchable
+        searchPlaceholder="ፈልግ…"
+        className={collapsible ? "w-full" : "w-full sm:w-[185px]"}
+      />
+      <ScrollableSelect
+        value={activeSubCategory || "_"}
+        onValueChange={raw => applyFilter("subCategory", raw === "_" ? "" : raw)}
+        options={subCategoryOptions}
+        searchable
+        searchPlaceholder="ፈልግ…"
+        className={collapsible ? "w-full" : "w-full sm:w-[185px]"}
+      />
+    </>
+  )
+
+  // Detail pages keep the search box always visible and tuck the dropdowns
+  // behind a toggle, so the filters stay reachable without dominating the page.
+  if (collapsible) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          {searchBox}
+          <button
+            onClick={() => setShowFilters(v => !v)}
+            className={`flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex-shrink-0 ${
+              showFilters || activeFilterCount > 0
+                ? "bg-blue-50 border-blue-200 text-blue-700"
+                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{t("filters_btn")}</span>
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-white text-[10px] font-semibold">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
+        {showFilters && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {dropdowns}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      {/* Search */}
-      <div className="relative w-full sm:flex-1 sm:min-w-[150px] sm:max-w-[240px]">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-        <input
-          type="text"
-          placeholder="ስብከት ፈልግ..."
-          value={searchValue}
-          onChange={e => handleSearchChange(e.target.value)}
-          onCompositionStart={() => { composingRef.current = true }}
-          onCompositionEnd={e => { composingRef.current = false; handleSearchChange(e.currentTarget.value) }}
-          className="w-full h-9 pl-9 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-400 focus:bg-white transition-colors placeholder:text-slate-400"
-        />
-      </div>
-
-      {/* Dropdowns */}
+      {searchBox}
       <div className="grid grid-cols-3 gap-2 sm:contents">
-        <ScrollableSelect
-          value={activeLanguage || "_"}
-          onValueChange={raw => applyFilter("language", raw === "_" ? "" : raw)}
-          options={languageOptions}
-          searchable
-          searchPlaceholder="ፈልግ…"
-          className="w-full sm:w-[145px]"
-        />
-        <ScrollableSelect
-          value={activeCategory || "_"}
-          onValueChange={raw => applyFilter("category", raw === "_" ? "" : raw)}
-          options={categoryOptions}
-          searchable
-          searchPlaceholder="ፈልግ…"
-          className="w-full sm:w-[185px]"
-        />
-        <ScrollableSelect
-          value={activeSubCategory || "_"}
-          onValueChange={raw => applyFilter("subCategory", raw === "_" ? "" : raw)}
-          options={subCategoryOptions}
-          searchable
-          searchPlaceholder="ፈልግ…"
-          className="w-full sm:w-[185px]"
-        />
+        {dropdowns}
       </div>
     </div>
   )

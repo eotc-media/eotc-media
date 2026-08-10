@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { auth } from "@/auth"
-import { getHymn, getRelatedHymns } from "@/lib/api/hymns"
+import { getHymn, getRelatedHymns, getHymnsFilterData } from "@/lib/api/hymns"
 import { absoluteUrl, jsonLd } from "@/lib/seo"
 import Navbar from "@/components/Navbar"
 import HymnPlayer from "@/components/hymns/HymnPlayer"
@@ -13,6 +13,7 @@ import FavoriteButton from "@/components/hymns/FavoriteButton"
 import SaveToListButton from "@/components/hymns/SaveToListButton"
 import CommentSection from "@/components/hymns/CommentSection"
 import HymnCard from "@/components/hymns/HymnCard"
+import HymnSearchFilters from "@/components/hymns/HymnSearchFilters"
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -66,6 +67,7 @@ export default async function HymnPage({ params }: PageProps) {
 
   const { hymn, isFavorited, comments } = result
 
+  const filterData = await getHymnsFilterData()
   const related = await getRelatedHymns({
     hymnId: hymn.id,
     categoryIds: hymn.categories?.map(c => c.id) ?? [],
@@ -115,6 +117,18 @@ export default async function HymnPage({ params }: PageProps) {
       <Navbar />
       <div className="pt-16">
         <div className="max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-11 pt-4 pb-8">
+
+          {/* Search stays reachable from the detail page; filters behind a toggle */}
+          <div className="mb-4">
+            <HymnSearchFilters
+              categories={filterData.categories}
+              subCategories={filterData.subCategories}
+              languages={filterData.languages}
+              singers={filterData.singers}
+              singersByLanguage={filterData.singersByLanguage}
+              collapsible
+            />
+          </div>
 
           {/* Main content: side-by-side on desktop */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_402px] gap-6 items-start">
