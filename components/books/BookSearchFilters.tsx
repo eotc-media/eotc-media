@@ -29,7 +29,6 @@ export default function BookSearchFilters({
   const activeLanguage = searchParams.get("language") ?? ""
   const activeCategory = searchParams.get("category") ?? ""
   const activeSubCategory = searchParams.get("subCategory") ?? ""
-  const activeSort = searchParams.get("sort") ?? ""
   const activeSearch = searchParams.get("search") ?? ""
 
   const [searchValue, setSearchValue] = useState(activeSearch)
@@ -88,16 +87,11 @@ export default function BookSearchFilters({
     { value: "_", label: t("book_select_subcategory") },
     ...visibleSubCategories.map(sc => ({ value: String(sc.id), label: sc.name })),
   ]
-  const sortOptions = [
-    { value: "newest", label: t("sort_newest_first") },
-    { value: "oldest", label: t("sort_oldest_first") },
-    { value: "popular", label: t("sort_most_liked") },
-    { value: "title", label: t("sort_name_az") },
-  ]
+
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      <div className="relative w-full sm:flex-1 sm:min-w-[150px] sm:max-w-[240px]">
+      <div className="relative w-full sm:flex-1 sm:min-w-[150px] sm:max-w-[480px]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
         <input
           type="text"
@@ -132,12 +126,6 @@ export default function BookSearchFilters({
           searchable
           searchPlaceholder={t("search_placeholder")}
           className="w-full sm:w-[185px]"
-        />
-        <ScrollableSelect
-          value={activeSort || "newest"}
-          onValueChange={raw => applyFilter("sort", raw === "newest" ? "" : raw)}
-          options={sortOptions}
-          className="w-full sm:w-[160px]"
         />
       </div>
     </div>

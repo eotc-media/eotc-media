@@ -113,7 +113,7 @@ export default function HymnSearchFilters({
   const activeFilterCount = [activeLanguage, activeCategory, isSingerMode ? activeSinger : activeSubCategory].filter(Boolean).length
 
   const searchBox = (
-    <div className={`relative ${collapsible ? "flex-1 min-w-0" : "w-full sm:flex-1 sm:min-w-[150px] sm:max-w-[240px]"}`}>
+    <div className="relative flex-1 min-w-0 sm:min-w-[150px] sm:max-w-[480px]">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
       <input
         type="text"
@@ -135,7 +135,7 @@ export default function HymnSearchFilters({
         options={languageOptions}
         searchable
         searchPlaceholder={t("search_placeholder")}
-        className={collapsible ? "w-full" : "w-full sm:w-[145px]"}
+        className="w-full sm:w-[145px]"
       />
       <ScrollableSelect
         value={activeCategory || "_"}
@@ -143,7 +143,7 @@ export default function HymnSearchFilters({
         options={categoryOptions}
         searchable
         searchPlaceholder={t("search_placeholder")}
-        className={collapsible ? "w-full" : "w-full sm:w-[185px]"}
+        className="w-full sm:w-[185px]"
       />
       <ScrollableSelect
         value={(isSingerMode ? activeSinger : activeSubCategory) || "_"}
@@ -151,7 +151,7 @@ export default function HymnSearchFilters({
         options={thirdOptions}
         searchable
         searchPlaceholder={t("search_placeholder")}
-        className={collapsible ? "w-full" : "w-full sm:w-[185px]"}
+        className="w-full sm:w-[185px]"
       />
     </>
   )
@@ -161,29 +161,27 @@ export default function HymnSearchFilters({
   if (collapsible) {
     return (
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:flex-wrap">
           {searchBox}
           <button
             onClick={() => setShowFilters(v => !v)}
-            className={`flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex-shrink-0 ${
+            className={`sm:hidden flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex-shrink-0 ${
               showFilters || activeFilterCount > 0
                 ? "bg-blue-50 border-blue-200 text-blue-700"
                 : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{t("filters_btn")}</span>
             {activeFilterCount > 0 && (
               <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-white text-[10px] font-semibold">
                 {activeFilterCount}
               </span>
             )}
           </button>
+          <div className="hidden sm:contents">{dropdowns}</div>
         </div>
         {showFilters && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {dropdowns}
-          </div>
+          <div className="grid grid-cols-3 gap-2 sm:hidden">{dropdowns}</div>
         )}
       </div>
     )

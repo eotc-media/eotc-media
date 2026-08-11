@@ -1,9 +1,18 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import BookCard from "./BookCard"
 import { CbBook } from "@/types/models/book"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useLocale } from "@/lib/i18n/LocaleContext"
 
 interface BookInfiniteGridProps {
   initialBooks: CbBook[]
@@ -20,6 +29,21 @@ export default function BookInfiniteGrid({
   filters = {},
   basePath = "/books",
 }: BookInfiniteGridProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { t } = useLocale()
+  const activeSort = searchParams.get("sort") ?? "newest"
+
+  // Sorting lives with the result count, the way hymns and sermons do it,
+  // rather than as another dropdown in the filter row.
+  function applySort(value: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("page")
+    if (value === "newest") params.delete("sort")
+    else params.set("sort", value)
+    router.push(`${basePath}?${params.toString()}`)
+  }
+
   const [books, setBooks] = useState<CbBook[]>(initialBooks)
   const [page, setPage] = useState(1)
   const [totalPages] = useState(initialTotalPages)
@@ -65,7 +89,23 @@ export default function BookInfiniteGrid({
 
   return (
     <div>
-      <p className="text-xs text-slate-400 mb-4">{initialTotal} book{initialTotal !== 1 ? "s" : ""}</p>
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <p className="text-xs text-slate-400">
+          {initialTotal.toLocaleString()} book{initialTotal !== 1 ? "s" : ""}
+        </p>
+        <span className="text-slate-300 text-xs select-none">|</span>
+        <Select value={activeSort} onValueChange={applySort}>
+          <SelectTrigger className="h-6 text-xs w-auto min-w-0 bg-transparent border-0 shadow-none px-0 focus:ring-0 text-slate-400 cursor-pointer gap-1">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">{t("sort_newest_first")}</SelectItem>
+            <SelectItem value="oldest">{t("sort_oldest_first")}</SelectItem>
+            <SelectItem value="popular">{t("sort_most_liked")}</SelectItem>
+            <SelectItem value="title">{t("sort_name_az")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {books.map(book => (
           <BookCard key={book.id} book={book} />
