@@ -274,7 +274,7 @@ export const translations = {
     // ── Search & filters (generic) ───────────────
     search_placeholder: "ፈልግ…",
     filters_btn:        "ማጣሪያዎች",
-    sort_random:        "በዘፈቀደ",
+    sort_random:        "ልዩ ልዩ",
     filter_all:         "ሁሉም",
     filter_language:    "ቋንቋ",
     filter_category:    "ምድብ",
