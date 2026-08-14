@@ -29,6 +29,7 @@ interface HymnInfiniteGridProps {
     channel?: string
     collection?: string
     sort?: string
+    seed?: string
   }
   userId?: number
 }
@@ -79,6 +80,7 @@ export default function HymnInfiniteGrid({
       if (filters.channel) params.set("channel", filters.channel)
       if (filters.collection) params.set("collection", filters.collection)
       if (filters.sort) params.set("sort", filters.sort)
+      if (filters.seed) params.set("seed", filters.seed)
 
       const res = await fetch(`/api/hymns?${params.toString()}`)
       if (!res.ok) return
@@ -110,6 +112,10 @@ export default function HymnInfiniteGrid({
     params.delete("page")
     if (value === "trending") params.delete("sort")
     else params.set("sort", value)
+    // A fresh seed each time Random is chosen, so picking it again reshuffles;
+    // keeping it in the URL is what makes paging through one shuffle stable.
+    if (value === "random") params.set("seed", Math.random().toString(36).slice(2, 10))
+    else params.delete("seed")
     // Stay on the current page (main list, singer, channel, favorites,
     // collection…) instead of always jumping back to /hymns.
     const query = params.toString()
@@ -127,6 +133,7 @@ export default function HymnInfiniteGrid({
     if (filters.collection) params.set("collection", filters.collection)
     if (filters.search) params.set("search", filters.search)
     if (filters.sort) params.set("sort", filters.sort)
+    if (filters.seed) params.set("seed", filters.seed)
     const q = params.toString()
     return `/hymns/play-all${q ? `?${q}` : ""}`
   }
@@ -159,6 +166,7 @@ export default function HymnInfiniteGrid({
               <SelectItem value="date-asc">{t("sort_oldest_first")}</SelectItem>
               <SelectItem value="clicks-desc">{t("sort_most_clicked")}</SelectItem>
               <SelectItem value="clicks-asc">{t("sort_least_clicked")}</SelectItem>
+              <SelectItem value="random">{t("sort_random")}</SelectItem>
             </SelectContent>
           </Select>
           {initialTotal >= 1 && initialTotal <= 200 && (

@@ -37,11 +37,12 @@ interface PageProps {
     language?: string
     singer?: string
     sort?: string
+    seed?: string
   }>
 }
 
 export default async function HymnsPage({ searchParams }: PageProps) {
-  const { search, category, subCategory, language, singer, sort } = await searchParams
+  const { search, category, subCategory, language, singer, sort, seed } = await searchParams
 
   const categoryId = category ? parseInt(category) || undefined : undefined
   const subCategoryId = subCategory ? parseInt(subCategory) || undefined : undefined
@@ -52,7 +53,7 @@ export default async function HymnsPage({ searchParams }: PageProps) {
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
 
   const [{ hymns, total }, { categories, subCategories, languages, singers, singersByLanguage }, featuredRecords] = await Promise.all([
-    getHymns({ categoryId, subCategoryId, languageId, singerId, userId, search, sort }),
+    getHymns({ categoryId, subCategoryId, languageId, singerId, userId, search, sort, seed }),
     getHymnsFilterData(),
     prisma.featuredItem.findMany({ where: { moduleType: "hymn" }, orderBy: { orderBy: "asc" } }),
   ])
@@ -101,7 +102,7 @@ export default async function HymnsPage({ searchParams }: PageProps) {
               initialHymns={hymns}
               initialTotal={total}
               initialTotalPages={totalPages}
-              filters={{ search, category, subCategory, language, singer, sort }}
+              filters={{ search, category, subCategory, language, singer, sort, seed }}
               userId={userId}
             />
           </main>

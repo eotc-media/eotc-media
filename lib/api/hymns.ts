@@ -5,6 +5,29 @@ import { HmHymn, HmCategory, HmSubCategory, HmLanguage, HmSinger, HmComment } fr
 
 const PAGE_SIZE = 24
 
+// Deterministic shuffle. Random ordering has to stay stable across pages, or
+// infinite scroll reshuffles on every fetch and repeats or skips hymns; the seed
+// travels in the URL so a given listing keeps one order until it is re-rolled.
+function seededShuffle<T>(items: T[], seed: string): T[] {
+  let h = 2166136261
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  const next = () => {
+    h += 0x6d2b79f5
+    let x = Math.imul(h ^ (h >>> 15), 1 | h)
+    x ^= x + Math.imul(x ^ (x >>> 7), 61 | x)
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296
+  }
+  const out = [...items]
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1))
+    ;[out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
+}
+
 function mapHymn(raw: {
   id: number
   slug: string
@@ -117,6 +140,7 @@ export async function getHymns({
   sort,
   itemIds,
   collectionId,
+  seed,
 }: {
   page?: number
   limit?: number
@@ -131,6 +155,7 @@ export async function getHymns({
   sort?: string
   itemIds?: number[]
   collectionId?: number
+  seed?: string
 } = {}): Promise<{ hymns: HmHymn[]; total: number }> {
   const where: Record<string, unknown> = {}
 
@@ -206,6 +231,19 @@ export async function getHymns({
         .sort((a, b) => b.score - a.score)
       total = scored.length
       const pageIds = scored.slice((page - 1) * limit, page * limit).map(s => s.id)
+      if (pageIds.length > 0) {
+        const idOrder = new Map(pageIds.map((id, idx) => [id, idx]))
+        const fetched = await prisma.hmHymn.findMany({
+          where: { id: { in: pageIds } },
+          include: hymnIncludeBase,
+        })
+        raws = fetched.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0))
+      }
+    } else if (sort === 'random') {
+      const candidates = await prisma.hmHymn.findMany({ where, select: { id: true } })
+      total = candidates.length
+      const shuffled = seededShuffle(candidates.map(c => c.id), seed ?? 'default')
+      const pageIds = shuffled.slice((page - 1) * limit, page * limit)
       if (pageIds.length > 0) {
         const idOrder = new Map(pageIds.map((id, idx) => [id, idx]))
         const fetched = await prisma.hmHymn.findMany({

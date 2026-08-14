@@ -19,11 +19,12 @@ interface PageProps {
     collection?: string
     search?: string
     sort?: string
+    seed?: string
   }>
 }
 
 export default async function PlayAllPage({ searchParams }: PageProps) {
-  const { view, language, category, subCategory, singer, channel, collection, search, sort } = await searchParams
+  const { view, language, category, subCategory, singer, channel, collection, search, sort, seed } = await searchParams
 
   const session = await auth()
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
@@ -44,7 +45,7 @@ export default async function PlayAllPage({ searchParams }: PageProps) {
     })
     if (!col || col.hymns.length === 0) notFound()
     const itemIds = col.hymns.map(h => h.hymnId)
-    const { hymns } = await getHymns({ itemIds, sort, userId, limit: 200 })
+    const { hymns } = await getHymns({ itemIds, sort, seed, userId, limit: 200 })
     if (hymns.length === 0) notFound()
     return (
       <div className="min-h-screen bg-white">
@@ -67,6 +68,7 @@ export default async function PlayAllPage({ searchParams }: PageProps) {
     channelId,
     search,
     sort,
+    seed,
     userId,
   })
 

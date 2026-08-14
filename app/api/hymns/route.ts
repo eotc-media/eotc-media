@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   const collectionId = searchParams.get('collection') ? parseInt(searchParams.get('collection')!) || undefined : undefined
   const search = searchParams.get('search') || undefined
   const sort = searchParams.get('sort') || undefined
+  const seed = searchParams.get('seed') || undefined
   const view = searchParams.get('view') || undefined
 
   let userId: number | undefined
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
     userId = parseInt(session.user.id)
   }
 
-  const { hymns, total } = await getHymns({ page, categoryId, subCategoryId, languageId, singerId, channelId, search, sort, view, userId, collectionId })
+  const { hymns, total } = await getHymns({ page, categoryId, subCategoryId, languageId, singerId, channelId, search, sort, view, userId, collectionId, seed })
   const totalPages = Math.ceil(total / 24)
 
   return NextResponse.json({ hymns, total, page, totalPages })
