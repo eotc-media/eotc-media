@@ -1,19 +1,35 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-// Supports both GET (curl from cPanel) and POST
+// Runs once a day (see vercel.json). Vercel Cron sends the secret as
+// `Authorization: Bearer $CRON_SECRET`; the ?token= form is kept so the job can
+// also be triggered by hand for testing.
+//
+// The path is public knowledge — vercel.json lives in a public repo — and the
+// endpoint gets probed roughly once a minute by automated traffic. Every one of
+// those is rejected below before any database work happens, and answered with
+// 404 rather than 401 so the endpoint reads as nonexistent rather than as a
+// guarded thing worth retrying.
+
 export async function GET(req: NextRequest) { return run(req) }
 export async function POST(req: NextRequest) { return run(req) }
 
+const notFound = () => NextResponse.json({ error: "Not found" }, { status: 404 })
+
 async function run(req: NextRequest) {
-  // Auth: bearer header OR ?token= query param
+  const expected = process.env.CRON_SECRET
+  if (!expected) {
+    // Misconfiguration, not an intruder — say so in the logs, since otherwise a
+    // silently non-running job looks identical to a working one.
+    console.error("[cron/daily-stats] CRON_SECRET is not set; refusing to run.")
+    return notFound()
+  }
+
   const authHeader = req.headers.get("authorization") ?? ""
   const tokenParam = new URL(req.url).searchParams.get("token") ?? ""
-  const secret = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : tokenParam
+  const provided = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : tokenParam
 
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  if (provided !== expected) return notFound()
 
   // Today (UTC date, time stripped)
   const today = new Date()
@@ -43,9 +59,16 @@ async function run(req: NextRequest) {
     create: { date: today,     hymnTotalClicks, hymnDailyClicks, sermonTotalClicks, sermonDailyClicks },
   })
 
+  // One line per successful run, so "did it run?" is answerable from the logs
+  // without reading the table.
+  const date = today.toISOString().split("T")[0]
+  console.log(
+    `[cron/daily-stats] ok ${date} hymns=${hymnTotalClicks} (+${hymnDailyClicks}) sermons=${sermonTotalClicks} (+${sermonDailyClicks})`
+  )
+
   return NextResponse.json({
     ok: true,
-    date: today.toISOString().split("T")[0],
+    date,
     hymnTotalClicks,
     hymnDailyClicks,
     sermonTotalClicks,
