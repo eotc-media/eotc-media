@@ -383,13 +383,32 @@ export async function getRelatedHymns(
   const { hymnId, categoryIds, subCategoryIds, languageIds, channelId, singerIds, userId } = ctx
 
   const exclude = { id: { not: hymnId } }
-  const hymnInclude = {
-    categories: { include: { category: true } },
-    subCategories: { include: { subCategory: true } },
-    languages: { include: { language: true } },
-    singers: { include: { singer: true } },
-    channel: true,
+
+  // Scoring only needs ids and a few numbers. Hydrating the whole candidate
+  // pool — 120 hymns with every category, sub-category, language, singer and
+  // channel row attached — was by far the heaviest query in the app, and all
+  // but `limit` of those rows were then discarded.
+  const candidateSelect = {
+    id: true,
+    channelId: true,
+    clicksCount: true,
+    createdAt: true,
+    categories: { select: { categoryId: true } },
+    subCategories: { select: { subCategoryId: true } },
+    languages: { select: { languageId: true } },
+    singers: { select: { singerId: true } },
   } as const
+
+  type Candidate = {
+    id: number
+    channelId: number | null
+    clicksCount: number
+    createdAt: Date
+    categories: { categoryId: number }[]
+    subCategories: { subCategoryId: number }[]
+    languages: { languageId: number }[]
+    singers: { singerId: number }[]
+  }
 
   const hasContentSignals = categoryIds.length > 0 || subCategoryIds.length > 0
 
@@ -411,16 +430,16 @@ export async function getRelatedHymns(
           },
           take: 80,
           orderBy: { clicksCount: 'desc' },
-          include: hymnInclude,
+          select: candidateSelect,
         })
-      : Promise.resolve([] as Awaited<ReturnType<typeof prisma.hmHymn.findMany<{ include: typeof hymnInclude }>>>),
+      : Promise.resolve([] as Candidate[]),
 
     // Top-clicked hymns for popularity/diversity fill
     prisma.hmHymn.findMany({
       where: exclude,
       take: 40,
       orderBy: { clicksCount: 'desc' },
-      include: hymnInclude,
+      select: candidateSelect,
     }),
 
     // User taste from recent favorites (personalisation)
@@ -457,8 +476,8 @@ export async function getRelatedHymns(
 
   // Merge pools, content candidates first (they're higher relevance)
   const seen = new Set<number>()
-  const pool: typeof popularPool = []
-  for (const h of [...contentPool, ...popularPool]) {
+  const pool: Candidate[] = []
+  for (const h of [...contentPool, ...popularPool] as Candidate[]) {
     if (!seen.has(h.id)) { seen.add(h.id); pool.push(h) }
   }
 
@@ -497,5 +516,49 @@ export async function getRelatedHymns(
   })
 
   const sampled = weightedSample(scored.map(s => ({ item: s.hymn, score: s.score })), limit)
-  return sampled.map(mapHymn)
+  if (sampled.length === 0) return []
+
+  // Only the survivors get their display data fetched. These are rendered as
+  // cards, so the long text columns (lyrics, suggestions, description) are left
+  // out entirely rather than shipped and ignored.
+  const chosenIds = sampled.map(s => s.id)
+  const rows = await prisma.hmHymn.findMany({
+    where: { id: { in: chosenIds } },
+    select: {
+      id: true,
+      slug: true,
+      videoId: true,
+      title: true,
+      singer: true,
+      thumbnailDefault: true,
+      thumbnailMedium: true,
+      thumbnailHigh: true,
+      thumbnailStandard: true,
+      thumbnailMaxres: true,
+      clicksCount: true,
+      publishedAt: true,
+      createdAt: true,
+      updatedAt: true,
+      channel: { select: { id: true, title: true, slug: true, handle: true, thumbnailDefault: true, thumbnailMedium: true, thumbnailHigh: true } },
+      singers: { select: { singer: { select: { id: true, name: true } } } },
+    },
+  })
+
+  const byId = new Map(rows.map(r => [r.id, r]))
+  return chosenIds.flatMap(id => {
+    const r = byId.get(id)
+    if (!r) return []
+    return [{
+      ...r,
+      lyrics: null,
+      lyricsSuggestion: null,
+      aiLyrics: null,
+      description: null,
+      categories: [],
+      subCategories: [],
+      languages: [],
+      singers: r.singers.map(s => s.singer),
+      channel: r.channel ?? undefined,
+    } as HmHymn]
+  })
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { sanitizeHtml } from '@/lib/sanitize-html'
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -29,10 +30,10 @@ export async function POST(req: NextRequest) {
       approvalStatusId: submittedStatus.id,
       typeId: parseInt(String(typeId)),
       difficultyId: difficultyId ? parseInt(String(difficultyId)) : null,
-      questionText: questionText.trim(),
+      questionText: sanitizeHtml(questionText.trim()),
       choices: {
         create: choices.map((c: { choiceText: string; isCorrect: boolean }) => ({
-          choiceText: c.choiceText.trim(),
+          choiceText: sanitizeHtml(c.choiceText.trim()),
           isCorrect: !!c.isCorrect,
         })),
       },

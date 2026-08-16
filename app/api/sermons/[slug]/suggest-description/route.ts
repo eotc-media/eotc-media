@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { sanitizeHtml } from '@/lib/sanitize-html'
 
 export async function POST(
   req: NextRequest,
@@ -22,7 +23,7 @@ export async function POST(
 
   await prisma.smSermon.update({
     where: { id: sermonId },
-    data: { descriptionSuggestion: description },
+    data: { descriptionSuggestion: sanitizeHtml(description) },
   })
 
   return NextResponse.json({ success: true })

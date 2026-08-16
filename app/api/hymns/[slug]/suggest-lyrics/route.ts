@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { sanitizeHtml } from '@/lib/sanitize-html'
 
 export async function POST(
   req: NextRequest,
@@ -22,7 +23,7 @@ export async function POST(
 
   await prisma.hmHymn.update({
     where: { id: hymnId },
-    data: { lyricsSuggestion: lyrics },
+    data: { lyricsSuggestion: sanitizeHtml(lyrics) },
   })
 
   return NextResponse.json({ success: true })
