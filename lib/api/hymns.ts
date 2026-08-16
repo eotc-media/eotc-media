@@ -28,16 +28,19 @@ function seededShuffle<T>(items: T[], seed: string): T[] {
   return out
 }
 
+// The four long-text fields are optional: list and grid views select only what a
+// card renders, so they arrive undefined there and are mapped to null. Only the
+// detail page asks for them.
 function mapHymn(raw: {
   id: number
   slug: string
   videoId: string
   title: string
   singer: string | null
-  lyrics: string | null
-  lyricsSuggestion: string | null
-  aiLyrics: string | null
-  description: string | null
+  lyrics?: string | null
+  lyricsSuggestion?: string | null
+  aiLyrics?: string | null
+  description?: string | null
   thumbnailDefault: string
   thumbnailMedium: string
   thumbnailHigh: string
@@ -60,10 +63,10 @@ function mapHymn(raw: {
     videoId: raw.videoId,
     title: raw.title,
     singer: raw.singer,
-    lyrics: raw.lyrics,
-    lyricsSuggestion: raw.lyricsSuggestion,
-    aiLyrics: raw.aiLyrics,
-    description: raw.description,
+    lyrics: raw.lyrics ?? null,
+    lyricsSuggestion: raw.lyricsSuggestion ?? null,
+    aiLyrics: raw.aiLyrics ?? null,
+    description: raw.description ?? null,
     thumbnailDefault: raw.thumbnailDefault,
     thumbnailMedium: raw.thumbnailMedium,
     thumbnailHigh: raw.thumbnailHigh,
@@ -82,7 +85,7 @@ function mapHymn(raw: {
       title: raw.channel.title,
       slug: raw.channel.slug,
       handle: raw.channel.handle,
-      description: raw.channel.description,
+      description: raw.channel.description ?? null,
       thumbnailDefault: raw.channel.thumbnailDefault,
       thumbnailMedium: raw.channel.thumbnailMedium,
       thumbnailHigh: raw.channel.thumbnailHigh,
@@ -141,6 +144,7 @@ export async function getHymns({
   itemIds,
   collectionId,
   seed,
+  withText = false,
 }: {
   page?: number
   limit?: number
@@ -156,6 +160,10 @@ export async function getHymns({
   itemIds?: number[]
   collectionId?: number
   seed?: string
+  /** Play-all builds a queue whose player shows lyrics for the current track,
+   *  so it is the one caller that needs the long-text columns. Everything else
+   *  renders cards and must leave this off. */
+  withText?: boolean
 } = {}): Promise<{ hymns: HmHymn[]; total: number }> {
   const where: Record<string, unknown> = {}
 
@@ -201,16 +209,47 @@ export async function getHymns({
     ]
   }
 
-  const hymnIncludeBase = {
-    categories: { include: { category: true } },
-    subCategories: { include: { subCategory: true } },
-    languages: { include: { language: true } },
-    singers: { include: { singer: true } },
-    channel: true,
-    ...(view === 'my-hymns' ? { approvalStatus: true } : {}),
+  // A card shows a thumbnail, title, singer, channel and badges — never a body
+  // of text. `include` would have fetched every column, and hm_hymns carries
+  // four TEXT columns (lyrics, lyrics_suggestion, ai_lyrics, description) plus a
+  // channel row with its own TEXT keywords. At 24 cards a page that was by far
+  // the largest thing this app pulled out of the database, and none of it was
+  // ever rendered. Name the columns instead.
+  const hymnCardSelect = {
+    id: true,
+    slug: true,
+    videoId: true,
+    title: true,
+    singer: true,
+    thumbnailDefault: true,
+    thumbnailMedium: true,
+    thumbnailHigh: true,
+    thumbnailStandard: true,
+    thumbnailMaxres: true,
+    clicksCount: true,
+    publishedAt: true,
+    createdAt: true,
+    updatedAt: true,
+    categories:    { select: { category:    { select: { id: true, name: true } } } },
+    subCategories: { select: { subCategory: { select: { id: true, name: true, categoryId: true } } } },
+    languages:     { select: { language:    { select: { id: true, name: true } } } },
+    singers:       { select: { singer:      { select: { id: true, name: true } } } },
+    channel: {
+      select: {
+        id: true, title: true, slug: true, handle: true,
+        thumbnailDefault: true, thumbnailMedium: true, thumbnailHigh: true,
+        coverImage: true, publishedAt: true,
+      },
+    },
+    ...(view === 'my-hymns'
+      ? { approvalStatus: { select: { id: true, name: true } } }
+      : {}),
+    ...(withText
+      ? { lyrics: true, lyricsSuggestion: true, aiLyrics: true, description: true }
+      : {}),
   } as const
 
-  let raws: Awaited<ReturnType<typeof prisma.hmHymn.findMany>> = []
+  let raws: Parameters<typeof mapHymn>[0][] = []
   let total = 0
 
   try {
@@ -235,7 +274,7 @@ export async function getHymns({
         const idOrder = new Map(pageIds.map((id, idx) => [id, idx]))
         const fetched = await prisma.hmHymn.findMany({
           where: { id: { in: pageIds } },
-          include: hymnIncludeBase,
+          select: hymnCardSelect,
         })
         raws = fetched.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0))
       }
@@ -248,7 +287,7 @@ export async function getHymns({
         const idOrder = new Map(pageIds.map((id, idx) => [id, idx]))
         const fetched = await prisma.hmHymn.findMany({
           where: { id: { in: pageIds } },
-          include: hymnIncludeBase,
+          select: hymnCardSelect,
         })
         raws = fetched.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0))
       }
@@ -264,7 +303,7 @@ export async function getHymns({
           orderBy,
           skip: (page - 1) * limit,
           take: limit,
-          include: hymnIncludeBase,
+          select: hymnCardSelect,
         }),
         prisma.hmHymn.count({ where }),
       ])

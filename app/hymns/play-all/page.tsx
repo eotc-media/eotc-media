@@ -45,7 +45,7 @@ export default async function PlayAllPage({ searchParams }: PageProps) {
     })
     if (!col || col.hymns.length === 0) notFound()
     const itemIds = col.hymns.map(h => h.hymnId)
-    const { hymns } = await getHymns({ itemIds, sort, seed, userId, limit: 200 })
+    const { hymns } = await getHymns({ itemIds, sort, seed, userId, limit: 200, withText: true })
     if (hymns.length === 0) notFound()
     return (
       <div className="min-h-screen bg-white">
@@ -70,6 +70,7 @@ export default async function PlayAllPage({ searchParams }: PageProps) {
     sort,
     seed,
     userId,
+    withText: true,
   })
 
   if (hymns.length === 0) notFound()

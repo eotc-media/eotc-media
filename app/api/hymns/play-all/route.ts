@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
     sort,
     search,
     userId,
+    withText: true,
   })
 
   return NextResponse.json({ hymns })

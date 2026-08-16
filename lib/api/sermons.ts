@@ -5,13 +5,16 @@ import { SmSermon, SmCategory, SmSubCategory, SmLanguage, SmPreacher } from '@/t
 
 const PAGE_SIZE = 24
 
+// `description` is optional: list and grid views select only what a card
+// renders, so it arrives undefined there and is mapped to null. Only the detail
+// page asks for it.
 function mapSermon(raw: {
   id: number
   slug: string
   videoId: string
   title: string
   preacher: string | null
-  description: string | null
+  description?: string | null
   thumbnailDefault: string
   thumbnailMedium: string
   thumbnailHigh: string
@@ -34,7 +37,7 @@ function mapSermon(raw: {
     videoId: raw.videoId,
     title: raw.title,
     preacher: raw.preacher,
-    description: raw.description,
+    description: raw.description ?? null,
     thumbnailDefault: raw.thumbnailDefault,
     thumbnailMedium: raw.thumbnailMedium,
     thumbnailHigh: raw.thumbnailHigh,
@@ -53,7 +56,7 @@ function mapSermon(raw: {
       name: raw.channel.name,
       slug: raw.channel.slug,
       handle: raw.channel.handle,
-      description: raw.channel.description,
+      description: raw.channel.description ?? null,
       thumbnailDefault: raw.channel.thumbnailDefault,
       thumbnailMedium: raw.channel.thumbnailMedium,
       thumbnailHigh: raw.channel.thumbnailHigh,
@@ -167,20 +170,47 @@ export async function getSermons({
     sort === 'clicks-asc' ? { clicksCount: 'asc' as const } :
                             { clicksCount: 'desc' as const }
 
+  // Named columns rather than `include`: a card never shows the description or
+  // the moderator's description_suggestion, and both are TEXT. See the matching
+  // note in lib/api/hymns.ts.
+  const sermonCardSelect = {
+    id: true,
+    slug: true,
+    videoId: true,
+    title: true,
+    preacher: true,
+    thumbnailDefault: true,
+    thumbnailMedium: true,
+    thumbnailHigh: true,
+    thumbnailStandard: true,
+    thumbnailMaxres: true,
+    clicksCount: true,
+    publishedAt: true,
+    createdAt: true,
+    updatedAt: true,
+    categories:    { select: { category:    { select: { id: true, name: true } } } },
+    subCategories: { select: { subCategory: { select: { id: true, name: true, categoryId: true } } } },
+    languages:     { select: { language:    { select: { id: true, name: true } } } },
+    preachers:     { select: { preacher:    { select: { id: true, name: true } } } },
+    channel: {
+      select: {
+        id: true, name: true, slug: true, handle: true,
+        thumbnailDefault: true, thumbnailMedium: true, thumbnailHigh: true,
+        coverImage: true, publishedAt: true,
+      },
+    },
+    ...(view === 'my-sermons'
+      ? { approvalStatus: { select: { id: true, name: true } } }
+      : {}),
+  } as const
+
   const [raws, total] = await Promise.all([
     prisma.smSermon.findMany({
       where,
       orderBy,
       skip: (page - 1) * limit,
       take: limit,
-      include: {
-        categories: { include: { category: true } },
-        subCategories: { include: { subCategory: true } },
-        languages: { include: { language: true } },
-        preachers: { include: { preacher: true } },
-        channel: true,
-        ...(view === 'my-sermons' ? { approvalStatus: true } : {}),
-      },
+      select: sermonCardSelect,
     }),
     prisma.smSermon.count({ where }),
   ])
@@ -247,14 +277,37 @@ export async function getRelatedSermons(
   if (categoryIds.length > 0) {
     where.categories = { some: { categoryId: { in: categoryIds } } }
   }
+  // Recommendation strip — thumbnail, title, preacher. Selecting the TEXT
+  // columns here meant every sermon page pulled a dozen full descriptions it
+  // then threw away.
   const raws = await prisma.smSermon.findMany({
     where,
     take: limit,
     orderBy: { createdAt: 'desc' },
-    include: {
-      categories: { include: { category: true } },
-      preachers: { include: { preacher: true } },
-      channel: true,
+    select: {
+      id: true,
+      slug: true,
+      videoId: true,
+      title: true,
+      preacher: true,
+      thumbnailDefault: true,
+      thumbnailMedium: true,
+      thumbnailHigh: true,
+      thumbnailStandard: true,
+      thumbnailMaxres: true,
+      clicksCount: true,
+      publishedAt: true,
+      createdAt: true,
+      updatedAt: true,
+      categories: { select: { category: { select: { id: true, name: true } } } },
+      preachers:  { select: { preacher: { select: { id: true, name: true } } } },
+      channel: {
+        select: {
+          id: true, name: true, slug: true, handle: true,
+          thumbnailDefault: true, thumbnailMedium: true, thumbnailHigh: true,
+          coverImage: true, publishedAt: true,
+        },
+      },
     },
   })
   return raws.map(mapSermon)
