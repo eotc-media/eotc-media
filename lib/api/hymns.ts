@@ -1,9 +1,15 @@
+import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { sortLanguages } from '@/lib/language-order'
 import { HmHymn, HmCategory, HmSubCategory, HmLanguage, HmSinger, HmComment } from '@/types/models/hymn'
 
 const PAGE_SIZE = 24
+
+// Size of the two windows the trending sort ranks over. Between them they hold
+// ~33 pages, far past where anyone scrolls a ranked feed.
+const TRENDING_CLICKS_POOL = 600
+const TRENDING_RECENT_POOL = 200
 
 // Deterministic shuffle. Random ordering has to stay stable across pages, or
 // infinite scroll reshuffles on every fetch and repeats or skips hymns; the seed
@@ -95,6 +101,60 @@ function mapHymn(raw: {
     approvalStatus: raw.approvalStatus ?? undefined,
   }
 }
+
+// Column sets for the list queries. `include` fetches every scalar, and
+// hm_hymns carries four TEXT columns (lyrics, lyrics_suggestion, ai_lyrics,
+// description) plus a channel row with its own TEXT keywords — at 24 cards a
+// page that was the largest thing this app pulled out of the database, and a
+// card renders none of it.
+//
+// These are three separate literals rather than one object with conditional
+// spreads because a spread of a ternary widens the type and Prisma then infers
+// relations as bare join rows instead of the nested shape.
+const HYMN_CARD_SELECT = {
+  id: true,
+  slug: true,
+  videoId: true,
+  title: true,
+  singer: true,
+  thumbnailDefault: true,
+  thumbnailMedium: true,
+  thumbnailHigh: true,
+  thumbnailStandard: true,
+  thumbnailMaxres: true,
+  clicksCount: true,
+  publishedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  // HymnCard shows the singer. It shows no categories, subcategories or
+  // languages, and each of those is a separate round trip.
+  singers: { select: { singer: { select: { id: true, name: true } } } },
+  channel: {
+    select: {
+      id: true, title: true, slug: true, handle: true,
+      thumbnailDefault: true, thumbnailMedium: true, thumbnailHigh: true,
+      coverImage: true, publishedAt: true,
+    },
+  },
+} as const
+
+/** my-hymns renders a table of taxonomy names and the moderation status. */
+const HYMN_MY_LIST_SELECT = {
+  ...HYMN_CARD_SELECT,
+  approvalStatus: { select: { id: true, name: true } },
+  categories:     { select: { category:    { select: { id: true, name: true } } } },
+  subCategories:  { select: { subCategory: { select: { id: true, name: true, categoryId: true } } } },
+  languages:      { select: { language:    { select: { id: true, name: true } } } },
+} as const
+
+/** play-all's player shows lyrics for the current track. */
+const HYMN_QUEUE_SELECT = {
+  ...HYMN_CARD_SELECT,
+  lyrics: true,
+  lyricsSuggestion: true,
+  aiLyrics: true,
+  description: true,
+} as const
 
 // Filter data (categories/subcategories/languages/singers) is identical for
 // every user and changes only via admin edits, so cache it across requests.
@@ -209,56 +269,48 @@ export async function getHymns({
     ]
   }
 
-  // A card shows a thumbnail, title, singer, channel and badges — never a body
-  // of text. `include` would have fetched every column, and hm_hymns carries
-  // four TEXT columns (lyrics, lyrics_suggestion, ai_lyrics, description) plus a
-  // channel row with its own TEXT keywords. At 24 cards a page that was by far
-  // the largest thing this app pulled out of the database, and none of it was
-  // ever rendered. Name the columns instead.
-  const hymnCardSelect = {
-    id: true,
-    slug: true,
-    videoId: true,
-    title: true,
-    singer: true,
-    thumbnailDefault: true,
-    thumbnailMedium: true,
-    thumbnailHigh: true,
-    thumbnailStandard: true,
-    thumbnailMaxres: true,
-    clicksCount: true,
-    publishedAt: true,
-    createdAt: true,
-    updatedAt: true,
-    categories:    { select: { category:    { select: { id: true, name: true } } } },
-    subCategories: { select: { subCategory: { select: { id: true, name: true, categoryId: true } } } },
-    languages:     { select: { language:    { select: { id: true, name: true } } } },
-    singers:       { select: { singer:      { select: { id: true, name: true } } } },
-    channel: {
-      select: {
-        id: true, title: true, slug: true, handle: true,
-        thumbnailDefault: true, thumbnailMedium: true, thumbnailHigh: true,
-        coverImage: true, publishedAt: true,
-      },
-    },
-    ...(view === 'my-hymns'
-      ? { approvalStatus: { select: { id: true, name: true } } }
-      : {}),
-    ...(withText
-      ? { lyrics: true, lyricsSuggestion: true, aiLyrics: true, description: true }
-      : {}),
-  } as const
+  // One branch per column set, so each findMany sees a literal select.
+  const fetchCards = (args: {
+    where: Record<string, unknown>
+    orderBy?: Record<string, 'asc' | 'desc' | undefined>
+    skip?: number
+    take?: number
+  }) =>
+    view === 'my-hymns' ? prisma.hmHymn.findMany({ ...args, select: HYMN_MY_LIST_SELECT }) :
+    withText            ? prisma.hmHymn.findMany({ ...args, select: HYMN_QUEUE_SELECT }) :
+                          prisma.hmHymn.findMany({ ...args, select: HYMN_CARD_SELECT })
 
   let raws: Parameters<typeof mapHymn>[0][] = []
   let total = 0
 
   try {
     if (!sort || sort === 'trending') {
-      // Compute click-velocity in memory: clicks / age-in-days
-      const candidates = await prisma.hmHymn.findMany({
-        where,
-        select: { id: true, clicksCount: true, publishedAt: true, createdAt: true },
-        orderBy: { clicksCount: 'desc' },
+      // Trending scores clicks-per-day in JavaScript, so every candidate row
+      // crosses the wire. Reading the whole catalogue to render 24 cards made
+      // the cost of the default sort grow with the library.
+      //
+      // Two bounded reads cover both ways a hymn can trend: heavily clicked, or
+      // new enough that modest clicks divide into a high rate. A hymn outside
+      // both windows cannot out-score the ones inside them.
+      const [byClicks, byRecency] = await Promise.all([
+        prisma.hmHymn.findMany({
+          where,
+          select: { id: true, clicksCount: true, publishedAt: true, createdAt: true },
+          orderBy: { clicksCount: 'desc' },
+          take: TRENDING_CLICKS_POOL,
+        }),
+        prisma.hmHymn.findMany({
+          where,
+          select: { id: true, clicksCount: true, publishedAt: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take: TRENDING_RECENT_POOL,
+        }),
+      ])
+      const seen = new Set<number>()
+      const candidates = [...byClicks, ...byRecency].filter(h => {
+        if (seen.has(h.id)) return false
+        seen.add(h.id)
+        return true
       })
       const now = Date.now()
       const scored = candidates
@@ -272,10 +324,7 @@ export async function getHymns({
       const pageIds = scored.slice((page - 1) * limit, page * limit).map(s => s.id)
       if (pageIds.length > 0) {
         const idOrder = new Map(pageIds.map((id, idx) => [id, idx]))
-        const fetched = await prisma.hmHymn.findMany({
-          where: { id: { in: pageIds } },
-          select: hymnCardSelect,
-        })
+        const fetched = await fetchCards({ where: { id: { in: pageIds } } })
         raws = fetched.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0))
       }
     } else if (sort === 'random') {
@@ -285,10 +334,7 @@ export async function getHymns({
       const pageIds = shuffled.slice((page - 1) * limit, page * limit)
       if (pageIds.length > 0) {
         const idOrder = new Map(pageIds.map((id, idx) => [id, idx]))
-        const fetched = await prisma.hmHymn.findMany({
-          where: { id: { in: pageIds } },
-          select: hymnCardSelect,
-        })
+        const fetched = await fetchCards({ where: { id: { in: pageIds } } })
         raws = fetched.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0))
       }
     } else {
@@ -298,13 +344,7 @@ export async function getHymns({
         sort === 'clicks-asc' ? { clicksCount: 'asc' as const } :
                                 { clicksCount: 'desc' as const }
       ;[raws, total] = await Promise.all([
-        prisma.hmHymn.findMany({
-          where,
-          orderBy,
-          skip: (page - 1) * limit,
-          take: limit,
-          select: hymnCardSelect,
-        }),
+        fetchCards({ where, orderBy, skip: (page - 1) * limit, take: limit }),
         prisma.hmHymn.count({ where }),
       ])
     }
@@ -327,14 +367,18 @@ export async function getHymns({
   return { hymns, total }
 }
 
-export async function getHymn(
+// Wrapped in React's per-request cache: the route calls this once in
+// generateMetadata and again in the page component, with identical arguments.
+// Without deduplication every hymn view fetched the full row — all four TEXT
+// columns — plus the entire comment thread twice.
+export const getHymn = cache(async (
   slug: string,
   userId?: number
 ): Promise<{
   hymn: HmHymn
   isFavorited: boolean
   comments: HmComment[]
-} | null> {
+} | null> => {
   const safeSlug = (() => { try { return decodeURIComponent(slug) } catch { return slug } })()
   let raw = await prisma.hmHymn.findUnique({
     where: { slug: safeSlug },
@@ -370,6 +414,9 @@ export async function getHymn(
       where: { hymnId: raw.id },
       include: { user: { select: { id: true, name: true, image: true } } },
       orderBy: { createdAt: 'desc' },
+      // Nothing paginates the thread, so an unbounded read is one spammed hymn
+      // away from dominating this page's egress. No hymn is near this today.
+      take: 200,
     }),
   ])
 
@@ -387,7 +434,7 @@ export async function getHymn(
     isFavorited: !!isFavoritedResult,
     comments,
   }
-}
+})
 
 function weightedSample<T>(items: { item: T; score: number }[], n: number): T[] {
   if (items.length <= n) return items.map(x => x.item)

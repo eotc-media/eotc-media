@@ -101,11 +101,19 @@ export default async function AdminSermonsPage({ searchParams }: PageProps) {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: {
-        approvalStatus: true,
-        languages: { include: { language: true }, take: 3 },
-        categories: { include: { category: true }, take: 2 },
-        subCategories: { include: { subCategory: true }, take: 2 },
+      // Explicit columns, as on the hymn admin list — `include` pulled
+      // description and description_suggestion for every row.
+      select: {
+        id: true,
+        slug: true,
+        videoId: true,
+        title: true,
+        preacher: true,
+        createdAt: true,
+        approvalStatus: { select: { id: true, name: true } },
+        languages:     { select: { language:    { select: { id: true, name: true } } }, take: 3 },
+        categories:    { select: { category:    { select: { id: true, name: true } } }, take: 2 },
+        subCategories: { select: { subCategory: { select: { id: true, name: true } } }, take: 2 },
       },
     }),
     prisma.smSermon.count({ where }),

@@ -101,11 +101,20 @@ export default async function AdminHymnsPage({ searchParams }: PageProps) {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: {
-        approvalStatus: true,
-        languages: { include: { language: true }, take: 3 },
-        categories: { include: { category: true }, take: 2 },
-        subCategories: { include: { subCategory: true }, take: 2 },
+      // Explicit columns: the table shows identity, singer, status and the
+      // first few taxonomy names. `include` would have pulled lyrics,
+      // lyrics_suggestion, ai_lyrics and description for every row.
+      select: {
+        id: true,
+        slug: true,
+        videoId: true,
+        title: true,
+        singer: true,
+        createdAt: true,
+        approvalStatus: { select: { id: true, name: true } },
+        languages:     { select: { language:    { select: { id: true, name: true } } }, take: 3 },
+        categories:    { select: { category:    { select: { id: true, name: true } } }, take: 2 },
+        subCategories: { select: { subCategory: { select: { id: true, name: true } } }, take: 2 },
       },
     }),
     prisma.hmHymn.count({ where }),

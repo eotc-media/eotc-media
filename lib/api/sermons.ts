@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { sortLanguages } from '@/lib/language-order'
@@ -67,6 +68,45 @@ function mapSermon(raw: {
   }
 }
 
+// Column sets for the list queries. `include` fetches every scalar, and
+// sm_sermons carries two TEXT columns (description, description_suggestion)
+// that no card renders. Separate literals rather than conditional spreads —
+// a spread of a ternary widens the type and breaks Prisma's inference.
+const SERMON_CARD_SELECT = {
+  id: true,
+  slug: true,
+  videoId: true,
+  title: true,
+  preacher: true,
+  thumbnailDefault: true,
+  thumbnailMedium: true,
+  thumbnailHigh: true,
+  thumbnailStandard: true,
+  thumbnailMaxres: true,
+  clicksCount: true,
+  publishedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  // SermonCard shows the preacher and nothing else relational.
+  preachers: { select: { preacher: { select: { id: true, name: true } } } },
+  channel: {
+    select: {
+      id: true, name: true, slug: true, handle: true,
+      thumbnailDefault: true, thumbnailMedium: true, thumbnailHigh: true,
+      coverImage: true, publishedAt: true,
+    },
+  },
+} as const
+
+/** my-sermons tables the taxonomy names; play-all's queue lists them too. */
+const SERMON_DETAIL_SELECT = {
+  ...SERMON_CARD_SELECT,
+  approvalStatus: { select: { id: true, name: true } },
+  categories:     { select: { category:    { select: { id: true, name: true } } } },
+  subCategories:  { select: { subCategory: { select: { id: true, name: true, categoryId: true } } } },
+  languages:      { select: { language:    { select: { id: true, name: true } } } },
+} as const
+
 // Filter data is identical for every user and changes only via admin edits, so
 // cache it across requests to avoid re-querying on every sermons page load.
 export const getSermonsFilterData = unstable_cache(
@@ -123,6 +163,7 @@ export async function getSermons({
   view,
   sort,
   itemIds,
+  withDetail = false,
 }: {
   page?: number
   limit?: number
@@ -136,6 +177,9 @@ export async function getSermons({
   view?: string
   sort?: string
   itemIds?: number[]
+  /** Play-all's queue panel lists each sermon's categories and languages.
+   *  Grids do not, so this stays off everywhere else. */
+  withDetail?: boolean
 } = {}): Promise<{ sermons: SmSermon[]; total: number }> {
   const where: Record<string, unknown> = {}
 
@@ -170,48 +214,18 @@ export async function getSermons({
     sort === 'clicks-asc' ? { clicksCount: 'asc' as const } :
                             { clicksCount: 'desc' as const }
 
-  // Named columns rather than `include`: a card never shows the description or
-  // the moderator's description_suggestion, and both are TEXT. See the matching
-  // note in lib/api/hymns.ts.
-  const sermonCardSelect = {
-    id: true,
-    slug: true,
-    videoId: true,
-    title: true,
-    preacher: true,
-    thumbnailDefault: true,
-    thumbnailMedium: true,
-    thumbnailHigh: true,
-    thumbnailStandard: true,
-    thumbnailMaxres: true,
-    clicksCount: true,
-    publishedAt: true,
-    createdAt: true,
-    updatedAt: true,
-    categories:    { select: { category:    { select: { id: true, name: true } } } },
-    subCategories: { select: { subCategory: { select: { id: true, name: true, categoryId: true } } } },
-    languages:     { select: { language:    { select: { id: true, name: true } } } },
-    preachers:     { select: { preacher:    { select: { id: true, name: true } } } },
-    channel: {
-      select: {
-        id: true, name: true, slug: true, handle: true,
-        thumbnailDefault: true, thumbnailMedium: true, thumbnailHigh: true,
-        coverImage: true, publishedAt: true,
-      },
-    },
-    ...(view === 'my-sermons'
-      ? { approvalStatus: { select: { id: true, name: true } } }
-      : {}),
-  } as const
+  const fetchCards = (args: {
+    where: Record<string, unknown>
+    orderBy?: Record<string, 'asc' | 'desc' | undefined>
+    skip?: number
+    take?: number
+  }) =>
+    view === 'my-sermons' || withDetail
+      ? prisma.smSermon.findMany({ ...args, select: SERMON_DETAIL_SELECT })
+      : prisma.smSermon.findMany({ ...args, select: SERMON_CARD_SELECT })
 
   const [raws, total] = await Promise.all([
-    prisma.smSermon.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * limit,
-      take: limit,
-      select: sermonCardSelect,
-    }),
+    fetchCards({ where, orderBy, skip: (page - 1) * limit, take: limit }),
     prisma.smSermon.count({ where }),
   ])
 
@@ -230,10 +244,12 @@ export async function getSermons({
   return { sermons, total }
 }
 
-export async function getSermon(
+// Per-request cache, as with getHymn: generateMetadata and the page component
+// both call this with the same arguments.
+export const getSermon = cache(async (
   slug: string,
   userId?: number
-): Promise<{ sermon: SmSermon; isFavorited: boolean } | null> {
+): Promise<{ sermon: SmSermon; isFavorited: boolean } | null> => {
   const safeSlug = (() => { try { return decodeURIComponent(slug) } catch { return slug } })()
   let raw = await prisma.smSermon.findUnique({
     where: { slug: safeSlug },
@@ -263,7 +279,7 @@ export async function getSermon(
     : null
 
   return { sermon, isFavorited: !!isFavoritedResult }
-}
+})
 
 export async function getRelatedSermons(
   sermonId: number,

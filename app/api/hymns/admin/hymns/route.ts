@@ -22,7 +22,23 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { approvalStatus: true, categories: { include: { category: true }, take: 3 } },
+      // Explicit columns — this response is serialised to JSON and sent to the
+      // browser, so `include` cost the long text twice: once out of Postgres,
+      // again out of the function.
+      select: {
+        id: true,
+        slug: true,
+        videoId: true,
+        title: true,
+        singer: true,
+        publishedAt: true,
+        createdAt: true,
+        clicksCount: true,
+        thumbnailDefault: true,
+        thumbnailMedium: true,
+        approvalStatus: { select: { id: true, name: true } },
+        categories: { select: { category: { select: { id: true, name: true } } }, take: 3 },
+      },
     }),
     prisma.hmHymn.count({ where }),
   ])

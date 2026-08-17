@@ -44,6 +44,7 @@ export default async function SermonPlayAllPage({ searchParams }: PageProps) {
     search,
     sort,
     userId,
+    withDetail: true,
   })
 
   if (sermons.length === 0) notFound()
