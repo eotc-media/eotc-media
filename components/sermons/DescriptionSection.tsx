@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Sparkles, Pencil, X } from "lucide-react"
+import { errorMessageFrom } from "@/lib/response-error"
 
 interface Props {
   sermonId: number
@@ -28,7 +29,7 @@ export default function DescriptionSection({ sermonId, description, descriptionS
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: text }),
       })
-      if (!res.ok) throw new Error((await res.json()).error ?? "Failed")
+      if (!res.ok) throw new Error(await errorMessageFrom(res, "Failed to save"))
       setMode("view")
       router.refresh()
     } catch (e: unknown) {
@@ -54,8 +55,8 @@ export default function DescriptionSection({ sermonId, description, descriptionS
     setError(null)
     try {
       const res = await fetch(`/api/sermons/${sermonId}/generate-description`, { method: "POST" })
+      if (!res.ok) throw new Error(await errorMessageFrom(res, "Failed to generate"))
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Failed to generate")
       setText(data.description)
       setMode("edit")
     } catch (e: unknown) {

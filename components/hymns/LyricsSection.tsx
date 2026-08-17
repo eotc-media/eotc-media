@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Sparkles, Pencil, X } from "lucide-react"
+import { errorMessageFrom } from "@/lib/response-error"
 
 interface Props {
   hymnId: number
@@ -28,7 +29,7 @@ export default function LyricsSection({ hymnId, lyrics, lyricsSuggestion }: Prop
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lyrics: text }),
       })
-      if (!res.ok) throw new Error((await res.json()).error ?? "Failed")
+      if (!res.ok) throw new Error(await errorMessageFrom(res, "Failed to save"))
       setMode("view")
       router.refresh()
     } catch (e: unknown) {
@@ -54,8 +55,8 @@ export default function LyricsSection({ hymnId, lyrics, lyricsSuggestion }: Prop
     setError(null)
     try {
       const res = await fetch(`/api/hymns/${hymnId}/generate-lyrics`, { method: "POST" })
+      if (!res.ok) throw new Error(await errorMessageFrom(res, "Failed to generate"))
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Failed to generate")
       setText(data.lyrics)
       setMode("edit")
     } catch (e: unknown) {

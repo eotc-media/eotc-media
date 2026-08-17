@@ -88,19 +88,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       if (token.id && (trigger === 'update' || isStale)) {
         const userId = typeof token.id === 'string' ? parseInt(token.id) : Number(token.id)
-        const dbUser = await prisma.user.findUnique({
-          where: { id: userId },
-          include: {
-            roles: { include: { role: true } },
-          },
-        })
-        if (dbUser) {
-          token.name = dbUser.name
-          token.email = dbUser.email
-          token.image = dbUser.image
-          token.roles = dbUser.roles.map((ur) => ur.role.code)
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+              name: true,
+              email: true,
+              image: true,
+              roles: { select: { role: { select: { code: true } } } },
+            },
+          })
+          if (dbUser) {
+            token.name = dbUser.name
+            token.email = dbUser.email
+            token.image = dbUser.image
+            token.roles = dbUser.roles.map((ur) => ur.role.code)
+          }
+          token.refreshedAt = Date.now()
+        } catch (e) {
+          // A throw here escapes auth(), and auth() is called by nearly every
+          // route handler — so one transient database hiccup turned into a 500
+          // (and an HTML error page) on actions that had nothing to do with the
+          // user record. The token we already hold is still valid; keep it, and
+          // leave refreshedAt alone so the next request retries.
+          console.error('[auth] could not refresh user from database:', e)
         }
-        token.refreshedAt = Date.now()
       }
 
       return token

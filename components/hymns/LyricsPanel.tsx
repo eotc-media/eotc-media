@@ -10,6 +10,7 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   List, ListOrdered, Minus, Undo2, Redo2,
 } from "lucide-react"
+import { errorMessageFrom } from "@/lib/response-error"
 
 interface LyricsPanelProps {
   lyrics: string | null
@@ -193,10 +194,7 @@ export default function LyricsPanel({ lyrics, lyricsSuggestion, aiLyrics, hymnId
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lyrics: html }),
     })
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error ?? "Failed to save")
-    }
+    if (!res.ok) throw new Error(await errorMessageFrom(res, "Failed to save"))
     setLocalSuggestion(html)
     setEditing(false)
   }, [hymnId])
@@ -207,8 +205,8 @@ export default function LyricsPanel({ lyrics, lyricsSuggestion, aiLyrics, hymnId
     startProgress()
     try {
       const res = await fetch(`/api/hymns/${hymnId}/generate-lyrics`, { method: "POST" })
+      if (!res.ok) throw new Error(await errorMessageFrom(res, "Failed to generate"))
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Failed to generate")
       stopProgress()
       setLocalAiLyrics(data.lyrics)
     } catch (e: unknown) {
