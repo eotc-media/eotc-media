@@ -11,6 +11,7 @@ const PAGE_SIZE = 24
 // page asks for it.
 function mapSermon(raw: {
   id: number
+  userId?: number
   slug: string
   videoId: string
   title: string
@@ -34,6 +35,7 @@ function mapSermon(raw: {
 }): SmSermon {
   return {
     id: raw.id,
+    userId: raw.userId,
     slug: raw.slug,
     videoId: raw.videoId,
     title: raw.title,

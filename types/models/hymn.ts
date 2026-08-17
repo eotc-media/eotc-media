@@ -1,4 +1,6 @@
 export interface HmHymn {
+  /** Submitter. Present on detail reads; list card projections omit it. */
+  userId?: number
   id: number
   slug: string
   videoId: string

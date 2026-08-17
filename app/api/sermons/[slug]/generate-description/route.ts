@@ -14,13 +14,15 @@ export async function POST(
 ) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const userId = parseInt(session.user.id)
 
   const { slug } = await params
   const sermonId = parseInt(slug)
+  if (!Number.isFinite(sermonId)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const sermon = await prisma.smSermon.findFirst({
-    where: { id: sermonId, userId },
+  // Open to any signed-in member, matching the hymn side: the output is a draft
+  // for the suggestion queue, not a published edit.
+  const sermon = await prisma.smSermon.findUnique({
+    where: { id: sermonId },
     select: { videoId: true },
   })
   if (!sermon) return NextResponse.json({ error: 'Not found' }, { status: 404 })

@@ -39,6 +39,7 @@ function seededShuffle<T>(items: T[], seed: string): T[] {
 // detail page asks for them.
 function mapHymn(raw: {
   id: number
+  userId?: number
   slug: string
   videoId: string
   title: string
@@ -65,6 +66,7 @@ function mapHymn(raw: {
 }): HmHymn {
   return {
     id: raw.id,
+    userId: raw.userId,
     slug: raw.slug,
     videoId: raw.videoId,
     title: raw.title,
