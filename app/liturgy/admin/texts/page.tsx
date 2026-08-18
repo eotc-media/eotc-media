@@ -60,7 +60,9 @@ export default function TextsPage() {
 
   const fetchTexts = async () => {
     try {
-      const response = await fetch("/api/liturgy/admin/texts?limit=100")
+      // No limit: the table pages in the browser, and a fixed window hid texts
+      // that fell outside it — a newly saved one looked like it had not saved.
+      const response = await fetch("/api/liturgy/admin/texts")
       const data = await response.json()
 
       if (response.ok) {

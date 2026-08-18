@@ -36,7 +36,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
-    "isomorphic-dompurify": "^3.22.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.1",
     "next-auth": "^5.0.0-beta.30",
@@ -48,6 +47,7 @@
     "react-easy-crop": "^5.5.6",
     "react-hook-form": "^7.71.1",
     "recharts": "^3.8.1",
+    "sanitize-html": "^2.17.7",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.3.6"
@@ -60,6 +60,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-easy-crop": "^1.16.0",
+    "@types/sanitize-html": "^2.16.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "tailwindcss": "^4",

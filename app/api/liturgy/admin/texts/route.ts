@@ -18,14 +18,19 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get("page") || "1")
-    const limit = parseInt(searchParams.get("limit") || "10")
+    // The admin table paginates in the browser, so it asks for the whole list
+    // and needs to get it: a fixed window meant a newly added text landed
+    // outside it and looked like it had not saved at all. Omitting `limit`
+    // returns everything; passing one still pages.
+    const limitParam = searchParams.get("limit")
+    const limit = limitParam ? parseInt(limitParam) : null
     const search = searchParams.get("search") || ""
     const sectionId = searchParams.get("sectionId")
     const roleId = searchParams.get("roleId")
     const sortBy = searchParams.get("sortBy") || "orderIndex"
     const sortOrder = (searchParams.get("sortOrder") || "asc") as "asc" | "desc"
 
-    const skip = (page - 1) * limit
+    const skip = limit ? (page - 1) * limit : 0
 
     const where: Record<string, unknown> = {}
 
@@ -49,22 +54,26 @@ export async function GET(request: NextRequest) {
       prisma.ltLiturgicalText.findMany({
         where,
         skip,
-        take: limit,
+        ...(limit ? { take: limit } : {}),
         orderBy: { [sortBy]: sortOrder },
-        include: {
-          section: {
-            select: {
-              id: true,
-              nameEnglish: true,
-            },
-          },
-          role: {
-            select: {
-              id: true,
-              roleKey: true,
-              nameEnglish: true,
-            },
-          },
+        // The table shows an order index, section, role, a preview of the
+        // English translation, the remark and whether audio exists. It never
+        // shows the Ge'ez, Amharic or transliteration bodies, and the edit page
+        // loads its own copy of the row, so those three TEXT columns stay here.
+        select: {
+          id: true,
+          sectionId: true,
+          roleId: true,
+          orderIndex: true,
+          textEnglishTranslation: true,
+          remark: true,
+          audioGeezFilePath: true,
+          audioEzilFilePath: true,
+          audioArarayFilePath: true,
+          createdAt: true,
+          updatedAt: true,
+          section: { select: { id: true, nameEnglish: true } },
+          role: { select: { id: true, roleKey: true, nameEnglish: true } },
         },
       }),
       prisma.ltLiturgicalText.count({ where }),
@@ -75,7 +84,7 @@ export async function GET(request: NextRequest) {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages: limit ? Math.ceil(total / limit) : 1,
     })
   } catch (error) {
     console.error("Error fetching texts:", error)
