@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { MessageCircle, Send } from "lucide-react"
 import { HmComment } from "@/types/models/hymn"
+import { errorMessageFrom } from "@/lib/response-error"
 
 interface CommentSectionProps {
   hymnId: number
@@ -22,6 +23,7 @@ export default function CommentSection({ hymnId, comments: initial, userId }: Co
   const [comments, setComments] = useState<HmComment[]>(initial)
   const [text, setText] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -37,6 +39,7 @@ export default function CommentSection({ hymnId, comments: initial, userId }: Co
     setComments(prev => [optimistic, ...prev])
     setText("")
     setSubmitting(true)
+    setError(null)
 
     try {
       const res = await fetch("/api/hymns/comment", {
@@ -44,14 +47,16 @@ export default function CommentSection({ hymnId, comments: initial, userId }: Co
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hymnId, comment: text.trim() }),
       })
+      if (!res.ok) throw new Error(await errorMessageFrom(res, "Could not post your comment"))
       const data = await res.json()
-      if (res.ok) {
-        setComments(prev => prev.map(c => (c.id === optimistic.id ? data : c)))
-      } else {
-        setComments(prev => prev.filter(c => c.id !== optimistic.id))
-      }
-    } catch {
+      setComments(prev => prev.map(c => (c.id === optimistic.id ? data : c)))
+    } catch (e: unknown) {
+      // Rolling the comment out of the list without a word meant a failed post
+      // looked to the writer like it had worked and then quietly disappeared,
+      // and left no trace anywhere. Put the text back so it is not lost.
       setComments(prev => prev.filter(c => c.id !== optimistic.id))
+      setText(optimistic.comment)
+      setError(e instanceof Error ? e.message : "Could not post your comment")
     } finally {
       setSubmitting(false)
     }
@@ -66,6 +71,10 @@ export default function CommentSection({ hymnId, comments: initial, userId }: Co
           {comments.length > 0 ? `${comments.length} Comment${comments.length !== 1 ? "s" : ""}` : "Comments"}
         </h2>
       </div>
+
+      {error && (
+        <p className="mb-3 text-sm text-red-600">{error}</p>
+      )}
 
       {/* Comment form */}
       {userId ? (
