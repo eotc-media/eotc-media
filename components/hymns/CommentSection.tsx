@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { MessageCircle, Send } from "lucide-react"
 import { HmComment } from "@/types/models/hymn"
 import { errorMessageFrom } from "@/lib/response-error"
+import EmojiPicker from "@/components/EmojiPicker"
 
 interface CommentSectionProps {
   hymnId: number
@@ -24,6 +25,24 @@ export default function CommentSection({ hymnId, comments: initial, userId }: Co
   const [text, setText] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Drop the emoji where the caret is rather than on the end, so it can go
+  // mid-sentence, and leave the caret after it so typing continues naturally.
+  function insertEmoji(emoji: string) {
+    const el = textareaRef.current
+    if (!el) {
+      setText(prev => prev + emoji)
+      return
+    }
+    const start = el.selectionStart ?? text.length
+    const end = el.selectionEnd ?? text.length
+    setText(text.slice(0, start) + emoji + text.slice(end))
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(start + emoji.length, start + emoji.length)
+    })
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -80,20 +99,24 @@ export default function CommentSection({ hymnId, comments: initial, userId }: Co
       {userId ? (
         <form onSubmit={handleSubmit} className="flex gap-3 mb-6">
           <textarea
+            ref={textareaRef}
             value={text}
             onChange={e => setText(e.target.value)}
             placeholder="Add a comment…"
             rows={2}
             className="flex-1 resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50"
           />
-          <button
-            type="submit"
-            disabled={!text.trim() || submitting}
-            className="self-end flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <Send className="w-3.5 h-3.5" />
-            Post
-          </button>
+          <div className="self-end flex items-center gap-1">
+            <EmojiPicker onSelect={insertEmoji} disabled={submitting} />
+            <button
+              type="submit"
+              disabled={!text.trim() || submitting}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Post
+            </button>
+          </div>
         </form>
       ) : (
         <p className="text-sm text-slate-400 mb-6">
