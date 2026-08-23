@@ -10,21 +10,23 @@ import { Smile } from "lucide-react"
 // they reach for. Everything here is also typeable from a phone keyboard; the
 // picker exists for people on a desktop.
 const GROUPS: { label: string; emoji: string[] }[] = [
+  // Eight per group, matching the eight columns below, so every group is one
+  // clean row and the whole panel fits without scrolling.
   {
     label: "Praise",
-    emoji: ["🙏", "✝️", "🕊️", "🌿", "🔥", "✨", "🙌", "👑", "🕯️", "📖"],
+    emoji: ["🙏", "✝️", "🕊️", "🔥", "✨", "🙌", "🕯️", "📖"],
   },
   {
     label: "Heart",
-    emoji: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🤍", "💖", "💝", "♥️"],
+    emoji: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🤍", "💖"],
   },
   {
     label: "Faces",
-    emoji: ["😊", "🥰", "😇", "🙂", "😌", "😢", "🥹", "😭", "🤗", "😴"],
+    emoji: ["😊", "🥰", "😇", "😌", "😢", "🥹", "😭", "🤗"],
   },
   {
     label: "More",
-    emoji: ["👍", "👏", "💪", "🎵", "🎶", "⭐", "🌟", "💫", "🌸", "🇪🇹"],
+    emoji: ["👍", "👏", "💪", "🎵", "🎶", "⭐", "🌟", "🇪🇹"],
   },
 ]
 
@@ -77,7 +79,7 @@ export default function EmojiPicker({
           aria-label="Emoji"
           // Opens upward: the comment box sits low on the page, and a panel
           // below it would fall off the bottom on a phone.
-          className="absolute bottom-full right-0 mb-2 z-50 w-[17rem] max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-lg"
+          className="absolute bottom-full right-0 mb-2 z-50 w-[17rem] max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-lg"
         >
           {GROUPS.map(group => (
             <div key={group.label} className="mb-3 last:mb-0">
@@ -89,12 +91,12 @@ export default function EmojiPicker({
                   <button
                     key={e}
                     type="button"
-                    onClick={() => {
-                      onSelect(e)
-                      setOpen(false)
-                    }}
+                    // Stays open on select: picking emoji tends to come in
+                    // runs, and reopening between each one is the annoying
+                    // part. Outside click or Escape closes it.
+                    onClick={() => onSelect(e)}
                     aria-label={e}
-                    className="flex items-center justify-center h-8 w-8 rounded-lg text-lg leading-none hover:bg-slate-100 transition-colors cursor-pointer"
+                    className="flex items-center justify-center h-9 w-full rounded-lg text-lg leading-none hover:bg-slate-100 transition-colors cursor-pointer"
                   >
                     {e}
                   </button>

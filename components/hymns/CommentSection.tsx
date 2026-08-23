@@ -29,19 +29,31 @@ export default function CommentSection({ hymnId, comments: initial, userId }: Co
 
   // Drop the emoji where the caret is rather than on the end, so it can go
   // mid-sentence, and leave the caret after it so typing continues naturally.
+  //
+  // Reads the value off the element rather than from state: the picker stays
+  // open so emoji arrive in runs, and two quick clicks within one render would
+  // otherwise both build on the same stale string, losing the first.
   function insertEmoji(emoji: string) {
     const el = textareaRef.current
     if (!el) {
       setText(prev => prev + emoji)
       return
     }
-    const start = el.selectionStart ?? text.length
-    const end = el.selectionEnd ?? text.length
-    setText(text.slice(0, start) + emoji + text.slice(end))
-    requestAnimationFrame(() => {
-      el.focus()
-      el.setSelectionRange(start + emoji.length, start + emoji.length)
-    })
+    const current = el.value
+    const start = el.selectionStart ?? current.length
+    const end = el.selectionEnd ?? current.length
+    const next = current.slice(0, start) + emoji + current.slice(end)
+    const caret = start + emoji.length
+
+    setText(next)
+
+    // Applied to the element straight away rather than after a frame. Deferring
+    // it lost a race against the person typing: pick an emoji, start typing
+    // immediately, and the caret jumped mid-word when the deferred call landed.
+    // React then renders this same value, so the two stay in step.
+    el.value = next
+    el.focus()
+    el.setSelectionRange(caret, caret)
   }
 
   async function handleSubmit(e: React.FormEvent) {
