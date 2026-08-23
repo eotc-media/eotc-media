@@ -1,15 +1,81 @@
 import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
+import { Prisma } from '@/generated/prisma/client/client'
 import { prisma } from '@/lib/prisma'
 import { sortLanguages } from '@/lib/language-order'
 import { HmHymn, HmCategory, HmSubCategory, HmLanguage, HmSinger, HmComment } from '@/types/models/hymn'
 
 const PAGE_SIZE = 24
 
-// Size of the two windows the trending sort ranks over. Between them they hold
-// ~33 pages, far past where anyone scrolls a ranked feed.
-const TRENDING_CLICKS_POOL = 600
-const TRENDING_RECENT_POOL = 200
+// Trending ranks by click velocity — clicks divided by age in days. Postgres
+// computes and orders by it, returning one page of ids, so the score never has
+// to be calculated over rows that will not be shown. Ties break on id to keep
+// paging stable.
+const TRENDING_SCORE = Prisma.sql`
+  h.clicks_count::float
+  / GREATEST(1, EXTRACT(EPOCH FROM (now() - COALESCE(h.published_at, h.created_at))) / 86400)
+`
+
+/**
+ * The list filters, expressed as SQL against `hm_hymns h`.
+ *
+ * This mirrors the Prisma `where` built in getHymns, and the two have to stay
+ * in step — the other sorts use the Prisma object, trending uses this. Keeping
+ * them together in one file is the best guard available; the alternative was
+ * reading hundreds of rows per request to sort them in JavaScript.
+ *
+ * Every value goes through Prisma.sql, so all of it is parameterised.
+ */
+function trendingFilters(f: {
+  ids?: number[]
+  favoritesOfUser?: number
+  ownedByUser?: number
+  categoryId?: number
+  subCategoryId?: number
+  languageId?: number
+  singerId?: number
+  channelId?: number
+  search?: string
+}): Prisma.Sql {
+  const conds: Prisma.Sql[] = []
+
+  if (f.ids) {
+    if (f.ids.length === 0) return Prisma.sql`WHERE false`
+    conds.push(Prisma.sql`h.id IN (${Prisma.join(f.ids)})`)
+  }
+  if (f.favoritesOfUser !== undefined) {
+    conds.push(Prisma.sql`EXISTS (SELECT 1 FROM hm_favorites f WHERE f.hymn_id = h.id AND f.user_id = ${f.favoritesOfUser})`)
+  }
+  if (f.ownedByUser !== undefined) {
+    conds.push(Prisma.sql`h.user_id = ${f.ownedByUser}`)
+  }
+  if (f.categoryId) {
+    conds.push(Prisma.sql`EXISTS (SELECT 1 FROM hm_category_hymn c WHERE c.hymn_id = h.id AND c.category_id = ${f.categoryId})`)
+  }
+  if (f.subCategoryId) {
+    conds.push(Prisma.sql`EXISTS (SELECT 1 FROM hm_hymn_sub_category s WHERE s.hymn_id = h.id AND s.sub_category_id = ${f.subCategoryId})`)
+  }
+  if (f.languageId) {
+    conds.push(Prisma.sql`EXISTS (SELECT 1 FROM hm_hymn_language l WHERE l.hymn_id = h.id AND l.language_id = ${f.languageId})`)
+  }
+  if (f.singerId) {
+    conds.push(Prisma.sql`EXISTS (SELECT 1 FROM hm_hymn_singer sg WHERE sg.hymn_id = h.id AND sg.singer_id = ${f.singerId})`)
+  }
+  if (f.channelId) {
+    conds.push(Prisma.sql`h.channel_id = ${f.channelId}`)
+  }
+  if (f.search && f.search.trim().length > 0) {
+    // ILIKE is Postgres' case-insensitive LIKE, matching Prisma's
+    // `mode: 'insensitive'`. The term is a parameter, so the wildcards are
+    // concatenated in SQL rather than interpolated into it.
+    const term = `%${f.search.trim()}%`
+    conds.push(Prisma.sql`(h.title ILIKE ${term} OR h.singer ILIKE ${term})`)
+  }
+
+  return conds.length > 0
+    ? Prisma.sql`WHERE ${Prisma.join(conds, ' AND ')}`
+    : Prisma.empty
+}
 
 // Deterministic shuffle. Random ordering has to stay stable across pages, or
 // infinite scroll reshuffles on every fetch and repeats or skips hymns; the seed
@@ -287,47 +353,42 @@ export async function getHymns({
 
   try {
     if (!sort || sort === 'trending') {
-      // Trending scores clicks-per-day in JavaScript, so every candidate row
-      // crosses the wire. Reading the whole catalogue to render 24 cards made
-      // the cost of the default sort grow with the library.
+      // Ranked and paged in Postgres. This used to read a window of candidate
+      // rows and score them in JavaScript, which meant hundreds of rows crossed
+      // the wire on the default sort of the busiest page to show twenty-four.
       //
-      // Two bounded reads cover both ways a hymn can trend: heavily clicked, or
-      // new enough that modest clicks divide into a high rate. A hymn outside
-      // both windows cannot out-score the ones inside them.
-      const [byClicks, byRecency] = await Promise.all([
-        prisma.hmHymn.findMany({
-          where,
-          select: { id: true, clicksCount: true, publishedAt: true, createdAt: true },
-          orderBy: { clicksCount: 'desc' },
-          take: TRENDING_CLICKS_POOL,
-        }),
-        prisma.hmHymn.findMany({
-          where,
-          select: { id: true, clicksCount: true, publishedAt: true, createdAt: true },
-          orderBy: { createdAt: 'desc' },
-          take: TRENDING_RECENT_POOL,
-        }),
-      ])
-      const seen = new Set<number>()
-      const candidates = [...byClicks, ...byRecency].filter(h => {
-        if (seen.has(h.id)) return false
-        seen.add(h.id)
-        return true
+      // The filters are read back off the Prisma `where` built above rather
+      // than from the arguments again, so the two descriptions of "which hymns"
+      // cannot drift apart.
+      const filterSql = trendingFilters({
+        ids: (where.id as { in: number[] } | undefined)?.in,
+        favoritesOfUser: (where.favorites as { some: { userId: number } } | undefined)?.some.userId,
+        ownedByUser: where.userId as number | undefined,
+        categoryId, subCategoryId, languageId, singerId, channelId, search,
       })
-      const now = Date.now()
-      const scored = candidates
-        .map(h => {
-          const ref = h.publishedAt ?? h.createdAt
-          const days = Math.max(1, (now - ref.getTime()) / 86_400_000)
-          return { id: h.id, score: h.clicksCount / days }
-        })
-        .sort((a, b) => b.score - a.score)
-      total = scored.length
-      const pageIds = scored.slice((page - 1) * limit, page * limit).map(s => s.id)
-      if (pageIds.length > 0) {
+
+      const offset = (page - 1) * limit
+      const ranked = await prisma.$queryRaw<{ id: number; total: bigint }[]>`
+        SELECT h.id, COUNT(*) OVER() AS total
+        FROM hm_hymns h
+        ${filterSql}
+        ORDER BY ${TRENDING_SCORE} DESC, h.id DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+
+      const pageIds = ranked.map(r => r.id)
+      if (ranked.length > 0) {
+        total = Number(ranked[0].total)
         const idOrder = new Map(pageIds.map((id, idx) => [id, idx]))
         const fetched = await fetchCards({ where: { id: { in: pageIds } } })
         raws = fetched.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0))
+      } else {
+        // The window function reports the total alongside each row, so an empty
+        // page — past the end, or no matches — carries no count with it.
+        const counted = await prisma.$queryRaw<{ total: bigint }[]>`
+          SELECT COUNT(*) AS total FROM hm_hymns h ${filterSql}
+        `
+        total = counted.length > 0 ? Number(counted[0].total) : 0
       }
     } else if (sort === 'random') {
       const candidates = await prisma.hmHymn.findMany({ where, select: { id: true } })
