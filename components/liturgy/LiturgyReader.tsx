@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Play, Pause, Music, BookOpenText, Check, ChevronDown } from "lucide-react"
+import { Play, Pause, Music, BookOpenText, Check, Type, Layers, ScrollText } from "lucide-react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 
 // ── Types ──────────────────────────────────────────────
@@ -50,11 +50,24 @@ interface LanguageVisibility {
 
 type RoleLanguage = "english" | "amharic"
 type AudioType = "geez" | "ezil" | "araray"
+type FontSize = "sm" | "base" | "lg"
 
 const AUDIO_LABELS: Record<AudioType, string> = {
   geez: "Ge'ez",
   ezil: "Ezil",
   araray: "Araray",
+}
+
+// Ge'ez leads each card and the other layers follow it at one shared size.
+//
+// `layerEthiopic` is that same step nudged up: Ethiopic glyphs have a smaller
+// apparent size than Latin at an identical pixel value, so an Amharic line set
+// to match the English one numerically still reads as the smaller of the two.
+// The bump is what makes them look equal, which is the point.
+const FONT_SCALE: Record<FontSize, { geez: string; layer: string; layerEthiopic: string }> = {
+  sm:   { geez: "text-[17px] sm:text-[18px]", layer: "text-[13px] sm:text-[14px]", layerEthiopic: "text-[15px] sm:text-[16px]" },
+  base: { geez: "text-[19px] sm:text-[21px]", layer: "text-[14px] sm:text-[15px]", layerEthiopic: "text-[16px] sm:text-[17px]" },
+  lg:   { geez: "text-[22px] sm:text-[25px]", layer: "text-[16px] sm:text-[17px]", layerEthiopic: "text-[18px] sm:text-[19px]" },
 }
 
 // Speakers are told apart by a small tinted monogram rather than a bar down the
@@ -86,6 +99,22 @@ function getAvailableAudio(text: LiturgicalText): { type: AudioType; path: strin
   return result
 }
 
+// ── Section grouping ───────────────────────────────────
+//
+// The service falls in two halves — the pre-anaphora and the anaphora proper —
+// but the database stores sections as one flat ordered run with nothing marking
+// where the second half starts. It is inferred from the name here: the
+// anaphoras are titled "Anaphora of …" in English and "ቅዳሴ ዘ…" in Ge'ez and
+// Amharic.
+//
+// If that inference finds nothing, the list is shown ungrouped rather than
+// under two headings one of which would be empty. Adjust this one predicate if
+// the section names do not follow that pattern.
+function isAnaphora(section: Section): boolean {
+  if (section.nameEnglish.toLowerCase().includes("anaphora")) return true
+  return /ቅዳሴ\s*ዘ/.test(section.nameGeez) || /ቅዳሴ\s*ዘ/.test(section.nameAmharic)
+}
+
 // ── Main Component ─────────────────────────────────────
 
 export function LiturgyReader({ sections }: LiturgyReaderProps) {
@@ -102,7 +131,9 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   const roleLanguage: RoleLanguage = locale === "am" ? "amharic" : "english"
   const [globalAudioType, setGlobalAudioType] = useState<AudioType>("geez")
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null)
-  const [openMenu, setOpenMenu] = useState<"mobile" | "desktop" | null>(null)
+  const [fontSize, setFontSize] = useState<FontSize>("base")
+  const [showRemarks, setShowRemarks] = useState(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const sectionTabsRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -112,41 +143,55 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
     [sections, activeSectionId]
   )
 
+  const groups = useMemo(() => {
+    const pre = sections.filter((s) => !isAnaphora(s))
+    const ana = sections.filter(isAnaphora)
+    if (pre.length === 0 || ana.length === 0) {
+      return [{ label: null as string | null, items: sections }]
+    }
+    return [
+      { label: locale === "am" ? "ቅድመ ቅዳሴ" : "Pre-anaphora", items: pre },
+      { label: locale === "am" ? "ቅዳሴ" : "Anaphora", items: ana },
+    ]
+  }, [sections, locale])
+
   const hasMultipleAudioTypes = useMemo(() => {
     if (!activeSection) return false
     return activeSection.texts.some((t) => getAvailableAudio(t).length > 1)
   }, [activeSection])
 
   const activeLanguageCount = Object.values(languageVisibility).filter(Boolean).length
+  const scale = FONT_SCALE[fontSize]
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpenMenu(null)
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMobileMenuOpen(false)
+      }
     }
-    document.addEventListener("mousedown", handleClickOutside)
+    if (mobileMenuOpen) document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+  }, [mobileMenuOpen])
 
   useEffect(() => {
-    if (sectionTabsRef.current && activeSectionId) {
-      const activeTab = sectionTabsRef.current.querySelector(
-        `[data-section-id="${activeSectionId}"]`
-      ) as HTMLElement
-      if (activeTab) activeTab.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
-    }
+    if (!sectionTabsRef.current) return
+    const activeTab = sectionTabsRef.current.querySelector<HTMLElement>(
+      `[data-section-id="${activeSectionId}"]`
+    )
+    activeTab?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
   }, [activeSectionId])
 
   const playAudio = (path: string, textId: number) => {
     const key = `${textId}-${path}`
+    if (playingAudioId === key) {
+      audioRef.current?.pause()
+      setPlayingAudioId(null)
+      return
+    }
     if (audioRef.current) {
-      if (playingAudioId === key) {
-        audioRef.current.pause()
-        setPlayingAudioId(null)
-      } else {
-        audioRef.current.src = path
-        audioRef.current.play()
-        setPlayingAudioId(key)
-      }
+      audioRef.current.src = path
+      audioRef.current.play().catch(() => setPlayingAudioId(null))
+      setPlayingAudioId(key)
     }
   }
 
@@ -160,6 +205,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   const handleSectionChange = (id: number) => {
     setActiveSectionId(id)
     setPlayingAudioId(null)
+    setMobileMenuOpen(false)
     if (audioRef.current) audioRef.current.pause()
   }
 
@@ -183,59 +229,114 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
     )
   }
 
-  // Matches the sidebars in sermons, hymns and books.
-  const sectionLinkClass = (active: boolean) =>
-    `px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors cursor-pointer flex-shrink-0 lg:w-full lg:text-left lg:whitespace-normal ${
+  const sectionButtonClass = (active: boolean) =>
+    `group relative flex items-center gap-2.5 pl-3.5 pr-3 py-2 rounded-lg text-sm text-left transition-all duration-100 cursor-pointer whitespace-nowrap lg:w-full lg:whitespace-normal ${
       active
-        ? "bg-blue-50 text-blue-700"
-        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        ? "bg-blue-50 text-blue-700 font-semibold"
+        : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
     }`
 
-  // One control holds both the visible layers and the chant mode, so neither
-  // needs a strip of its own above the text.
-  const settingsPanel = (
-    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-slate-200 p-1.5 z-50 shadow-sm">
-      <p className="px-2.5 pt-2 pb-2 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.12em]">
-        {t("liturgy_select_langs")}
-      </p>
-      {[
-        { key: "geez" as const, label: "ግዕዝ", sub: "Ge'ez" },
-        { key: "amharic" as const, label: "አማርኛ", sub: "Amharic" },
-        { key: "transliteration" as const, label: "Transliteration", sub: "Latin script" },
-        { key: "translation" as const, label: "English", sub: "Translation" },
-      ].map(({ key, label, sub }) => {
-        const on = languageVisibility[key]
-        return (
-          <button
-            key={key}
-            onClick={() => toggleLanguage(key)}
-            className="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors text-left"
-          >
-            <span className={`w-[18px] h-[18px] rounded-md flex items-center justify-center flex-shrink-0 transition-all ${
-              on ? "bg-slate-900" : "border-[1.5px] border-slate-200"
-            }`}>
-              {on && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[13px] font-medium text-slate-800 truncate">{label}</span>
-              <span className="block text-[11px] text-slate-400 truncate">{sub}</span>
-            </span>
-          </button>
-        )
-      })}
+  const sectionList = (
+    <>
+      {groups.map((group, gi) => (
+        <div key={group.label ?? gi} className="mb-2 lg:mb-3 flex items-center lg:block gap-1">
+          {group.label && (
+            <div className="hidden lg:flex items-center gap-2 px-2 pt-2 pb-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+                {group.label}
+              </span>
+              <span className="h-px flex-1 bg-slate-100" />
+              <span className="text-[10px] font-medium text-slate-300 tabular-nums">
+                {group.items.length}
+              </span>
+            </div>
+          )}
+          {/* On the mobile strip a hairline stands in for the heading, so the
+              two halves stay distinguishable without spending a row on labels. */}
+          {group.label && gi > 0 && (
+            <span className="lg:hidden w-px h-5 bg-slate-200 mx-1 flex-shrink-0" />
+          )}
+          <div className="flex flex-row items-center gap-1 lg:flex-col lg:items-stretch lg:gap-0.5">
+            {group.items.map((section) => {
+              const active = activeSectionId === section.id
+              return (
+                <button
+                  key={section.id}
+                  data-section-id={section.id}
+                  onClick={() => handleSectionChange(section.id)}
+                  className={sectionButtonClass(active)}
+                >
+                  <span
+                    className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-full bg-blue-500 transition-all ${
+                      active ? "h-5 opacity-100" : "h-0 opacity-0"
+                    }`}
+                  />
+                  {locale === "am" ? section.nameAmharic : section.nameEnglish}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </>
+  )
+
+  // The whole control panel, shared by the desktop right column and the mobile
+  // dropdown so the two can never drift apart.
+  const controls = (
+    <div className="space-y-5">
+      <div>
+        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">
+          <Layers className="h-3 w-3" /> {t("liturgy_select_langs")}
+        </p>
+        <div className="space-y-1">
+          {[
+            { key: "geez" as const, label: "ግዕዝ", sub: "Ge'ez" },
+            { key: "amharic" as const, label: "አማርኛ", sub: "Amharic" },
+            { key: "transliteration" as const, label: "Transliteration", sub: "Latin script" },
+            { key: "translation" as const, label: "English", sub: "Translation" },
+          ].map(({ key, label, sub }) => {
+            const on = languageVisibility[key]
+            return (
+              <button
+                key={key}
+                onClick={() => toggleLanguage(key)}
+                className={`flex items-center gap-3 w-full px-2.5 py-2 rounded-xl border transition-colors text-left cursor-pointer ${
+                  on
+                    ? "border-blue-200 bg-blue-50/60"
+                    : "border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <span
+                  className={`w-[18px] h-[18px] rounded-md flex items-center justify-center flex-shrink-0 transition-all ${
+                    on ? "bg-blue-600" : "border-[1.5px] border-slate-200"
+                  }`}
+                >
+                  {on && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                </span>
+                <span className="min-w-0">
+                  <span className={`block text-[13px] font-medium truncate ${on ? "text-blue-800" : "text-slate-700"}`}>
+                    {label}
+                  </span>
+                  <span className="block text-[11px] text-slate-400 truncate">{sub}</span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {hasMultipleAudioTypes && (
-        <>
-          <div className="mx-2.5 my-1.5 border-t border-slate-100" />
-          <p className="px-2.5 pt-1 pb-2 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.12em] flex items-center gap-1.5">
+        <div>
+          <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">
             <Music className="h-3 w-3" /> Chant
           </p>
-          <div className="flex items-center gap-1 px-1.5 pb-1.5">
+          <div className="flex items-center gap-1">
             {(["geez", "ezil", "araray"] as AudioType[]).map((type) => (
               <button
                 key={type}
                 onClick={() => setGlobalAudioType(type)}
-                className={`flex-1 px-2 py-1.5 text-[11px] font-medium rounded-lg cursor-pointer transition-colors ${
+                className={`flex-1 px-2 py-2 text-[11px] font-semibold rounded-lg cursor-pointer transition-colors ${
                   globalAudioType === type
                     ? "bg-slate-900 text-white"
                     : "bg-slate-50 text-slate-500 hover:text-slate-800"
@@ -245,84 +346,110 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
               </button>
             ))}
           </div>
-        </>
+        </div>
       )}
-    </div>
-  )
 
-  const settingsButton = (which: "mobile" | "desktop") => (
-    <button
-      onClick={() => setOpenMenu(openMenu === which ? null : which)}
-      className={`flex items-center gap-2 h-9 pl-3 pr-2.5 rounded-lg text-[13px] font-medium border cursor-pointer transition-colors ${
-        openMenu === which
-          ? "bg-slate-900 text-white border-slate-900"
-          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-      }`}
-    >
-      <span className="flex items-baseline gap-[1px] leading-none select-none" aria-hidden="true">
-        <span className="text-[15px] font-semibold">ሀ</span>
-        <span className="text-[11px] font-semibold">A</span>
-      </span>
-      <span className="hidden xl:inline">{t("liturgy_language_btn")}</span>
-      <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold ${
-        openMenu === which ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
-      }`}>
-        {activeLanguageCount}
-      </span>
-      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openMenu === which ? "rotate-180" : ""}`} />
-    </button>
+      <div>
+        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">
+          <Type className="h-3 w-3" /> Text size
+        </p>
+        <div className="flex gap-2">
+          {(["sm", "base", "lg"] as FontSize[]).map((size, i) => (
+            <button
+              key={size}
+              onClick={() => setFontSize(size)}
+              className={`flex-1 flex items-center justify-center py-2.5 rounded-xl font-semibold border-2 transition-all cursor-pointer ${
+                fontSize === size
+                  ? "border-blue-600 bg-blue-50 text-blue-700"
+                  : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+              }`}
+              style={{ fontSize: i === 0 ? "13px" : i === 1 ? "16px" : "19px" }}
+            >
+              A
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <button
+          onClick={() => setShowRemarks((v) => !v)}
+          className={`flex items-center gap-3 w-full px-2.5 py-2 rounded-xl border transition-colors text-left cursor-pointer ${
+            showRemarks ? "border-blue-200 bg-blue-50/60" : "border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          <span
+            className={`w-[18px] h-[18px] rounded-md flex items-center justify-center flex-shrink-0 transition-all ${
+              showRemarks ? "bg-blue-600" : "border-[1.5px] border-slate-200"
+            }`}
+          >
+            {showRemarks && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+          </span>
+          <span className="min-w-0">
+            <span className={`block text-[13px] font-medium ${showRemarks ? "text-blue-800" : "text-slate-700"}`}>
+              Rubrics
+            </span>
+            <span className="block text-[11px] text-slate-400">Directions for the service</span>
+          </span>
+        </button>
+      </div>
+    </div>
   )
 
   return (
     <div className="min-h-screen bg-white">
       <audio ref={audioRef} onEnded={() => setPlayingAudioId(null)} />
 
-      <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
-
-        {/* ─── Sections — sidebar on desktop; on mobile it also carries the
-             settings control, so nothing needs its own band ─── */}
-        <aside className="
-          sticky top-16 z-30 bg-white flex flex-row items-center gap-2 px-4 py-2 border-b border-slate-100
-          lg:flex-col lg:items-stretch lg:gap-0.5 lg:border-b-0 lg:border-r lg:self-start lg:h-[calc(100vh-4rem)] lg:overflow-y-auto lg:px-3 lg:py-4
-        ">
-          <div
-            ref={sectionTabsRef}
-            className="flex-1 min-w-0 flex flex-row items-center gap-1 overflow-x-auto scrollbar-hide lg:flex-none lg:w-full lg:flex-col lg:items-stretch lg:gap-0.5 lg:overflow-x-visible"
+      {/* Mobile bar: sections plus the control panel behind one button */}
+      <div className="lg:hidden sticky top-16 z-30 bg-white border-b border-slate-100 flex items-center gap-2 px-4 py-2">
+        <div
+          ref={sectionTabsRef}
+          className="flex-1 min-w-0 flex flex-row items-center gap-1 overflow-x-auto scrollbar-hide"
+        >
+          {sectionList}
+        </div>
+        <div className="relative flex-shrink-0" ref={mobileMenuOpen ? menuRef : undefined}>
+          <button
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className={`flex items-center gap-2 h-9 pl-3 pr-2.5 rounded-lg text-[13px] font-medium border cursor-pointer transition-colors ${
+              mobileMenuOpen
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+            }`}
           >
-            {sections.map((section) => (
-              <button
-                key={section.id}
-                data-section-id={section.id}
-                onClick={() => handleSectionChange(section.id)}
-                className={sectionLinkClass(activeSectionId === section.id)}
-              >
-                {locale === "am" ? section.nameAmharic : section.nameEnglish}
-              </button>
-            ))}
-          </div>
+            <span className="flex items-baseline gap-[1px] leading-none select-none" aria-hidden="true">
+              <span className="text-[15px] font-semibold">ሀ</span>
+              <span className="text-[11px] font-semibold">A</span>
+            </span>
+            <span
+              className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold ${
+                mobileMenuOpen ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {activeLanguageCount}
+            </span>
+          </button>
+          {mobileMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-72 max-h-[70vh] overflow-y-auto bg-white rounded-2xl border border-slate-200 p-4 z-50 shadow-lg">
+              {controls}
+            </div>
+          )}
+        </div>
+      </div>
 
-          <div className="relative flex-shrink-0 lg:hidden" ref={openMenu === "mobile" ? menuRef : undefined}>
-            {settingsButton("mobile")}
-            {openMenu === "mobile" && settingsPanel}
+      <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr_256px]">
+
+        {/* Left: sections, in their two liturgical halves */}
+        <aside className="hidden lg:flex lg:flex-col border-r border-slate-100 sticky top-16 self-start h-[calc(100vh-4rem)] z-10">
+          <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3" style={{ scrollbarWidth: "none" }}>
+            {sectionList}
           </div>
         </aside>
 
-        {/* ─── Main column — the text starts at the very top ─── */}
-        <main className="relative min-w-0 px-4 sm:px-6 lg:px-8 lg:pr-56 py-5 sm:py-6">
-
-          {/* Desktop control floats in the gutter beside the text, taking no row */}
-          <div
-            className="hidden lg:block fixed right-6 top-20 z-30"
-            ref={openMenu === "desktop" ? menuRef : undefined}
-          >
-            <div className="relative">
-              {settingsButton("desktop")}
-              {openMenu === "desktop" && settingsPanel}
-            </div>
-          </div>
-
+        {/* Center: the text */}
+        <main className="min-w-0 px-4 sm:px-6 lg:px-8 py-5 sm:py-7">
           {activeSection && activeSection.texts.length > 0 ? (
-            <div className="max-w-3xl flex flex-col gap-2.5">
+            <div className="max-w-3xl flex flex-col gap-3">
               {activeSection.texts.map((text) => {
                 const audioPath = getAudioForText(text)
                 const audioKey = audioPath ? `${text.id}-${audioPath}` : null
@@ -330,11 +457,19 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                 const roleName = getRoleName(text.role)
                 const monogram = ROLE_MONOGRAM[text.role.roleKey] ?? DEFAULT_MONOGRAM
 
+                // Everything after the Ge'ez shares one presentation, the way a
+                // quiz card's choices do — only the tag tells them apart.
+                const layers = [
+                  { key: "amharic", ethiopic: true, text: languageVisibility.amharic ? text.textAmharic : "" },
+                  { key: "transliteration", ethiopic: false, text: languageVisibility.transliteration ? text.textEnglishTransliteration : "" },
+                  { key: "translation", ethiopic: false, text: languageVisibility.translation ? text.textEnglishTranslation : "" },
+                ].filter((l) => l.text)
+
                 return (
                   <article
                     key={text.id}
                     className={`rounded-xl bg-white p-4 sm:p-5 border transition-colors ${
-                      isPlaying ? "border-slate-400 bg-slate-50/60" : "border-slate-200"
+                      isPlaying ? "border-slate-400 bg-slate-50/40" : "border-slate-200"
                     }`}
                   >
                     {/* Speaker + audio */}
@@ -364,33 +499,43 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                       )}
                     </div>
 
-                    {/* Text */}
-                    <div className="space-y-2.5">
-                      {languageVisibility.geez && text.textGeez && (
-                        <p className="text-[18px] sm:text-[20px] leading-[1.9] text-slate-900 font-semibold tracking-wide" dir="auto">
+                    {/* Ge'ez — set apart the way a quiz question is */}
+                    {languageVisibility.geez && text.textGeez && (
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5">
+                        <p
+                          className={`${scale.geez} font-semibold leading-[1.9] tracking-wide text-slate-900`}
+                          dir="auto"
+                        >
                           {text.textGeez}
                         </p>
-                      )}
-                      {languageVisibility.amharic && text.textAmharic && (
-                        <p className="text-[15px] sm:text-[16px] leading-[1.8] text-slate-700" dir="auto">
-                          {text.textAmharic}
-                        </p>
-                      )}
-                      {languageVisibility.transliteration && text.textEnglishTransliteration && (
-                        <p className="text-[13px] sm:text-[14px] leading-relaxed text-slate-400 italic">
-                          {text.textEnglishTransliteration}
-                        </p>
-                      )}
-                      {languageVisibility.translation && text.textEnglishTranslation && (
-                        <p className="text-[13px] sm:text-[14px] leading-relaxed text-slate-500">
-                          {text.textEnglishTranslation}
-                        </p>
-                      )}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* The remaining layers — one shared style, like choices */}
+                    {layers.length > 0 && (
+                      <div className={`space-y-2 ${languageVisibility.geez && text.textGeez ? "mt-3" : ""}`}>
+                        {layers.map((layer) => (
+                          <div
+                            key={layer.key}
+                            className="px-4 py-3 rounded-lg border border-slate-200"
+                          >
+                            {/* Unlabelled, like a quiz choice — the script says
+                                which is which, and a label column cost width
+                                that the text wants on a phone. */}
+                            <p
+                              className={`${layer.ethiopic ? scale.layerEthiopic : scale.layer} leading-[1.75] text-slate-700`}
+                              dir="auto"
+                            >
+                              {layer.text}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Rubric */}
-                    {text.remark && (
-                      <p className="mt-3.5 rounded-lg bg-slate-50 px-3 py-2 text-[12px] leading-relaxed text-slate-500 italic" dir="auto">
+                    {showRemarks && text.remark && (
+                      <p className="mt-3 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-[12px] leading-relaxed text-amber-800 italic" dir="auto">
                         {text.remark}
                       </p>
                     )}
@@ -413,6 +558,19 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
 
           <div className="h-16" />
         </main>
+
+        {/* Right: reading controls, all options on show */}
+        <aside className="hidden lg:flex lg:flex-col border-l border-slate-100 sticky top-16 self-start h-[calc(100vh-4rem)]">
+          <div className="flex-shrink-0 px-4 py-3 border-b border-slate-100">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              <ScrollText className="h-4 w-4 text-slate-400" />
+              {activeSection ? (locale === "am" ? activeSection.nameAmharic : activeSection.nameEnglish) : ""}
+            </p>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4" style={{ scrollbarWidth: "none" }}>
+            {controls}
+          </div>
+        </aside>
       </div>
     </div>
   )
