@@ -416,7 +416,11 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
               {activeSection.texts.map((text) => {
                 const audioPath = getAudioForText(text)
                 const audioKey = audioPath ? `${text.id}-${audioPath}` : null
-                const isPlaying = playingAudioId === audioKey
+                // A text with no recording has a null key, and nothing is
+                // playing, so comparing the two matched null to null and every
+                // silent card rendered as though it were playing — which is
+                // where the darker outline on all of them came from.
+                const isPlaying = audioKey !== null && playingAudioId === audioKey
                 const roleName = getRoleName(text.role)
                 const monogram = ROLE_MONOGRAM[text.role.roleKey] ?? DEFAULT_MONOGRAM
 
