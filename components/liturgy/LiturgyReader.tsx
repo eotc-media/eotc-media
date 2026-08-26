@@ -449,7 +449,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
         {/* Center: the text */}
         <main className="min-w-0 px-4 sm:px-6 lg:px-8 py-5 sm:py-7">
           {activeSection && activeSection.texts.length > 0 ? (
-            <div className="max-w-3xl flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               {activeSection.texts.map((text) => {
                 const audioPath = getAudioForText(text)
                 const audioKey = audioPath ? `${text.id}-${audioPath}` : null
@@ -458,7 +458,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                 const monogram = ROLE_MONOGRAM[text.role.roleKey] ?? DEFAULT_MONOGRAM
 
                 // Everything after the Ge'ez shares one presentation, the way a
-                // quiz card's choices do — only the tag tells them apart.
+                // quiz card's choices do.
                 const layers = [
                   { key: "amharic", ethiopic: true, text: languageVisibility.amharic ? text.textAmharic : "" },
                   { key: "transliteration", ethiopic: false, text: languageVisibility.transliteration ? text.textEnglishTransliteration : "" },
@@ -468,19 +468,34 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                 return (
                   <article
                     key={text.id}
-                    className={`rounded-xl bg-white p-4 sm:p-5 border transition-colors ${
-                      isPlaying ? "border-slate-400 bg-slate-50/40" : "border-slate-200"
+                    className={`bg-white border rounded-xl overflow-hidden transition-colors ${
+                      isPlaying ? "border-slate-400" : "border-slate-200"
                     }`}
                   >
-                    {/* Speaker + audio */}
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${monogram}`}>
-                          {monogramFor(roleName)}
-                        </span>
-                        <span className="text-[12px] font-semibold text-slate-600 truncate">
-                          {roleName}
-                        </span>
+                    {/* Header band, exactly where a quiz card puts its question:
+                        the speaker's monogram stands in for the question number
+                        and the Ge'ez for the question itself. */}
+                    <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-start gap-3">
+                      <span
+                        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${monogram}`}
+                      >
+                        {monogramFor(roleName)}
+                      </span>
+
+                      <div className="flex-1 min-w-0">
+                        {languageVisibility.geez && text.textGeez && (
+                          <p
+                            className={`${scale.geez} font-semibold leading-[1.9] tracking-wide text-slate-900`}
+                            dir="auto"
+                          >
+                            {text.textGeez}
+                          </p>
+                        )}
+                        <div className={languageVisibility.geez && text.textGeez ? "mt-2" : ""}>
+                          <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">
+                            {roleName}
+                          </span>
+                        </div>
                       </div>
 
                       {audioPath && (
@@ -490,7 +505,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                           className={`flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-lg text-[12px] font-medium cursor-pointer transition-colors flex-shrink-0 ${
                             isPlaying
                               ? "bg-slate-900 text-white"
-                              : "text-slate-500 bg-slate-50 hover:bg-slate-100 hover:text-slate-800"
+                              : "text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 hover:text-slate-800"
                           }`}
                         >
                           {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
@@ -499,29 +514,14 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                       )}
                     </div>
 
-                    {/* Ge'ez — set apart the way a quiz question is */}
-                    {languageVisibility.geez && text.textGeez && (
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5">
-                        <p
-                          className={`${scale.geez} font-semibold leading-[1.9] tracking-wide text-slate-900`}
-                          dir="auto"
-                        >
-                          {text.textGeez}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* The remaining layers — one shared style, like choices */}
-                    {layers.length > 0 && (
-                      <div className={`space-y-2 ${languageVisibility.geez && text.textGeez ? "mt-3" : ""}`}>
+                    {/* Body, where the choices sit */}
+                    {(layers.length > 0 || (showRemarks && text.remark)) && (
+                      <div className="p-4 space-y-2">
                         {layers.map((layer) => (
                           <div
                             key={layer.key}
                             className="px-4 py-3 rounded-lg border border-slate-200"
                           >
-                            {/* Unlabelled, like a quiz choice — the script says
-                                which is which, and a label column cost width
-                                that the text wants on a phone. */}
                             <p
                               className={`${layer.ethiopic ? scale.layerEthiopic : scale.layer} leading-[1.75] text-slate-700`}
                               dir="auto"
@@ -530,28 +530,30 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                             </p>
                           </div>
                         ))}
-                      </div>
-                    )}
 
-                    {/* Rubric */}
-                    {showRemarks && text.remark && (
-                      <p className="mt-3 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-[12px] leading-relaxed text-amber-800 italic" dir="auto">
-                        {text.remark}
-                      </p>
+                        {showRemarks && text.remark && (
+                          <p
+                            className="rounded-lg bg-amber-50 border border-amber-100 px-4 py-3 text-[12px] leading-relaxed text-amber-800 italic"
+                            dir="auto"
+                          >
+                            {text.remark}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </article>
                 )
               })}
             </div>
           ) : activeSection ? (
-            <div className="max-w-3xl rounded-xl border border-dashed border-slate-200 py-20 text-center">
+            <div className="rounded-xl border border-dashed border-slate-200 py-20 text-center">
               <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                 <BookOpenText className="h-7 w-7 text-slate-400" />
               </div>
               <p className="text-sm text-slate-400 font-medium">{t("liturgy_no_section")}</p>
             </div>
           ) : (
-            <div className="max-w-3xl py-24 text-center">
+            <div className="py-24 text-center">
               <p className="text-sm text-slate-400">Select a section to begin reading</p>
             </div>
           )}
