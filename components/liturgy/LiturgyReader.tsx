@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Play, Pause, Music, BookOpenText, Check, Type, Layers, ScrollText } from "lucide-react"
+import { Play, Pause, Music, BookOpenText, Check, Layers, ScrollText } from "lucide-react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 
 // ── Types ──────────────────────────────────────────────
@@ -50,24 +50,11 @@ interface LanguageVisibility {
 
 type RoleLanguage = "english" | "amharic"
 type AudioType = "geez" | "ezil" | "araray"
-type FontSize = "sm" | "base" | "lg"
 
 const AUDIO_LABELS: Record<AudioType, string> = {
   geez: "Ge'ez",
   ezil: "Ezil",
   araray: "Araray",
-}
-
-// Ge'ez leads each card and the other layers follow it at one shared size.
-//
-// `layerEthiopic` is that same step nudged up: Ethiopic glyphs have a smaller
-// apparent size than Latin at an identical pixel value, so an Amharic line set
-// to match the English one numerically still reads as the smaller of the two.
-// The bump is what makes them look equal, which is the point.
-const FONT_SCALE: Record<FontSize, { geez: string; layer: string; layerEthiopic: string }> = {
-  sm:   { geez: "text-[17px] sm:text-[18px]", layer: "text-[13px] sm:text-[14px]", layerEthiopic: "text-[15px] sm:text-[16px]" },
-  base: { geez: "text-[19px] sm:text-[21px]", layer: "text-[14px] sm:text-[15px]", layerEthiopic: "text-[16px] sm:text-[17px]" },
-  lg:   { geez: "text-[22px] sm:text-[25px]", layer: "text-[16px] sm:text-[17px]", layerEthiopic: "text-[18px] sm:text-[19px]" },
 }
 
 // Speakers are told apart by a small tinted monogram rather than a bar down the
@@ -131,7 +118,6 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   const roleLanguage: RoleLanguage = locale === "am" ? "amharic" : "english"
   const [globalAudioType, setGlobalAudioType] = useState<AudioType>("geez")
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null)
-  const [fontSize, setFontSize] = useState<FontSize>("base")
   const [showRemarks, setShowRemarks] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -161,7 +147,6 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   }, [activeSection])
 
   const activeLanguageCount = Object.values(languageVisibility).filter(Boolean).length
-  const scale = FONT_SCALE[fontSize]
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -350,28 +335,6 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
       )}
 
       <div>
-        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">
-          <Type className="h-3 w-3" /> Text size
-        </p>
-        <div className="flex gap-2">
-          {(["sm", "base", "lg"] as FontSize[]).map((size, i) => (
-            <button
-              key={size}
-              onClick={() => setFontSize(size)}
-              className={`flex-1 flex items-center justify-center py-2.5 rounded-xl font-semibold border-2 transition-all cursor-pointer ${
-                fontSize === size
-                  ? "border-blue-600 bg-blue-50 text-blue-700"
-                  : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-              }`}
-              style={{ fontSize: i === 0 ? "13px" : i === 1 ? "16px" : "19px" }}
-            >
-              A
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
         <button
           onClick={() => setShowRemarks((v) => !v)}
           className={`flex items-center gap-3 w-full px-2.5 py-2 rounded-xl border transition-colors text-left cursor-pointer ${
@@ -460,9 +423,9 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                 // Everything after the Ge'ez shares one presentation, the way a
                 // quiz card's choices do.
                 const layers = [
-                  { key: "amharic", ethiopic: true, text: languageVisibility.amharic ? text.textAmharic : "" },
-                  { key: "transliteration", ethiopic: false, text: languageVisibility.transliteration ? text.textEnglishTransliteration : "" },
-                  { key: "translation", ethiopic: false, text: languageVisibility.translation ? text.textEnglishTranslation : "" },
+                  { key: "amharic", text: languageVisibility.amharic ? text.textAmharic : "" },
+                  { key: "transliteration", text: languageVisibility.transliteration ? text.textEnglishTransliteration : "" },
+                  { key: "translation", text: languageVisibility.translation ? text.textEnglishTranslation : "" },
                 ].filter((l) => l.text)
 
                 return (
@@ -485,7 +448,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                       <div className="flex-1 min-w-0">
                         {languageVisibility.geez && text.textGeez && (
                           <p
-                            className={`${scale.geez} font-semibold leading-[1.9] tracking-wide text-slate-900`}
+                            className="text-sm font-medium text-slate-900 leading-relaxed"
                             dir="auto"
                           >
                             {text.textGeez}
@@ -520,10 +483,10 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                         {layers.map((layer) => (
                           <div
                             key={layer.key}
-                            className="px-4 py-3 rounded-lg border border-slate-200"
+                            className="flex items-center gap-3 px-4 py-3 rounded-lg border border-slate-200 text-slate-700"
                           >
                             <p
-                              className={`${layer.ethiopic ? scale.layerEthiopic : scale.layer} leading-[1.75] text-slate-700`}
+                              className="text-sm leading-snug text-slate-700"
                               dir="auto"
                             >
                               {layer.text}
@@ -532,12 +495,11 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                         ))}
 
                         {showRemarks && text.remark && (
-                          <p
-                            className="rounded-lg bg-amber-50 border border-amber-100 px-4 py-3 text-[12px] leading-relaxed text-amber-800 italic"
-                            dir="auto"
-                          >
-                            {text.remark}
-                          </p>
+                          <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50">
+                            <p className="text-sm leading-snug text-amber-800 italic" dir="auto">
+                              {text.remark}
+                            </p>
+                          </div>
                         )}
                       </div>
                     )}
