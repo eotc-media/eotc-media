@@ -69,13 +69,18 @@ const ROLE_MONOGRAM: Record<string, string> = {
 }
 const DEFAULT_MONOGRAM = "bg-slate-100 text-slate-500"
 
-// Ge'ez syllables carry a whole sound, so one is enough; Latin needs two so
-// Priest and People don't both show up as "P".
+// An Ethiopic role is shown as ይ followed by the first syllable of its name —
+// ካህን becomes ይካ, ዲያቆን ይዲ, ሕዝብ ይሕ. Latin names take their first two letters,
+// so that Priest and People do not both come out as "P".
+const ETHIOPIC_MONOGRAM_PREFIX = "ይ"
+
 function monogramFor(name: string): string {
   const trimmed = name.trim()
   if (!trimmed) return "?"
   const isGeez = trimmed.codePointAt(0)! >= 0x1200 && trimmed.codePointAt(0)! <= 0x137f
-  return isGeez ? trimmed.slice(0, 1) : trimmed.slice(0, 2)
+  return isGeez
+    ? ETHIOPIC_MONOGRAM_PREFIX + trimmed.slice(0, 1)
+    : trimmed.slice(0, 2)
 }
 
 function getAvailableAudio(text: LiturgicalText): { type: AudioType; path: string }[] {
@@ -446,7 +451,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                       <span
                         title={roleName}
                         aria-label={roleName}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${monogram}`}
+                        className={`w-11 h-11 rounded-full flex items-center justify-center text-[13px] font-bold flex-shrink-0 ${monogram}`}
                       >
                         {monogramFor(roleName)}
                       </span>
