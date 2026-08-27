@@ -202,6 +202,11 @@ export const translations = {
     liturgy_no_content_msg: "Liturgical texts will appear here once they are added by an administrator.",
     liturgy_note:           "Note:",
     liturgy_no_section:     "No texts in this section yet",
+    liturgy_find_section:   "Find a section",
+    liturgy_no_sections:    "No sections found",
+    liturgy_directions:     "Service directions",
+    liturgy_directions_sub: "Instructions for how the service is performed",
+    liturgy_text_size:      "Text size",
 
     // ── Collections ──────────────────────────────
     col_save_title:       "Save to collection",
@@ -424,6 +429,11 @@ export const translations = {
     liturgy_no_content_msg: "የቅዳሴ ጽሑፎች ሲጨመሩ እዚህ ይታያሉ።",
     liturgy_note:           "ማሳሰቢያ፡",
     liturgy_no_section:     "በዚህ ክፍል ምንም ጽሑፍ የለም",
+    liturgy_find_section:   "ክፍል ይፈልጉ",
+    liturgy_no_sections:    "ምንም ክፍል አልተገኘም",
+    liturgy_directions:     "የሥርዓት መመሪያ",
+    liturgy_directions_sub: "ቅዳሴው እንዴት እንደሚከናወን የሚያሳይ መመሪያ",
+    liturgy_text_size:      "የፊደል መጠን",
 
     // ── Collections ──────────────────────────────
     col_save_title:       "ወደ ስብስብ አስቀምጥ",

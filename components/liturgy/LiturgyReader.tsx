@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Play, Pause, Music, BookOpenText, Check, Layers, ScrollText } from "lucide-react"
+import { Play, Pause, Music, BookOpenText, Check, Layers, Type, Search } from "lucide-react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 
 // ── Types ──────────────────────────────────────────────
@@ -50,6 +50,13 @@ interface LanguageVisibility {
 
 type RoleLanguage = "english" | "amharic"
 type AudioType = "geez" | "ezil" | "araray"
+type FontSize = "base" | "lg" | "xl"
+
+const FONT_SCALE: Record<FontSize, string> = {
+  base: "text-sm",
+  lg:   "text-base",
+  xl:   "text-lg",
+}
 
 const AUDIO_LABELS: Record<AudioType, string> = {
   geez: "Ge'ez",
@@ -124,6 +131,8 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   const [globalAudioType, setGlobalAudioType] = useState<AudioType>("geez")
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null)
   const [showRemarks, setShowRemarks] = useState(true)
+  const [fontSize, setFontSize] = useState<FontSize>("base")
+  const [query, setQuery] = useState("")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const sectionTabsRef = useRef<HTMLDivElement>(null)
@@ -135,16 +144,25 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   )
 
   const groups = useMemo(() => {
-    const pre = sections.filter((s) => !isAnaphora(s))
-    const ana = sections.filter(isAnaphora)
+    const q = query.trim().toLowerCase()
+    const matches = q
+      ? sections.filter(
+          (s) =>
+            s.nameEnglish.toLowerCase().includes(q) ||
+            s.nameAmharic.toLowerCase().includes(q) ||
+            s.nameGeez.toLowerCase().includes(q)
+        )
+      : sections
+    const pre = matches.filter((s) => !isAnaphora(s))
+    const ana = matches.filter(isAnaphora)
     if (pre.length === 0 || ana.length === 0) {
-      return [{ label: null as string | null, items: sections }]
+      return [{ label: null as string | null, items: matches }]
     }
     return [
       { label: locale === "am" ? "ቅድመ ቅዳሴ" : "Pre-anaphora", items: pre },
       { label: locale === "am" ? "ቅዳሴ" : "Anaphora", items: ana },
     ]
-  }, [sections, locale])
+  }, [sections, locale, query])
 
   const hasMultipleAudioTypes = useMemo(() => {
     if (!activeSection) return false
@@ -152,6 +170,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   }, [activeSection])
 
   const activeLanguageCount = Object.values(languageVisibility).filter(Boolean).length
+  const textScale = FONT_SCALE[fontSize]
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -340,6 +359,28 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
       )}
 
       <div>
+        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">
+          <Type className="h-3 w-3" /> {t("liturgy_text_size")}
+        </p>
+        <div className="flex gap-2">
+          {(["base", "lg", "xl"] as FontSize[]).map((size, i) => (
+            <button
+              key={size}
+              onClick={() => setFontSize(size)}
+              className={`flex-1 flex items-center justify-center py-2.5 rounded-xl font-semibold border-2 transition-all cursor-pointer ${
+                fontSize === size
+                  ? "border-blue-600 bg-blue-50 text-blue-700"
+                  : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+              }`}
+              style={{ fontSize: i === 0 ? "13px" : i === 1 ? "16px" : "19px" }}
+            >
+              A
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
         <button
           onClick={() => setShowRemarks((v) => !v)}
           className={`flex items-center gap-3 w-full px-2.5 py-2 rounded-xl border transition-colors text-left cursor-pointer ${
@@ -355,9 +396,9 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
           </span>
           <span className="min-w-0">
             <span className={`block text-[13px] font-medium ${showRemarks ? "text-blue-800" : "text-slate-700"}`}>
-              Rubrics
+              {t("liturgy_directions")}
             </span>
-            <span className="block text-[11px] text-slate-400">Directions for the service</span>
+            <span className="block text-[11px] text-slate-400">{t("liturgy_directions_sub")}</span>
           </span>
         </button>
       </div>
@@ -409,8 +450,29 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
 
         {/* Left: sections, in their two liturgical halves */}
         <aside className="hidden lg:flex lg:flex-col border-r border-slate-100 sticky top-16 self-start h-[calc(100vh-4rem)] z-10">
+          <div className="flex-shrink-0 px-4 py-3 border-b border-slate-100">
+            <p className="text-sm font-semibold text-slate-700 truncate">
+              {activeSection ? (locale === "am" ? activeSection.nameAmharic : activeSection.nameEnglish) : ""}
+            </p>
+          </div>
+          <div className="flex-shrink-0 px-3 pt-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder={t("liturgy_find_section")}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-100/70 border border-transparent rounded-xl text-slate-700 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-blue-400/70 focus:ring-2 focus:ring-blue-400/15 transition-all"
+              />
+            </div>
+          </div>
           <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3" style={{ scrollbarWidth: "none" }}>
-            {sectionList}
+            {groups.every((g) => g.items.length === 0) ? (
+              <p className="text-xs text-slate-400 text-center mt-8">{t("liturgy_no_sections")}</p>
+            ) : (
+              sectionList
+            )}
           </div>
         </aside>
 
@@ -459,7 +521,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                       <div className="flex-1 min-w-0">
                         {languageVisibility.geez && text.textGeez && (
                           <p
-                            className="text-sm font-medium text-slate-900 leading-relaxed"
+                            className={`${textScale} font-medium text-slate-900 leading-relaxed`}
                             dir="auto"
                           >
                             {text.textGeez}
@@ -489,7 +551,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                         {layers.map((layer) => (
                           <p
                             key={layer.key}
-                            className="text-sm leading-relaxed text-slate-700 py-3"
+                            className={`${textScale} leading-relaxed text-slate-700 py-3`}
                             dir="auto"
                           >
                             {layer.text}
@@ -497,7 +559,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                         ))}
 
                         {showRemarks && text.remark && (
-                          <p className="text-sm leading-relaxed text-amber-700 italic py-3" dir="auto">
+                          <p className={`${textScale} leading-relaxed text-amber-700 italic py-3`} dir="auto">
                             {text.remark}
                           </p>
                         )}
@@ -525,12 +587,6 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
 
         {/* Right: reading controls, all options on show */}
         <aside className="hidden lg:flex lg:flex-col border-l border-slate-100 sticky top-16 self-start h-[calc(100vh-4rem)]">
-          <div className="flex-shrink-0 px-4 py-3 border-b border-slate-100">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-              <ScrollText className="h-4 w-4 text-slate-400" />
-              {activeSection ? (locale === "am" ? activeSection.nameAmharic : activeSection.nameEnglish) : ""}
-            </p>
-          </div>
           <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4" style={{ scrollbarWidth: "none" }}>
             {controls}
           </div>
