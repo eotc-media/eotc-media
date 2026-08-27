@@ -444,6 +444,8 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                         and the Ge'ez for the question itself. */}
                     <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-start gap-3">
                       <span
+                        title={roleName}
+                        aria-label={roleName}
                         className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${monogram}`}
                       >
                         {monogramFor(roleName)}
@@ -458,11 +460,6 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                             {text.textGeez}
                           </p>
                         )}
-                        <div className={languageVisibility.geez && text.textGeez ? "mt-2" : ""}>
-                          <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">
-                            {roleName}
-                          </span>
-                        </div>
                       </div>
 
                       {audioPath && (
@@ -483,27 +480,21 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
 
                     {/* Body, where the choices sit */}
                     {(layers.length > 0 || (showRemarks && text.remark)) && (
-                      <div className="p-4 space-y-2">
+                      <div className="px-5 divide-y divide-slate-100">
                         {layers.map((layer) => (
-                          <div
+                          <p
                             key={layer.key}
-                            className="flex items-center gap-3 px-4 py-3 rounded-lg border border-slate-200 text-slate-700"
+                            className="text-sm leading-relaxed text-slate-700 py-3"
+                            dir="auto"
                           >
-                            <p
-                              className="text-sm leading-snug text-slate-700"
-                              dir="auto"
-                            >
-                              {layer.text}
-                            </p>
-                          </div>
+                            {layer.text}
+                          </p>
                         ))}
 
                         {showRemarks && text.remark && (
-                          <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50">
-                            <p className="text-sm leading-snug text-amber-800 italic" dir="auto">
-                              {text.remark}
-                            </p>
-                          </div>
+                          <p className="text-sm leading-relaxed text-amber-700 italic py-3" dir="auto">
+                            {text.remark}
+                          </p>
                         )}
                       </div>
                     )}
