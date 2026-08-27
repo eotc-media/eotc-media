@@ -50,13 +50,10 @@ interface LanguageVisibility {
 
 type RoleLanguage = "english" | "amharic"
 type AudioType = "geez" | "ezil" | "araray"
-type FontSize = "base" | "lg" | "xl"
 
-const FONT_SCALE: Record<FontSize, string> = {
-  base: "text-sm",
-  lg:   "text-base",
-  xl:   "text-lg",
-}
+// The Bible's reading sizes, indexed as it indexes them, and remembered under
+// the same kind of key so a reader's choice survives a reload there and here.
+const FONT_SIZES = [15, 17, 20] as const
 
 const AUDIO_LABELS: Record<AudioType, string> = {
   geez: "Ge'ez",
@@ -131,7 +128,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   const [globalAudioType, setGlobalAudioType] = useState<AudioType>("geez")
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null)
   const [showRemarks, setShowRemarks] = useState(true)
-  const [fontSize, setFontSize] = useState<FontSize>("base")
+  const [fontSizeIdx, setFontSizeIdx] = useState(1)
   const [query, setQuery] = useState("")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -170,7 +167,25 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   }, [activeSection])
 
   const activeLanguageCount = Object.values(languageVisibility).filter(Boolean).length
-  const textScale = FONT_SCALE[fontSize]
+  const fontSize = FONT_SIZES[fontSizeIdx]
+
+  // Read the saved size once the component is on the client. A lazy useState
+  // initialiser cannot do this: localStorage is absent during the server render,
+  // so the two passes would disagree and hydration would fail. The Bible reader
+  // reads its own preference the same way.
+  useEffect(() => {
+    const fs = localStorage.getItem("liturgy_font_size")
+    if (fs !== null) {
+      const idx = parseInt(fs, 10)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (idx >= 0 && idx <= 2) setFontSizeIdx(idx)
+    }
+  }, [])
+
+  function changeFontSize(i: number) {
+    setFontSizeIdx(i)
+    localStorage.setItem("liturgy_font_size", String(i))
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -354,21 +369,24 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
         </div>
       )}
 
-      <div>
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t("liturgy_text_size")}</p>
-        <div className="flex gap-2">
-          {(["base", "lg", "xl"] as FontSize[]).map((size, i) => (
+      {/* Reading preferences — the Bible's panel, control for control */}
+      <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-3">
+          {t("liturgy_reading_label")}
+        </p>
+        <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-2">{t("liturgy_text_size")}</p>
+        <div className="flex items-center gap-1.5">
+          {(["S", "M", "L"] as const).map((label, i) => (
             <button
-              key={size}
-              onClick={() => setFontSize(size)}
-              className={`flex-1 flex items-center justify-center py-2.5 rounded-xl font-semibold border-2 transition-all cursor-pointer ${
-                fontSize === size
-                  ? "border-blue-600 bg-blue-50 text-blue-700"
-                  : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+              key={i}
+              onClick={() => changeFontSize(i)}
+              className={`flex-1 flex items-center justify-center h-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                fontSizeIdx === i
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-white text-slate-500 hover:bg-slate-100 border border-slate-200"
               }`}
-              style={{ fontSize: i === 0 ? "13px" : i === 1 ? "16px" : "19px" }}
             >
-              A
+              {label}
             </button>
           ))}
         </div>
@@ -515,7 +533,8 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                       <div className="flex-1 min-w-0">
                         {languageVisibility.geez && text.textGeez && (
                           <p
-                            className={`${textScale} font-medium text-slate-900 leading-relaxed`}
+                            className="font-medium text-slate-900 leading-relaxed"
+                            style={{ fontSize }}
                             dir="auto"
                           >
                             {text.textGeez}
@@ -545,7 +564,8 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                         {layers.map((layer) => (
                           <p
                             key={layer.key}
-                            className={`${textScale} leading-relaxed text-slate-700 py-3`}
+                            className="leading-relaxed text-slate-700 py-3"
+                            style={{ fontSize }}
                             dir="auto"
                           >
                             {layer.text}
@@ -553,7 +573,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                         ))}
 
                         {showRemarks && text.remark && (
-                          <p className={`${textScale} leading-relaxed text-amber-700 italic py-3`} dir="auto">
+                          <p className="leading-relaxed text-amber-700 italic py-3" style={{ fontSize }} dir="auto">
                             {text.remark}
                           </p>
                         )}

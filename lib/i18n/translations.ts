@@ -207,6 +207,7 @@ export const translations = {
     liturgy_directions:     "Service directions",
     liturgy_directions_sub: "Instructions for how the service is performed",
     liturgy_text_size:      "Text size",
+    liturgy_reading_label:  "Reading",
 
     // ── Collections ──────────────────────────────
     col_save_title:       "Save to collection",
@@ -434,6 +435,7 @@ export const translations = {
     liturgy_directions:     "የሥርዓት መመሪያ",
     liturgy_directions_sub: "ቅዳሴው እንዴት እንደሚከናወን የሚያሳይ መመሪያ",
     liturgy_text_size:      "የፊደል መጠን",
+    liturgy_reading_label:  "ማንበቢያ",
 
     // ── Collections ──────────────────────────────
     col_save_title:       "ወደ ስብስብ አስቀምጥ",
