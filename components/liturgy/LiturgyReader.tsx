@@ -442,11 +442,11 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                     {/* Header band, exactly where a quiz card puts its question:
                         the speaker's monogram stands in for the question number
                         and the Ge'ez for the question itself. */}
-                    <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-start gap-3">
+                    <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
                       <span
                         title={roleName}
                         aria-label={roleName}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${monogram}`}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${monogram}`}
                       >
                         {monogramFor(roleName)}
                       </span>
