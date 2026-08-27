@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Play, Pause, Music, BookOpenText, Check, Layers, Type, Search } from "lucide-react"
+import { Play, Pause, BookOpenText, Check, Search } from "lucide-react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 
 // ── Types ──────────────────────────────────────────────
@@ -293,11 +293,9 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   // The whole control panel, shared by the desktop right column and the mobile
   // dropdown so the two can never drift apart.
   const controls = (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div>
-        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">
-          <Layers className="h-3 w-3" /> {t("liturgy_select_langs")}
-        </p>
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t("liturgy_select_langs")}</p>
         <div className="space-y-1">
           {[
             { key: "geez" as const, label: "ግዕዝ", sub: "Ge'ez" },
@@ -337,9 +335,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
 
       {hasMultipleAudioTypes && (
         <div>
-          <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">
-            <Music className="h-3 w-3" /> Chant
-          </p>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Chant</p>
           <div className="flex items-center gap-1">
             {(["geez", "ezil", "araray"] as AudioType[]).map((type) => (
               <button
@@ -359,9 +355,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
       )}
 
       <div>
-        <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">
-          <Type className="h-3 w-3" /> {t("liturgy_text_size")}
-        </p>
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t("liturgy_text_size")}</p>
         <div className="flex gap-2">
           {(["base", "lg", "xl"] as FontSize[]).map((size, i) => (
             <button
