@@ -82,17 +82,17 @@ export default function SermonSearchFilters({
     : []
 
   const languageOptions = [
-    { value: "_", label: "ቋንቋ ይምረጡ" },
+    { value: "_", label: t("sermon_select_language") },
     ...languages.map(l => ({ value: String(l.id), label: l.name })),
   ]
 
   const categoryOptions = [
-    { value: "_", label: "የምድብ አይነት ይምረጡ" },
+    { value: "_", label: t("sermon_select_category") },
     ...visibleCategories.map(c => ({ value: String(c.id), label: c.name })),
   ]
 
   const subCategoryOptions = [
-    { value: "_", label: "ምድብ ይምረጡ" },
+    { value: "_", label: t("sermon_select_subcategory") },
     ...visibleSubCategories.map(sc => ({ value: String(sc.id), label: sc.name })),
   ]
 
@@ -103,7 +103,7 @@ export default function SermonSearchFilters({
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
       <input
         type="text"
-        placeholder="ስብከት ፈልግ..."
+        placeholder={t("sermon_search_placeholder")}
         value={searchValue}
         onChange={e => handleSearchChange(e.target.value)}
         onCompositionStart={() => { composingRef.current = true }}
@@ -120,7 +120,7 @@ export default function SermonSearchFilters({
         onValueChange={raw => applyFilter("language", raw === "_" ? "" : raw)}
         options={languageOptions}
         searchable
-        searchPlaceholder="ፈልግ…"
+        searchPlaceholder={t("search_placeholder")}
         className="w-full sm:w-[145px]"
       />
       <ScrollableSelect
@@ -128,7 +128,7 @@ export default function SermonSearchFilters({
         onValueChange={raw => applyFilter("category", raw === "_" ? "" : raw)}
         options={categoryOptions}
         searchable
-        searchPlaceholder="ፈልግ…"
+        searchPlaceholder={t("search_placeholder")}
         className="w-full sm:w-[185px]"
       />
       <ScrollableSelect
@@ -136,7 +136,7 @@ export default function SermonSearchFilters({
         onValueChange={raw => applyFilter("subCategory", raw === "_" ? "" : raw)}
         options={subCategoryOptions}
         searchable
-        searchPlaceholder="ፈልግ…"
+        searchPlaceholder={t("search_placeholder")}
         className="w-full sm:w-[185px]"
       />
     </>

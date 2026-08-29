@@ -73,7 +73,7 @@ interface CollectionVerseData {
 interface OpenedCollection { id: number; name: string; verses: CollectionVerseData[] }
 
 const VERSION_LABELS: Record<string, string> = {
-  kjv:  "KJV",
+  kjv:  "NKJV",
   "1954": "Am 1954",
   v1:   "Oromifa",
 }
@@ -603,7 +603,7 @@ export default function BibleReader({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="amharic__1954">Amharic 1954</SelectItem>
-                <SelectItem value="english__kjv">English KJV</SelectItem>
+                <SelectItem value="english__kjv">English NKJV</SelectItem>
                 <SelectItem value="oromifa__v1">Oromifa</SelectItem>
               </SelectContent>
             </Select>
@@ -847,7 +847,7 @@ export default function BibleReader({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="amharic__1954">Amharic 1954</SelectItem>
-                <SelectItem value="english__kjv">English KJV</SelectItem>
+                <SelectItem value="english__kjv">English NKJV</SelectItem>
                 <SelectItem value="oromifa__v1">Oromifa</SelectItem>
               </SelectContent>
             </Select>
@@ -1017,7 +1017,7 @@ export default function BibleReader({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="amharic__1954">Amharic 1954</SelectItem>
-                <SelectItem value="english__kjv">English KJV</SelectItem>
+                <SelectItem value="english__kjv">English NKJV</SelectItem>
                 <SelectItem value="oromifa__v1">Oromifa</SelectItem>
               </SelectContent>
             </Select>

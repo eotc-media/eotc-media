@@ -43,6 +43,10 @@ export const translations = {
     hymn_by_singer:          "By the singer",
 
     // ── Sermons sidebar ─────────────────────────
+    sermon_select_language:    "Select language",
+    sermon_select_category:    "Select category",
+    sermon_select_subcategory: "Select sub-category",
+    sermon_search_placeholder: "Search sermons…",
     sermon_all:         "All sermons",
     sermon_channels:    "Channels",
     sermon_favorites:   "Favorites",
@@ -272,6 +276,10 @@ export const translations = {
     hymn_by_singer:          "በዘማሪው",
 
     // ── Sermons sidebar ─────────────────────────
+    sermon_select_language:    "ቋንቋ ይምረጡ",
+    sermon_select_category:    "የምድብ አይነት ይምረጡ",
+    sermon_select_subcategory: "ምድብ ይምረጡ",
+    sermon_search_placeholder: "ስብከት ፈልግ...",
     sermon_all:         "ሁሉም ስብከቶች",
     sermon_channels:    "ቻናሎች",
     sermon_favorites:   "የተመረጡ ስብከቶች",

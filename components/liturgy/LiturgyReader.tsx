@@ -73,6 +73,19 @@ const ROLE_MONOGRAM: Record<string, string> = {
 }
 const DEFAULT_MONOGRAM = "bg-slate-100 text-slate-500"
 
+// A circle shows a photograph when one exists at these paths, and the tinted
+// monogram when it does not. Nothing breaks if the files are absent — a failed
+// load simply falls back — so the pictures can be dropped in later without a
+// code change.
+const ROLE_IMAGE: Record<string, string> = {
+  priest: "/roles/priest.jpg",
+  deacon: "/roles/deacon.jpg",
+  people: "/roles/people.jpg",
+  choir: "/roles/choir.jpg",
+  assistant_priest: "/roles/priest.jpg",
+  assistant_deacon: "/roles/deacon.jpg",
+}
+
 // An Ethiopic role is shown as ይ followed by the first syllable of its name —
 // ካህን becomes ይካ, ዲያቆን ይዲ, ሕዝብ ይሕ. Latin names take their first two letters,
 // so that Priest and People do not both come out as "P".
@@ -85,6 +98,41 @@ function monogramFor(name: string): string {
   return isGeez
     ? ETHIOPIC_MONOGRAM_PREFIX + trimmed.slice(0, 1)
     : trimmed.slice(0, 2)
+}
+
+function RoleAvatar({ roleKey, roleName, tint }: { roleKey: string; roleName: string; tint: string }) {
+  const src = ROLE_IMAGE[roleKey]
+  const [loaded, setLoaded] = useState(false)
+
+  // The picture is loaded off-screen first and only rendered once it has
+  // actually arrived. Rendering the <img> straight away and falling back on
+  // error puts a broken-image glyph in the circle for as long as the request
+  // takes — and permanently, if the file was never added.
+  useEffect(() => {
+    if (!src) return
+    let live = true
+    const probe = new window.Image()
+    probe.onload = () => { if (live) setLoaded(true) }
+    probe.src = src
+    return () => { live = false }
+  }, [src])
+
+  return (
+    <span
+      title={roleName}
+      aria-label={roleName}
+      className={`w-11 h-11 rounded-full flex items-center justify-center text-[13px] font-bold flex-shrink-0 overflow-hidden ${
+        loaded ? "bg-slate-100" : tint
+      }`}
+    >
+      {loaded ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" className="w-full h-full object-cover" />
+      ) : (
+        monogramFor(roleName)
+      )}
+    </span>
+  )
 }
 
 function getAvailableAudio(text: LiturgicalText): { type: AudioType; path: string }[] {
@@ -521,13 +569,18 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                     {/* Header band, exactly where a quiz card puts its question:
                         the speaker's monogram stands in for the question number
                         and the Ge'ez for the question itself. */}
-                    <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
-                      <span
-                        title={roleName}
-                        aria-label={roleName}
-                        className={`w-11 h-11 rounded-full flex items-center justify-center text-[13px] font-bold flex-shrink-0 ${monogram}`}
-                      >
-                        {monogramFor(roleName)}
+                    {/* py-2.5 rather than py-4: the speaker column grew by the
+                        name beneath the circle, so the padding gives back what
+                        the name takes and the band keeps its height. */}
+                    <div className="px-5 py-2.5 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
+                      <span className="flex flex-col items-center gap-1 flex-shrink-0 w-16">
+                        <RoleAvatar roleKey={text.role.roleKey} roleName={roleName} tint={monogram} />
+                        <span
+                          title={roleName}
+                          className="w-full text-[10px] font-medium text-slate-500 leading-none text-center truncate"
+                        >
+                          {roleName}
+                        </span>
                       </span>
 
                       <div className="flex-1 min-w-0">
