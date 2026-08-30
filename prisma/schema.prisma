@@ -149,9 +149,9 @@ model BlCanon {
 
 // Join table: which books belong to which canons
 model BlCanonBook {
-  id       Int @id @default(autoincrement())
-  canonId  Int @map("canon_id")
-  bookId   Int @map("book_id")
+  id       Int     @id @default(autoincrement())
+  canonId  Int     @map("canon_id")
+  bookId   Int     @map("book_id")
   order    Int // Order within this canon
   optional Boolean @default(false) // Some books are optional in certain canons
 
@@ -183,15 +183,15 @@ model BlBook {
 
 // Translations (Amharic 1954, KJV, etc.)
 model BlTranslation {
-  id           Int      @id @default(autoincrement())
-  canonId      Int      @map("canon_id")
-  code         String   @unique // "am-1954", "en-kjv", "om-ethiopic"
-  name         String // "Amharic 1954", "King James Version"
-  language     String // "am", "en", "om"
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id        Int      @id @default(autoincrement())
+  canonId   Int      @map("canon_id")
+  code      String   @unique // "am-1954", "en-kjv", "om-ethiopic"
+  name      String // "Amharic 1954", "King James Version"
+  language  String // "am", "en", "om"
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  canon      BlCanon      @relation(fields: [canonId], references: [id], onDelete: Cascade)
+  canon      BlCanon       @relation(fields: [canonId], references: [id], onDelete: Cascade)
   verseTexts BlVerseText[]
 
   @@map("bl_translations")
@@ -279,27 +279,27 @@ model BlCollectionVerse {
 // =====================================================
 
 model LtSection {
-  id          Int       @id @default(autoincrement())
-  nameGeez    String    @map("name_geez")
-  nameAmharic String    @map("name_amharic")
-  nameEnglish String    @map("name_english")
-  orderIndex  Int       @map("order_index")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id          Int      @id @default(autoincrement())
+  nameGeez    String   @map("name_geez")
+  nameAmharic String   @map("name_amharic")
+  nameEnglish String   @map("name_english")
+  orderIndex  Int      @map("order_index")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  texts    LtLiturgicalText[]
+  texts LtLiturgicalText[]
 
   @@map("lt_sections")
 }
 
 model LtRole {
-  id           Int      @id @default(autoincrement())
-  roleKey      String   @unique @map("role_key")
-  nameAmharic  String   @map("name_amharic")
-  nameEnglish  String   @map("name_english")
-  orderIndex   Int      @map("order_index")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id          Int      @id @default(autoincrement())
+  roleKey     String   @unique @map("role_key")
+  nameAmharic String   @map("name_amharic")
+  nameEnglish String   @map("name_english")
+  orderIndex  Int      @map("order_index")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   texts LtLiturgicalText[]
 
@@ -307,20 +307,20 @@ model LtRole {
 }
 
 model LtLiturgicalText {
-  id                          Int      @id @default(autoincrement())
-  sectionId                   Int      @map("section_id")
-  orderIndex                  Int      @map("order_index")
-  roleId                      Int      @map("role_id")
-  textGeez                    String   @map("text_geez") @db.Text
-  textAmharic                 String   @map("text_amharic") @db.Text
-  textEnglishTransliteration  String   @map("text_english_transliteration") @db.Text
-  textEnglishTranslation      String   @map("text_english_translation") @db.Text
-  remark                      String?  @db.Text
-  audioGeezFilePath           String?  @map("audio_geez_file_path")
-  audioEzilFilePath           String?  @map("audio_ezil_file_path")
-  audioArarayFilePath         String?  @map("audio_araray_file_path")
-  createdAt                   DateTime @default(now()) @map("created_at")
-  updatedAt                   DateTime @updatedAt @map("updated_at")
+  id                         Int      @id @default(autoincrement())
+  sectionId                  Int      @map("section_id")
+  orderIndex                 Int      @map("order_index")
+  roleId                     Int      @map("role_id")
+  textGeez                   String   @map("text_geez") @db.Text
+  textAmharic                String   @map("text_amharic") @db.Text
+  textEnglishTransliteration String   @map("text_english_transliteration") @db.Text
+  textEnglishTranslation     String   @map("text_english_translation") @db.Text
+  remark                     String?  @db.Text
+  audioGeezFilePath          String?  @map("audio_geez_file_path")
+  audioEzilFilePath          String?  @map("audio_ezil_file_path")
+  audioArarayFilePath        String?  @map("audio_araray_file_path")
+  createdAt                  DateTime @default(now()) @map("created_at")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
 
   section LtSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   role    LtRole    @relation(fields: [roleId], references: [id])
@@ -541,7 +541,7 @@ model HmCategory {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  language      HmLanguage?     @relation(fields: [languageId], references: [id])
+  language      HmLanguage?      @relation(fields: [languageId], references: [id])
   subCategories HmSubCategory[]
   hymns         HmCategoryHymn[]
 
@@ -843,15 +843,15 @@ model SmChannel {
 }
 
 model SmSermon {
-  id                Int       @id @default(autoincrement())
-  userId            Int       @map("user_id")
-  approvalStatusId  Int       @map("approval_status_id")
-  channelId         Int       @map("channel_id")
-  slug              String    @unique
-  videoId           String    @map("video_id")
-  publishedAt       DateTime? @map("published_at")
-  preacher          String?
-  title             String
+  id                    Int       @id @default(autoincrement())
+  userId                Int       @map("user_id")
+  approvalStatusId      Int       @map("approval_status_id")
+  channelId             Int       @map("channel_id")
+  slug                  String    @unique
+  videoId               String    @map("video_id")
+  publishedAt           DateTime? @map("published_at")
+  preacher              String?
+  title                 String
   description           String?   @db.Text
   descriptionSuggestion String?   @map("description_suggestion") @db.Text
   thumbnailDefault      String    @map("thumbnail_default")
@@ -952,9 +952,9 @@ model QzLanguage {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  questions   QzLanguageQuestion[]
-  categories  QzCategory[]
-  rounds      QzRound[]
+  questions  QzLanguageQuestion[]
+  categories QzCategory[]
+  rounds     QzRound[]
 
   @@map("qz_languages")
 }
@@ -1147,19 +1147,19 @@ model QzRoomMemberRound {
 }
 
 model QzRound {
-  id           Int       @id @default(autoincrement())
-  roomId       Int       @map("room_id")
-  roundNumber  Int       @map("round_number")
-  timerSeconds Int       @default(30) @map("timer_seconds")
-  status       String    @default("active") // active, finished
-  startedAt    DateTime? @map("started_at")
-  endedAt      DateTime? @map("ended_at")
+  id            Int       @id @default(autoincrement())
+  roomId        Int       @map("room_id")
+  roundNumber   Int       @map("round_number")
+  timerSeconds  Int       @default(30) @map("timer_seconds")
+  status        String    @default("active") // active, finished
+  startedAt     DateTime? @map("started_at")
+  endedAt       DateTime? @map("ended_at")
   categoryId    Int?      @map("category_id")
   subCategoryId Int?      @map("sub_category_id")
   difficultyId  Int?      @map("difficulty_id")
   languageId    Int?      @map("language_id")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   room        QzRoom         @relation(fields: [roomId], references: [id], onDelete: Cascade)
   category    QzCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -1222,14 +1222,14 @@ model QzRoundResult {
 // =====================================================
 
 model DailyStat {
-  id                 Int      @id @default(autoincrement())
-  date               DateTime @unique @db.Date
-  hymnTotalClicks    Int      @default(0) @map("hymn_total_clicks")
-  hymnDailyClicks    Int      @default(0) @map("hymn_daily_clicks")
-  sermonTotalClicks  Int      @default(0) @map("sermon_total_clicks")
-  sermonDailyClicks  Int      @default(0) @map("sermon_daily_clicks")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  id                Int      @id @default(autoincrement())
+  date              DateTime @unique @db.Date
+  hymnTotalClicks   Int      @default(0) @map("hymn_total_clicks")
+  hymnDailyClicks   Int      @default(0) @map("hymn_daily_clicks")
+  sermonTotalClicks Int      @default(0) @map("sermon_total_clicks")
+  sermonDailyClicks Int      @default(0) @map("sermon_daily_clicks")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("daily_stats")
 }
@@ -1244,4 +1244,44 @@ model FeaturedItem {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@map("featured_items")
+}
+
+// ── Scheduled newsletter sends ────────────────────────────────────────────
+//
+// A campaign sends to a fixed list in daily batches rather than all at once.
+// The rendered HTML and text are stored with it, so a campaign already under
+// way keeps the template it was composed against even if the template changes.
+// The recipient list is frozen at creation for the same reason: someone who
+// joins tomorrow is not silently added to a send that is already running.
+model EmailCampaign {
+  id          Int      @id @default(autoincrement())
+  subject     String   @db.Text
+  htmlContent String   @map("html_content") @db.Text
+  textContent String   @map("text_content") @db.Text
+  batchSize   Int      @default(100) @map("batch_size")
+  status      String   @default("running")
+  createdById Int      @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  recipients EmailCampaignRecipient[]
+
+  @@map("email_campaigns")
+}
+
+model EmailCampaignRecipient {
+  id         Int       @id @default(autoincrement())
+  campaignId Int       @map("campaign_id")
+  userId     Int       @map("user_id")
+  email      String
+  name       String?
+  sentAt     DateTime? @map("sent_at")
+  error      String?   @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  campaign EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+  @@index([campaignId, sentAt])
+  @@map("email_campaign_recipients")
 }

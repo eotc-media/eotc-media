@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
-import { Send, Users, User, Search, X, CheckCircle, Loader2 } from "lucide-react"
+import { Send, Users, User, Search, X, CheckCircle, Loader2, CalendarClock } from "lucide-react"
 import RichTextEditor from "@/components/admin/shared/RichTextEditor"
 
 interface Member { id: number; name: string; email: string }
 
-type Mode = "all" | "specific"
+type Mode = "all" | "specific" | "drip"
 
 function hasText(html: string) {
   return html.replace(/<[^>]*>/g, "").trim().length > 0
@@ -33,7 +33,9 @@ export default function EmailComposerClient() {
 
   // Send state
   const [sending, setSending] = useState(false)
-  const [result, setResult] = useState<{ sent: number; failed: number; total: number; error?: string } | null>(null)
+  const [result, setResult] = useState<{ sent: number; failed: number; total: number; error?: string; campaignId?: number; batchSize?: number; remaining?: number } | null>(null)
+  // Drip mode: how many go out each day.
+  const [batchSize, setBatchSize] = useState(100)
   const [error, setError] = useState("")
   const [confirmOpen, setConfirmOpen] = useState(false)
 
@@ -76,6 +78,8 @@ export default function EmailComposerClient() {
       const body = {
         subjectAm, subjectEn, bodyAm, bodyEn,
         variant,
+        mode,
+        batchSize,
         userIds: mode === "specific" ? [...selected.keys()] : [],
       }
       const res = await fetch("/api/admin/email/send", {
@@ -98,11 +102,15 @@ export default function EmailComposerClient() {
   }
 
   const canSend = subjectAm.trim() && subjectEn.trim() && hasText(bodyAm) && hasText(bodyEn) &&
-    (mode === "all" || selected.size > 0)
+    (mode === "all" || mode === "drip" || selected.size > 0)
 
-  const recipientLabel = mode === "all"
-    ? `All members${totalCount !== null ? ` (${totalCount})` : ""}`
-    : `${selected.size} member${selected.size !== 1 ? "s" : ""} selected`
+  const dripDays = totalCount !== null ? Math.ceil(totalCount / Math.max(batchSize, 1)) : null
+  const recipientLabel =
+    mode === "all"
+      ? `All members${totalCount !== null ? ` (${totalCount})` : ""}`
+      : mode === "drip"
+        ? `All members${totalCount !== null ? ` (${totalCount})` : ""}, ${batchSize} per day`
+        : `${selected.size} member${selected.size !== 1 ? "s" : ""} selected`
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -121,7 +129,7 @@ export default function EmailComposerClient() {
           </div>
           <div className="p-4 space-y-3">
             <div className="flex gap-2">
-              {(["specific", "all"] as Mode[]).map(m => (
+              {(["specific", "all", "drip"] as Mode[]).map(m => (
                 <button
                   key={m}
                   onClick={() => setMode(m)}
@@ -129,10 +137,34 @@ export default function EmailComposerClient() {
                     mode === m ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  {m === "all" ? <><Users className="w-3.5 h-3.5" /> All members</> : <><User className="w-3.5 h-3.5" /> Specific members</>}
+                  {m === "all" ? <><Users className="w-3.5 h-3.5" /> All members</>
+                    : m === "drip" ? <><CalendarClock className="w-3.5 h-3.5" /> Spread over days</>
+                    : <><User className="w-3.5 h-3.5" /> Specific members</>}
                 </button>
               ))}
             </div>
+
+            {mode === "drip" && (
+              <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 space-y-2">
+                <label className="flex items-center gap-2 text-sm text-blue-900">
+                  Send
+                  <input
+                    type="number"
+                    min={1}
+                    max={500}
+                    value={batchSize}
+                    onChange={e => setBatchSize(Math.min(500, Math.max(1, parseInt(e.target.value) || 1)))}
+                    className="w-20 px-2 py-1 rounded border border-blue-200 bg-white text-sm"
+                  />
+                  members per day
+                </label>
+                <p className="text-xs text-blue-700">
+                  The first {batchSize} go out now; the rest follow one batch a day
+                  {dripDays !== null && <> — about {dripDays} day{dripDays !== 1 ? "s" : ""} in total</>}.
+                  The recipient list is fixed when you start, and anyone who unsubscribes before their turn is skipped.
+                </p>
+              </div>
+            )}
 
             {mode === "specific" && (
               <div className="space-y-2">
@@ -265,9 +297,14 @@ export default function EmailComposerClient() {
           <div className="flex items-start gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-xl">
             <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-green-800">Email sent successfully</p>
+              <p className="text-sm font-semibold text-green-800">
+                {result.campaignId ? "First batch sent" : "Email sent successfully"}
+              </p>
               <p className="text-xs text-green-600 mt-0.5">
                 {result.sent} sent · {result.failed} failed · {result.total} total recipients
+                {result.campaignId && result.remaining !== undefined && (
+                  <> · {result.remaining} to follow, {result.batchSize} a day</>
+                )}
               </p>
             </div>
           </div>

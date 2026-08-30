@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { hasMainAdminAccess } from "@/lib/auth-helpers"
 import { sendCampaign, buildEmailHtml, buildEmailText, type EmailVariant } from "@/lib/email"
 import { generateUnsubscribeToken } from "@/lib/unsubscribe-token"
+import { deliverNextBatch } from "@/lib/email-campaign"
 
 export const maxDuration = 60
 
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
   const session = await auth()
   if (!hasMainAdminAccess(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-  const { subjectAm, subjectEn, bodyAm, bodyEn, userIds, variant } = await req.json()
+  const { subjectAm, subjectEn, bodyAm, bodyEn, userIds, variant, mode, batchSize } = await req.json()
   const emailVariant: EmailVariant = variant === "rich" ? "rich" : "simple"
 
   const hasText = (s: string) => s?.replace(/<[^>]*>/g, "").trim().length > 0
@@ -48,6 +49,35 @@ export async function POST(req: NextRequest) {
     bodyAm, bodyEn,
     unsubscribeUrl: "{{params.unsubscribeUrl}}",
   })
+
+  // Drip mode: freeze the list, then send one batch a day. The first batch goes
+  // now so the sender can see it working rather than waiting until tomorrow.
+  if (mode === "drip") {
+    const perDay = Math.min(Math.max(parseInt(String(batchSize ?? 100), 10) || 100, 1), 500)
+    const campaign = await prisma.emailCampaign.create({
+      data: {
+        subject,
+        htmlContent,
+        textContent,
+        batchSize: perDay,
+        createdById: parseInt(session!.user!.id!),
+        recipients: {
+          create: recipients.map(u => ({ userId: u.id, email: u.email, name: u.name })),
+        },
+      },
+    })
+
+    const first = await deliverNextBatch(campaign.id)
+    return NextResponse.json({
+      campaignId: campaign.id,
+      total: recipients.length,
+      batchSize: perDay,
+      sent: first.sent,
+      failed: first.failed,
+      remaining: first.remaining,
+      error: first.error,
+    })
+  }
 
   const { sent, failed, error } = await sendCampaign({
     subject,
