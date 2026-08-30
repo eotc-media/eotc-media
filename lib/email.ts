@@ -156,13 +156,12 @@ export function buildEmailHtml({
       <table width="100%" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)">
 
         <!-- Header -->
-        <tr><td style="background:#1a3a5c;padding:28px 32px;text-align:center">
-          <p style="margin:0;font-size:22px;font-weight:bold;color:#ffffff;letter-spacing:0.5px">EOTC Media</p>
+        <tr><td style="padding:28px 32px 20px;text-align:center;border-bottom:1px solid #e5e7eb">
+          <p style="margin:0;font-size:22px;font-weight:bold;color:#1a3a5c;letter-spacing:0.5px">EOTC Media</p>
         </td></tr>
 
         <!-- Amharic section -->
         <tr><td style="padding:32px 32px 24px">
-          <p style="margin:0 0 6px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;color:#6b7280">አማርኛ</p>
           <h2 style="margin:0 0 16px;font-size:18px;color:#111827;line-height:1.4" dir="auto">${subjectAm}</h2>
           <p style="margin:0 0 12px;font-size:15px;color:#374151" dir="auto">{{params.greetingAm}}</p>
           <div class="bc" style="font-size:15px;color:#374151;line-height:1.8" dir="auto">${bodyAm}</div>
@@ -173,7 +172,6 @@ export function buildEmailHtml({
 
         <!-- English section -->
         <tr><td style="padding:24px 32px 32px">
-          <p style="margin:0 0 6px;font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;color:#6b7280">English</p>
           <h2 style="margin:0 0 16px;font-size:18px;color:#111827;line-height:1.4">${subjectEn}</h2>
           <p style="margin:0 0 12px;font-size:15px;color:#374151">{{params.greetingEn}}</p>
           <div class="bc" style="font-size:15px;color:#374151;line-height:1.8">${bodyEn}</div>
