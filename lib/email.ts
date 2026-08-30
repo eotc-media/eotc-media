@@ -112,7 +112,6 @@ export function buildEmailHtml({
 }): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://eotcmedia.com"
   const feedbackUrl = `${siteUrl}/?feedback=1`
-  const githubUrl = "https://github.com/ayenewdemeke/eotc-media"
 
   const bodyStyles = `<style>
     .bc p{margin:0 0 10px}.bc ul{margin:0 0 10px;padding-left:20px;list-style:disc}
@@ -136,8 +135,7 @@ export function buildEmailHtml({
     <p style="margin:0 0 12px;font-size:15px;color:#333333" dir="auto">{{params.greetingAm}}</p>
     <div class="bc" style="font-size:15px;color:#333333;line-height:1.75" dir="auto">${bodyAm}</div>
     <p style="margin:14px 0 0;font-size:13px;color:#555555" dir="auto">
-      <a href="${feedbackUrl}" style="color:#1a3a5c">አስተያየትዎን ይጻፉ</a> ·
-      <a href="${githubUrl}" style="color:#1a3a5c">በGitHub ከእኛ ጋር ይተባበሩ</a>
+      <a href="${feedbackUrl}" style="color:#1a3a5c">አስተያየትዎን ይጻፉ</a>
     </p>
 
     <div style="border-top:1px solid #e5e7eb;margin:22px 0"></div>
@@ -146,8 +144,7 @@ export function buildEmailHtml({
     <p style="margin:0 0 12px;font-size:15px;color:#333333">{{params.greetingEn}}</p>
     <div class="bc" style="font-size:15px;color:#333333;line-height:1.75">${bodyEn}</div>
     <p style="margin:14px 0 0;font-size:13px;color:#555555">
-      <a href="${feedbackUrl}" style="color:#1a3a5c">Write your feedback</a> ·
-      <a href="${githubUrl}" style="color:#1a3a5c">Collaborate with us on GitHub</a>
+      <a href="${feedbackUrl}" style="color:#1a3a5c">Write your feedback</a>
     </p>
 
     <p style="margin:28px 0 0;font-size:12px;color:#999999">
@@ -170,7 +167,6 @@ export function buildEmailHtml({
         <!-- Header -->
         <tr><td style="background:#1a3a5c;padding:28px 32px;text-align:center">
           <p style="margin:0;font-size:22px;font-weight:bold;color:#ffffff;letter-spacing:0.5px">EOTC Media</p>
-          <p style="margin:6px 0 0;font-size:13px;color:#93c5fd">Ethiopian Orthodox Tewahedo Church</p>
         </td></tr>
 
         <!-- Amharic section -->
@@ -180,8 +176,7 @@ export function buildEmailHtml({
           <p style="margin:0 0 12px;font-size:15px;color:#374151" dir="auto">{{params.greetingAm}}</p>
           <div class="bc" style="font-size:15px;color:#374151;line-height:1.8" dir="auto">${bodyAm}</div>
           <p style="margin:14px 0 0;font-size:13px;color:#4b5563" dir="auto">
-            <a href="${feedbackUrl}" style="color:#1a3a5c">አስተያየትዎን ይጻፉ</a> ·
-            <a href="${githubUrl}" style="color:#1a3a5c">በGitHub ከእኛ ጋር ይተባበሩ</a>
+            <a href="${feedbackUrl}" style="color:#1a3a5c">አስተያየትዎን ይጻፉ</a>
           </p>
         </td></tr>
 
@@ -195,8 +190,7 @@ export function buildEmailHtml({
           <p style="margin:0 0 12px;font-size:15px;color:#374151">{{params.greetingEn}}</p>
           <div class="bc" style="font-size:15px;color:#374151;line-height:1.8">${bodyEn}</div>
           <p style="margin:14px 0 0;font-size:13px;color:#4b5563">
-            <a href="${feedbackUrl}" style="color:#1a3a5c">Write your feedback</a> ·
-            <a href="${githubUrl}" style="color:#1a3a5c">Collaborate with us on GitHub</a>
+            <a href="${feedbackUrl}" style="color:#1a3a5c">Write your feedback</a>
           </p>
         </td></tr>
 
@@ -252,8 +246,7 @@ export function buildEmailText({
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://eotcmedia.com"
   const links =
-    `አስተያየትዎን ይጻፉ / Write your feedback: ${siteUrl}/?feedback=1\n` +
-    `ከእኛ ጋር ይተባበሩ / Collaborate with us: https://github.com/ayenewdemeke/eotc-media`
+    `አስተያየትዎን ይጻፉ / Write your feedback: ${siteUrl}/?feedback=1`
 
   return `${subjectAm}\n\n{{params.greetingAm}}\n\n${strip(bodyAm)}\n\n----\n\n${subjectEn}\n\n{{params.greetingEn}}\n\n${strip(bodyEn)}\n\n${links}\n\n—\nYou're receiving this as a member of EOTC Media.\nUnsubscribe: ${unsubscribeUrl}`
 }
