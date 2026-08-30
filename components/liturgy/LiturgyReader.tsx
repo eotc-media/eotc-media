@@ -74,16 +74,15 @@ const ROLE_MONOGRAM: Record<string, string> = {
 const DEFAULT_MONOGRAM = "bg-slate-100 text-slate-500"
 
 // A circle shows a photograph when one exists at these paths, and the tinted
-// monogram when it does not. Nothing breaks if the files are absent — a failed
-// load simply falls back — so the pictures can be dropped in later without a
-// code change.
+// monogram when it does not, so the files can be added later without a code
+// change. Choir has no photograph and is not meant to; the assistants share the
+// priest's and deacon's. See public/README.md.
 const ROLE_IMAGE: Record<string, string> = {
-  priest: "/roles/priest.jpg",
-  deacon: "/roles/deacon.jpg",
-  people: "/roles/people.jpg",
-  choir: "/roles/choir.jpg",
-  assistant_priest: "/roles/priest.jpg",
-  assistant_deacon: "/roles/deacon.jpg",
+  priest: "/images/liturgy/roles/priest.jpg",
+  deacon: "/images/liturgy/roles/deacon.jpg",
+  people: "/images/liturgy/roles/people.jpg",
+  assistant_priest: "/images/liturgy/roles/priest.jpg",
+  assistant_deacon: "/images/liturgy/roles/deacon.jpg",
 }
 
 // An Ethiopic role is shown as ይ followed by the first syllable of its name —

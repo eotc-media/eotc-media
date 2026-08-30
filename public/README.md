@@ -33,6 +33,17 @@ Default/fallback images
 - Book cover placeholder
 - No image available graphics
 
+#### `/images/liturgy/roles/`
+Photographs shown in the speaker circles on the liturgy page. Optional — each
+circle falls back to a tinted monogram when its file is absent, so the page is
+correct with none, some or all of them present.
+- `priest.jpg` - Priest (also used for the assistant priest)
+- `deacon.jpg` - Deacon (also used for the assistant deacon)
+- `people.jpg` - People
+
+Square crops work best: they are drawn `object-cover` inside a 44px circle, so
+anything far from square is cropped to the centre.
+
 ### Root Level
 - `manifest.json` - PWA manifest
 - `robots.txt` - Search engine directives (add when needed)
