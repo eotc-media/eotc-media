@@ -32,7 +32,7 @@ type Scope = "whole_bible" | "old_testament" | "new_testament" | "current_book"
 
 const TRANSLATIONS = [
   { value: "amharic__1954", label: "Amharic 1954" },
-  { value: "english__kjv", label: "English NKJV" },
+  { value: "english__kjv", label: "English KJV" },
   { value: "oromifa__v1",  label: "Oromifa" },
 ]
 
