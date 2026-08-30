@@ -40,12 +40,12 @@ export async function POST(req: NextRequest) {
   // per-recipient unsubscribe link; each recipient's real link is supplied via
   // message params.
   const htmlContent = buildEmailHtml({
-    subjectAm, subjectEn, bodyAm, bodyEn,
+    bodyAm, bodyEn,
     unsubscribeUrl: "{{params.unsubscribeUrl}}",
     variant: emailVariant,
   })
   const textContent = buildEmailText({
-    subjectAm, subjectEn, bodyAm, bodyEn,
+    bodyAm, bodyEn,
     unsubscribeUrl: "{{params.unsubscribeUrl}}",
   })
 

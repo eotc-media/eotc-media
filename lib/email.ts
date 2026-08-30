@@ -96,15 +96,11 @@ export async function sendCampaign(opts: {
 export type EmailVariant = "rich" | "simple"
 
 export function buildEmailHtml({
-  subjectAm,
-  subjectEn,
   bodyAm,
   bodyEn,
   unsubscribeUrl,
   variant = "rich",
 }: {
-  subjectAm: string
-  subjectEn: string
   bodyAm: string
   bodyEn: string
   unsubscribeUrl: string
@@ -127,14 +123,10 @@ export function buildEmailHtml({
 <body style="margin:0;padding:24px 16px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#222222">
   <div style="max-width:680px">
     <p style="margin:0 0 20px;font-size:13px;color:#666666">EOTC Media</p>
-
-    <h2 style="margin:0 0 10px;font-size:17px;color:#111827;line-height:1.4" dir="auto">${subjectAm}</h2>
     <p style="margin:0 0 12px;font-size:15px;color:#333333" dir="auto">{{params.greetingAm}}</p>
     <div class="bc" style="font-size:15px;color:#333333;line-height:1.75" dir="auto">${bodyAm}</div>
 
     <div style="border-top:1px solid #e5e7eb;margin:22px 0"></div>
-
-    <h2 style="margin:0 0 10px;font-size:17px;color:#111827;line-height:1.4">${subjectEn}</h2>
     <p style="margin:0 0 12px;font-size:15px;color:#333333">{{params.greetingEn}}</p>
     <div class="bc" style="font-size:15px;color:#333333;line-height:1.75">${bodyEn}</div>
 
@@ -162,7 +154,6 @@ export function buildEmailHtml({
 
         <!-- Amharic section -->
         <tr><td style="padding:32px 32px 24px">
-          <h2 style="margin:0 0 16px;font-size:18px;color:#111827;line-height:1.4" dir="auto">${subjectAm}</h2>
           <p style="margin:0 0 12px;font-size:15px;color:#374151" dir="auto">{{params.greetingAm}}</p>
           <div class="bc" style="font-size:15px;color:#374151;line-height:1.8" dir="auto">${bodyAm}</div>
         </td></tr>
@@ -172,7 +163,6 @@ export function buildEmailHtml({
 
         <!-- English section -->
         <tr><td style="padding:24px 32px 32px">
-          <h2 style="margin:0 0 16px;font-size:18px;color:#111827;line-height:1.4">${subjectEn}</h2>
           <p style="margin:0 0 12px;font-size:15px;color:#374151">{{params.greetingEn}}</p>
           <div class="bc" style="font-size:15px;color:#374151;line-height:1.8">${bodyEn}</div>
         </td></tr>
@@ -203,14 +193,10 @@ export function buildEmailHtml({
 // Plain-text alternative — improves deliverability and makes the mail read as
 // more personal/transactional. Uses the same {{params.unsubscribeUrl}} placeholder.
 export function buildEmailText({
-  subjectAm,
-  subjectEn,
   bodyAm,
   bodyEn,
   unsubscribeUrl,
 }: {
-  subjectAm: string
-  subjectEn: string
   bodyAm: string
   bodyEn: string
   unsubscribeUrl: string
@@ -227,5 +213,5 @@ export function buildEmailText({
       .replace(/\n{3,}/g, "\n\n")
       .trim()
 
-  return `${subjectAm}\n\n{{params.greetingAm}}\n\n${strip(bodyAm)}\n\n----\n\n${subjectEn}\n\n{{params.greetingEn}}\n\n${strip(bodyEn)}\n\n—\nYou're receiving this as a member of EOTC Media.\nUnsubscribe: ${unsubscribeUrl}`
+  return `{{params.greetingAm}}\n\n${strip(bodyAm)}\n\n----\n\n{{params.greetingEn}}\n\n${strip(bodyEn)}\n\n—\nYou're receiving this as a member of EOTC Media.\nUnsubscribe: ${unsubscribeUrl}`
 }
