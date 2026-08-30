@@ -21,10 +21,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "All four fields (Amharic/English subject and body) are required." }, { status: 400 })
   }
 
-  // The Simple variant uses a single natural English subject: a pipe-joined
-  // bilingual line reads machine-generated, which pushes Gmail toward
-  // Promotions. The branded variant keeps both languages in the subject.
-  const subject = emailVariant === "simple" ? subjectEn : `${subjectAm} | ${subjectEn}`
+  // Both variants carry both languages in the subject, so a reader sees the one
+  // they read whichever way their client truncates the line.
+  const subject = `${subjectAm} | ${subjectEn}`
 
   // If specific user IDs provided, send only to those (still excluding opt-outs)
   const where = userIds?.length
