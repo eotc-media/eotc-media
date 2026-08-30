@@ -156,8 +156,8 @@ export function buildEmailHtml({
       <table width="100%" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)">
 
         <!-- Header -->
-        <tr><td style="padding:28px 32px 20px;text-align:center;border-bottom:1px solid #e5e7eb">
-          <p style="margin:0;font-size:22px;font-weight:bold;color:#1a3a5c;letter-spacing:0.5px">EOTC Media</p>
+        <tr><td style="padding:18px 32px 14px;text-align:center;border-bottom:1px solid #e5e7eb">
+          <p style="margin:0;font-size:17px;font-weight:bold;color:#1a3a5c;letter-spacing:0.5px">EOTC Media</p>
         </td></tr>
 
         <!-- Amharic section -->
