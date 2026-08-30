@@ -80,9 +80,9 @@ export default function Navbar() {
   ]
 
   const moreLinks = [
-    { href: "/quiz", label: t("nav_quiz"), icon: HelpCircle },
-    { href: "/books", label: t("nav_books"), icon: BookMarked },
     { href: "/sermons", label: t("nav_sermons"), icon: MessageSquare },
+    { href: "/books", label: t("nav_books"), icon: BookMarked },
+    { href: "/quiz", label: t("nav_quiz"), icon: HelpCircle },
   ]
 
   // Desktop shows every section directly; the mobile sheet still lists them in
