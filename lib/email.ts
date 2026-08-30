@@ -95,6 +95,20 @@ export async function sendCampaign(opts: {
 
 export type EmailVariant = "rich" | "simple"
 
+const SHARE_TEXT = {
+  am: "የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ መዝሙር፣ ስብከት፣ ቅዳሴ፣ መጽሐፍ ቅዱስ እና መንፈሳዊ መጻሕፍት — EOTC Media",
+  en: "EOTC Media — Amharic Bible, mezmur, sermons, liturgy and spiritual books",
+}
+
+function shareLinks(text: string, url: string) {
+  const u = encodeURIComponent(url)
+  return {
+    telegram: `https://t.me/share/url?url=${u}&text=${encodeURIComponent(text)}`,
+    whatsapp: `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${u}`,
+  }
+}
+
 export function buildEmailHtml({
   subjectAm,
   subjectEn,
@@ -112,6 +126,8 @@ export function buildEmailHtml({
 }): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://eotcmedia.com"
   const feedbackUrl = `${siteUrl}/?feedback=1`
+  const shareAm = shareLinks(SHARE_TEXT.am, siteUrl)
+  const shareEn = shareLinks(SHARE_TEXT.en, siteUrl)
 
   const bodyStyles = `<style>
     .bc p{margin:0 0 10px}.bc ul{margin:0 0 10px;padding-left:20px;list-style:disc}
@@ -137,6 +153,11 @@ export function buildEmailHtml({
     <p style="margin:14px 0 0;font-size:13px;color:#555555" dir="auto">
       <a href="${feedbackUrl}" style="color:#1a3a5c">አስተያየትዎን ይጻፉ</a>
     </p>
+    <p style="margin:6px 0 0;font-size:12px;color:#888888">አጋሩ፦
+      <a href="${shareAm.telegram}" style="color:#888888">Telegram</a> ·
+      <a href="${shareAm.whatsapp}" style="color:#888888">WhatsApp</a> ·
+      <a href="${shareAm.facebook}" style="color:#888888">Facebook</a>
+    </p>
 
     <div style="border-top:1px solid #e5e7eb;margin:22px 0"></div>
 
@@ -145,6 +166,11 @@ export function buildEmailHtml({
     <div class="bc" style="font-size:15px;color:#333333;line-height:1.75">${bodyEn}</div>
     <p style="margin:14px 0 0;font-size:13px;color:#555555">
       <a href="${feedbackUrl}" style="color:#1a3a5c">Write your feedback</a>
+    </p>
+    <p style="margin:6px 0 0;font-size:12px;color:#888888">Share:
+      <a href="${shareEn.telegram}" style="color:#888888">Telegram</a> ·
+      <a href="${shareEn.whatsapp}" style="color:#888888">WhatsApp</a> ·
+      <a href="${shareEn.facebook}" style="color:#888888">Facebook</a>
     </p>
 
     <p style="margin:28px 0 0;font-size:12px;color:#999999">
@@ -178,6 +204,11 @@ export function buildEmailHtml({
           <p style="margin:14px 0 0;font-size:13px;color:#4b5563" dir="auto">
             <a href="${feedbackUrl}" style="color:#1a3a5c">አስተያየትዎን ይጻፉ</a>
           </p>
+          <p style="margin:6px 0 0;font-size:12px;color:#6b7280">አጋሩ፦
+      <a href="${shareAm.telegram}" style="color:#6b7280">Telegram</a> ·
+      <a href="${shareAm.whatsapp}" style="color:#6b7280">WhatsApp</a> ·
+      <a href="${shareAm.facebook}" style="color:#6b7280">Facebook</a>
+    </p>
         </td></tr>
 
         <!-- Divider -->
@@ -192,6 +223,11 @@ export function buildEmailHtml({
           <p style="margin:14px 0 0;font-size:13px;color:#4b5563">
             <a href="${feedbackUrl}" style="color:#1a3a5c">Write your feedback</a>
           </p>
+          <p style="margin:6px 0 0;font-size:12px;color:#6b7280">Share:
+      <a href="${shareEn.telegram}" style="color:#6b7280">Telegram</a> ·
+      <a href="${shareEn.whatsapp}" style="color:#6b7280">WhatsApp</a> ·
+      <a href="${shareEn.facebook}" style="color:#6b7280">Facebook</a>
+    </p>
         </td></tr>
 
         <!-- CTA -->
@@ -246,7 +282,8 @@ export function buildEmailText({
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://eotcmedia.com"
   const links =
-    `አስተያየትዎን ይጻፉ / Write your feedback: ${siteUrl}/?feedback=1`
+    `አስተያየትዎን ይጻፉ / Write your feedback: ${siteUrl}/?feedback=1\n` +
+    `አጋሩ / Share: ${siteUrl}`
 
   return `${subjectAm}\n\n{{params.greetingAm}}\n\n${strip(bodyAm)}\n\n----\n\n${subjectEn}\n\n{{params.greetingEn}}\n\n${strip(bodyEn)}\n\n${links}\n\n—\nYou're receiving this as a member of EOTC Media.\nUnsubscribe: ${unsubscribeUrl}`
 }
