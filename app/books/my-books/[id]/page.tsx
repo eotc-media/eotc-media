@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import Navbar from "@/components/Navbar"
 import BookSidebar from "@/components/books/BookSidebar"
 import { ArrowLeft, FileText } from "lucide-react"
+import { bookImageUrl, bookFileUrl } from "@/lib/book-assets"
 
 const STATUS_BADGE: Record<string, string> = {
   Approved: "bg-green-100 text-green-700",
@@ -38,8 +39,8 @@ export default async function MyBookDetailPage({ params }: PageProps) {
   if (!book) notFound()
 
   const statusName = (book.approvalStatus as { name: string } | null)?.name ?? "Pending"
-  const coverUrl = book.image ? `/api/books/images/${book.image}` : null
-  const fileUrl = book.file ? `/api/books/files/${book.file}` : null
+  const coverUrl = book.image ? bookImageUrl(book.image) : null
+  const fileUrl = book.file ? bookFileUrl(book.file) : null
 
   return (
     <div className="min-h-screen bg-white">

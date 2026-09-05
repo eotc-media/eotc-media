@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Download, ThumbsUp, Flag, MessageSquare, X } from "lucide-react"
 import { CbBook, CbBookComment } from "@/types/models/book"
+import { bookImageUrl, bookFileUrl } from "@/lib/book-assets"
 
 interface BookDetailClientProps {
   book: CbBook & { comments?: CbBookComment[]; hasLiked?: boolean; likesCount?: number; commentsCount?: number }
@@ -20,8 +21,8 @@ export default function BookDetailClient({ book, userId }: BookDetailClientProps
   const [copyrightReason, setCopyrightReason] = useState("")
   const [hasCopyrightReport, setHasCopyrightReport] = useState(false)
 
-  const coverUrl = book.image ? `/api/books/images/${book.image}` : null
-  const fileUrl = `/api/books/files/${book.file}`
+  const coverUrl = book.image ? bookImageUrl(book.image) : null
+  const fileUrl = bookFileUrl(book.file)
 
   async function toggleLike() {
     if (!userId) { window.location.href = "/auth/login"; return }
