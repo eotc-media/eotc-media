@@ -22,8 +22,15 @@ export function middleware(request: NextRequest) {
   return response
 }
 
+// `missing` is evaluated before the function is invoked at all, so a visitor who
+// already has the locale cookie never wakes it. It only ever needed to run once
+// per visitor; without this it ran on every page they opened, and doing nothing
+// still counts as an invocation.
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|public|images).*)",
+    {
+      source: "/((?!api|_next/static|_next/image|favicon.ico|public|images).*)",
+      missing: [{ type: "cookie", key: "locale" }],
+    },
   ],
 }
