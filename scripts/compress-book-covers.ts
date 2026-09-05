@@ -5,22 +5,14 @@
  * everything submitted before that went to R2 at full size. This walks the
  * existing covers and applies the same treatment.
  *
- * Each cover is written under a NEW key ending .webp and the book row is
- * repointed at it, rather than overwriting in place. Overwriting would leave
- * every edge cache and browser serving the old bytes from the long TTL on
- * files.eotcmedia.com; a new filename simply isn't cached yet. The old object
- * is deleted only after the row has been updated, so a crash mid-run leaves
- * orphaned files, never a book with a broken cover.
+ * Needs DATABASE_URL and the R2_* variables locally. Without them, the same
+ * work runs on Vercel via /api/admin/backfill-covers, which has them already.
  *
  *   npx tsx --env-file=.env scripts/compress-book-covers.ts --dry-run
  *   npx tsx --env-file=.env scripts/compress-book-covers.ts
  */
-import sharp from "sharp"
 import { prisma } from "../lib/prisma"
-import { getObject, putObject, deleteObject } from "../lib/storage"
-
-const COVER_MAX_WIDTH = 600
-const PREFIX = "books/images"
+import { recompressStoredCover } from "../lib/book-covers"
 
 const dryRun = process.argv.includes("--dry-run")
 
@@ -29,87 +21,40 @@ const kb = (n: number) => `${(n / 1024).toFixed(1)} KB`
 async function main() {
   const books = await prisma.cbBook.findMany({
     where: { image: { not: null } },
-    select: { id: true, image: true },
+    select: { image: true },
     orderBy: { id: "asc" },
   })
 
-  // Nothing stops two rows from naming the same file, and deleting it after the
-  // first row would break the second. Convert to one pass per distinct cover.
-  const byImage = new Map<string, number[]>()
-  for (const b of books) {
-    if (!b.image) continue
-    byImage.set(b.image, [...(byImage.get(b.image) ?? []), b.id])
-  }
+  // Two rows can name the same file, and the second pass over it would find the
+  // original already deleted. One pass per distinct cover instead.
+  const covers = [...new Set(books.map(b => b.image).filter((i): i is string => !!i))]
 
-  console.log(`${books.length} books, ${byImage.size} distinct covers${dryRun ? " (dry run)" : ""}\n`)
+  console.log(`${books.length} books, ${covers.length} distinct covers${dryRun ? " (dry run)" : ""}\n`)
 
-  let converted = 0
-  let skipped = 0
-  let missing = 0
-  let failed = 0
+  const counts = { converted: 0, optimal: 0, missing: 0, failed: 0 }
   let before = 0
   let after = 0
 
-  for (const [image, bookIds] of byImage) {
-    const oldKey = `${PREFIX}/${image}`
+  for (const image of covers) {
+    const result = await recompressStoredCover(image, { dryRun })
+    counts[result.status]++
 
-    let stored
-    try {
-      stored = await getObject(oldKey)
-    } catch (err) {
-      console.error(`  ! ${image} — read failed: ${(err as Error).message}`)
-      failed++
-      continue
-    }
-
-    if (!stored) {
+    if (result.status === "converted") {
+      before += result.before
+      after += result.after
+      console.log(`  ${image}  ${kb(result.before)} → ${kb(result.after)}`)
+    } else if (result.status === "failed") {
+      console.error(`  ! ${image} — ${result.error}`)
+    } else if (result.status === "missing") {
       console.warn(`  ? ${image} — not in R2, leaving row alone`)
-      missing++
-      continue
     }
-
-    const original = Buffer.from(stored.body)
-
-    let compressed: Buffer
-    try {
-      compressed = await sharp(original)
-        .rotate()
-        .resize({ width: COVER_MAX_WIDTH, withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toBuffer()
-    } catch (err) {
-      console.error(`  ! ${image} — could not decode: ${(err as Error).message}`)
-      failed++
-      continue
-    }
-
-    // Re-encoding an already-small WebP can come out larger. Leave those alone;
-    // churning the filename for no gain only costs cache warmth.
-    if (compressed.length >= original.length) {
-      skipped++
-      continue
-    }
-
-    before += original.length
-    after += compressed.length
-    converted++
-
-    const base = image.replace(/\.[^./]+$/, "")
-    const newImage = `${base}.webp`
-    const newKey = `${PREFIX}/${newImage}`
-
-    console.log(`  ${image}  ${kb(original.length)} → ${kb(compressed.length)}`)
-    if (dryRun) continue
-
-    await putObject(newKey, compressed, "image/webp")
-    await prisma.cbBook.updateMany({ where: { id: { in: bookIds } }, data: { image: newImage } })
-    if (newKey !== oldKey) await deleteObject(oldKey)
   }
 
   const saved = before - after
   console.log(
-    `\n${converted} converted, ${skipped} already optimal, ${missing} missing, ${failed} failed` +
-    (converted ? `\n${kb(before)} → ${kb(after)} (saved ${kb(saved)}, ${((saved / before) * 100).toFixed(0)}%)` : "")
+    `\n${counts.converted} converted, ${counts.optimal} already optimal, ` +
+    `${counts.missing} missing, ${counts.failed} failed` +
+    (counts.converted ? `\n${kb(before)} → ${kb(after)} (saved ${kb(saved)}, ${((saved / before) * 100).toFixed(0)}%)` : "")
   )
 }
 
