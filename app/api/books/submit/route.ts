@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import sharp from 'sharp'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { putObject } from '@/lib/storage'
@@ -7,13 +8,42 @@ function generateSlug(name: string): string {
   return name.trim().replace(/\s+/g, '-').replace(/[^\w\u1200-\u137F-]/g, '').slice(0, 120) + '-' + Date.now().toString(36)
 }
 
+// Covers are displayed at most a few hundred pixels wide, but people upload
+// whatever their phone or scanner produced — often several megabytes. Every one
+// of those bytes is then served on every book listing. Re-encoding to WebP at
+// 600px wide brings a typical cover under 40 KB with no visible loss.
+const COVER_MAX_WIDTH = 600
+
+async function compressCover(buffer: Buffer): Promise<{ buffer: Uint8Array; ext: string; type: string }> {
+  const out = await sharp(buffer)
+    .rotate() // honour EXIF orientation, which stripping metadata would otherwise discard
+    .resize({ width: COVER_MAX_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toBuffer()
+  return { buffer: out, ext: 'webp', type: 'image/webp' }
+}
+
 // dir is the R2 key prefix ("files" for PDFs, "images" for covers). Returns the
 // stored filename; the matching serve route reads books/<dir>/<filename>.
 async function saveFile(file: File, dir: string): Promise<string> {
-  const ext = file.name.split('.').pop() ?? 'bin'
+  const original = Buffer.from(await file.arrayBuffer())
+
+  let buffer: Uint8Array = original
+  let ext = file.name.split('.').pop() ?? 'bin'
+  let type = file.type || 'application/octet-stream'
+
+  if (dir === 'images') {
+    try {
+      ;({ buffer, ext, type } = await compressCover(original))
+    } catch {
+      // An unreadable or exotic image still gets stored as uploaded — a book
+      // submission is not worth losing over a cover sharp could not decode.
+      console.error('[books/submit] cover compression failed; storing original')
+    }
+  }
+
   const filename = `book_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}.${ext}`
-  const buffer = Buffer.from(await file.arrayBuffer())
-  await putObject(`books/${dir}/${filename}`, buffer, file.type || 'application/octet-stream')
+  await putObject(`books/${dir}/${filename}`, buffer, type)
   return filename
 }
 
