@@ -44,7 +44,13 @@ export async function putObject(
     // Node Buffer/Uint8Array are valid request bodies at runtime; cast past the
     // DOM BodyInit typing mismatch.
     body: body as unknown as BodyInit,
-    headers: { "Content-Type": contentType },
+    headers: {
+      "Content-Type": contentType,
+      // R2 rejects a PUT without a length. aws4fetch wraps the body in a
+      // Request to sign it, which turns the bytes into a stream and loses the
+      // length fetch would otherwise have derived, so state it outright.
+      "Content-Length": String(body.byteLength),
+    },
   })
   if (!res.ok) {
     const detail = await res.text().catch(() => "")
