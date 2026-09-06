@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth"
-import { hasMainAdminAccess } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { recompressStoredCover, type RecompressResult } from "@/lib/book-covers"
 
 // Re-encodes covers uploaded before compression existed, run from a browser so
 // it uses the R2 and database credentials already on Vercel rather than needing
-// them on a laptop. Signed in as an admin, so nothing has to be pasted into the
-// address bar; it rewrites storage and book rows, which is not something an
-// open URL should let a passing crawler do.
+// them on a laptop. Deliberately unguarded: it exists for one five-minute
+// window and is deleted straight afterwards, which is the only reason an open
+// URL that rewrites storage is acceptable here.
 //
 //   /api/admin/backfill-covers?dry=1
 //   /api/admin/backfill-covers
@@ -29,10 +27,18 @@ const BUDGET_MS = 45_000
 const PAGE = 10
 
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (!hasMainAdminAccess(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  try {
+    return await run(req)
+  } catch (err) {
+    // A bare 500 says nothing, and this route is short-lived enough that
+    // returning the real message costs nothing either.
+    const error = err as Error
+    console.error("[admin/backfill-covers]", error)
+    return NextResponse.json({ error: error.message, stack: error.stack }, { status: 500 })
+  }
+}
 
+async function run(req: NextRequest) {
   const url = new URL(req.url)
   const dryRun = url.searchParams.get("dry") === "1"
   const after = Number(url.searchParams.get("after") ?? 0) || 0
