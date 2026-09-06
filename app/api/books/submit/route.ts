@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
+import sharp from 'sharp'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { putObject } from '@/lib/storage'
-import { compressCover } from '@/lib/book-covers'
 
 function generateSlug(name: string): string {
   return name.trim().replace(/\s+/g, '-').replace(/[^\w\u1200-\u137F-]/g, '').slice(0, 120) + '-' + Date.now().toString(36)
+}
+
+// Covers are displayed a few hundred pixels wide at most, but people upload
+// whatever their phone or scanner produced \u2014 often several megabytes, and every
+// one of those bytes then goes out on each book listing.
+const COVER_MAX_WIDTH = 600
+
+function compressCover(input: Uint8Array): Promise<Uint8Array> {
+  return sharp(input)
+    .rotate() // honour EXIF orientation, which stripping metadata would otherwise discard
+    .resize({ width: COVER_MAX_WIDTH, withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toBuffer()
 }
 
 // dir is the R2 key prefix ("files" for PDFs, "images" for covers). Returns the
