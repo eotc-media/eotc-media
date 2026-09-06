@@ -1,10 +1,11 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Navbar from "@/components/Navbar"
 import QuizSidebar from "@/components/quiz/QuizSidebar"
+import { usePolling } from "@/hooks/use-polling"
 import { Users, Crown, Copy, Check, Plus, Loader2, ChevronRight, SlidersHorizontal, Trash2 } from "lucide-react"
 
 interface FilterOption { id: number; name: string }
@@ -72,7 +73,6 @@ export default function RoomPage() {
   const [startingRound, setStartingRound] = useState(false)
   const [deletingRound, setDeletingRound] = useState(false)
   const [error, setError] = useState("")
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Filter options (loaded once)
   const [categories, setCategories] = useState<FilterOption[]>([])
@@ -97,11 +97,11 @@ export default function RoomPage() {
     setLoading(false)
   }, [roomId, router])
 
-  useEffect(() => {
-    fetchRoom()
-    intervalRef.current = setInterval(fetchRoom, 2000)
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
-  }, [fetchRoom])
+  useEffect(() => { fetchRoom() }, [fetchRoom])
+
+  // The lobby only has to notice people joining and the host starting a round,
+  // neither of which needs two-second resolution.
+  usePolling(fetchRoom, 5000)
 
   useEffect(() => {
     Promise.all([

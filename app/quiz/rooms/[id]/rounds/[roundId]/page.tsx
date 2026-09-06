@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Navbar from "@/components/Navbar"
 import QuizSidebar from "@/components/quiz/QuizSidebar"
+import { usePolling } from "@/hooks/use-polling"
 import { Crown, CheckCircle, XCircle, Clock, Loader2, ChevronLeft, ChevronRight, Check } from "lucide-react"
 
 interface Choice {
@@ -75,7 +76,6 @@ export default function RoundPage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [markingReady, setMarkingReady] = useState(false)
   const [isReady, setIsReady] = useState(false)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timeUpCalledRef = useRef(false)
 
@@ -110,12 +110,13 @@ export default function RoundPage() {
 
   useEffect(() => {
     fetchRound()
-    intervalRef.current = setInterval(fetchRound, 2000)
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [fetchRound])
+
+  // Two seconds while the round is live, since players are watching each other
+  // answer. A finished round never changes again, so it stops polling entirely
+  // rather than asking the same question forever on a left-open scoreboard.
+  usePolling(fetchRound, 2000, round?.status !== "finished")
 
   // Countdown timer — fires end API once when time runs out
   useEffect(() => {
