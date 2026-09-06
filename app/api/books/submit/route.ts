@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { putObject } from '@/lib/storage'
+import { compressCover } from '@/lib/book-covers'
 
 function generateSlug(name: string): string {
   return name.trim().replace(/\s+/g, '-').replace(/[^\w\u1200-\u137F-]/g, '').slice(0, 120) + '-' + Date.now().toString(36)
@@ -10,10 +11,26 @@ function generateSlug(name: string): string {
 // dir is the R2 key prefix ("files" for PDFs, "images" for covers). Returns the
 // stored filename; the matching serve route reads books/<dir>/<filename>.
 async function saveFile(file: File, dir: string): Promise<string> {
-  const ext = file.name.split('.').pop() ?? 'bin'
+  const original = Buffer.from(await file.arrayBuffer())
+
+  let buffer: Uint8Array = original
+  let ext = file.name.split('.').pop() ?? 'bin'
+  let type = file.type || 'application/octet-stream'
+
+  if (dir === 'images') {
+    try {
+      buffer = await compressCover(original)
+      ext = 'webp'
+      type = 'image/webp'
+    } catch {
+      // An unreadable or exotic image still gets stored as uploaded — a book
+      // submission is not worth losing over a cover sharp could not decode.
+      console.error('[books/submit] cover compression failed; storing original')
+    }
+  }
+
   const filename = `book_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}.${ext}`
-  const buffer = Buffer.from(await file.arrayBuffer())
-  await putObject(`books/${dir}/${filename}`, buffer, file.type || 'application/octet-stream')
+  await putObject(`books/${dir}/${filename}`, buffer, type)
   return filename
 }
 
