@@ -4,11 +4,10 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@prisma/client'],
   // sharp reaches its native libvips through dlopen at runtime, so nothing in
   // the source refers to the .so and file tracing leaves it out of the bundle.
-  // The routes below then fail to import sharp at all on Vercel. Naming the
-  // platform packages explicitly puts the binary back in.
+  // The route then fails to import sharp at all on Vercel. Naming the platform
+  // packages explicitly puts the binary back in.
   outputFileTracingIncludes: {
     '/api/books/submit': ['./node_modules/@img/sharp-linux-x64/**', './node_modules/@img/sharp-libvips-linux-x64/**'],
-    '/api/admin/backfill-covers': ['./node_modules/@img/sharp-linux-x64/**', './node_modules/@img/sharp-libvips-linux-x64/**'],
   },
   images: {
     remotePatterns: [
