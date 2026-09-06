@@ -13,18 +13,20 @@ import { recompressStoredCover, type RecompressResult } from "@/lib/book-covers"
 //   /api/admin/backfill-covers?dry=1
 //   /api/admin/backfill-covers
 //
-// A function times out long before a few hundred covers are done, so each call
-// handles one batch and reports `nextUrl` to continue from. `after` is a book
-// id, which keeps the walk stateless — covers left alone because they were
-// already small are behind the cursor and never retried.
+// One call keeps going until it runs out of covers or out of time, then reports
+// `nextUrl` to resume from — so this is a couple of clicks, not one per cover.
+// `after` is a book id, which keeps the walk stateless: covers left alone
+// because they were already small sit behind the cursor and are never retried.
 //
 // Delete this route once the backfill has been run; new uploads are compressed
 // on the way in, so it has no second use.
 
 export const maxDuration = 60
 
-const DEFAULT_LIMIT = 10
-const MAX_LIMIT = 50
+// Stop well short of maxDuration: a cover already being encoded when the budget
+// runs out still has to finish, and the response still has to be written.
+const BUDGET_MS = 45_000
+const PAGE = 10
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -34,52 +36,57 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url)
   const dryRun = url.searchParams.get("dry") === "1"
   const after = Number(url.searchParams.get("after") ?? 0) || 0
-  const limit = Math.min(Number(url.searchParams.get("limit")) || DEFAULT_LIMIT, MAX_LIMIT)
 
-  const books = await prisma.cbBook.findMany({
-    where: { image: { not: null }, id: { gt: after } },
-    select: { id: true, image: true },
-    orderBy: { id: "asc" },
-    take: limit,
-  })
-
-  const remaining = await prisma.cbBook.count({
-    where: { image: { not: null }, id: { gt: after } },
-  })
-
+  const startedAt = Date.now()
   const results: RecompressResult[] = []
   const seen = new Set<string>()
-  let lastId = after
+  let cursor = after
+  let scanned = 0
 
-  for (const book of books) {
-    lastId = book.id
-    if (!book.image || seen.has(book.image)) continue
-    seen.add(book.image)
-    results.push(await recompressStoredCover(book.image, { dryRun }))
+  outer: while (Date.now() - startedAt < BUDGET_MS) {
+    const books = await prisma.cbBook.findMany({
+      where: { image: { not: null }, id: { gt: cursor } },
+      select: { id: true, image: true },
+      orderBy: { id: "asc" },
+      take: PAGE,
+    })
+    if (books.length === 0) break
+
+    for (const book of books) {
+      cursor = book.id
+      scanned++
+      if (!book.image || seen.has(book.image)) continue
+      seen.add(book.image)
+      results.push(await recompressStoredCover(book.image, { dryRun }))
+      if (Date.now() - startedAt >= BUDGET_MS) break outer
+    }
   }
+
+  const remaining = await prisma.cbBook.count({
+    where: { image: { not: null }, id: { gt: cursor } },
+  })
 
   const converted = results.filter(r => r.status === "converted")
   const bytesBefore = converted.reduce((n, r) => n + r.before, 0)
   const bytesAfter = converted.reduce((n, r) => n + r.after, 0)
 
-  const done = books.length === 0
-  const nextUrl = done
-    ? null
-    : `${url.origin}${url.pathname}?after=${lastId}&limit=${limit}${dryRun ? "&dry=1" : ""}`
-
   return NextResponse.json({
     dryRun,
-    done,
-    batch: {
-      scanned: books.length,
+    done: remaining === 0,
+    elapsedSeconds: +((Date.now() - startedAt) / 1000).toFixed(1),
+    thisRun: {
+      scanned,
       converted: converted.length,
       optimal: results.filter(r => r.status === "optimal").length,
       missing: results.filter(r => r.status === "missing").length,
       failed: results.filter(r => r.status === "failed").length,
       savedKb: +((bytesBefore - bytesAfter) / 1024).toFixed(1),
     },
-    remainingAfterThisBatch: Math.max(remaining - books.length, 0),
+    remaining,
     results,
-    nextUrl,
+    nextUrl:
+      remaining === 0
+        ? null
+        : `${url.origin}${url.pathname}?after=${cursor}${dryRun ? "&dry=1" : ""}`,
   })
 }
