@@ -3,14 +3,15 @@
 import { useState } from "react"
 import { Share2, Check } from "lucide-react"
 
-// Copies (or natively shares) a SHORT link like /h/123 instead of the full
-// Amharic-slug URL, which browsers percent-encode into a long %E1%88… string.
+// Shares the canonical page URL. The slug is Ge'ez, so the copied link reads
+// as the hymn's own title — browsers percent-encode it into a long %E1%88… run
+// only in the address bar, and messaging apps show it intact.
 export default function ShareButton({
   path,
   title,
   className = "",
 }: {
-  path: string       // e.g. "/h/123"
+  path: string       // canonical page path, e.g. "/hymns/<slug>"
   title?: string
   className?: string
 }) {

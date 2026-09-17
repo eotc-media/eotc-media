@@ -151,7 +151,7 @@ export default async function HymnPage({ params }: PageProps) {
               <div className="mt-4 flex items-start justify-between gap-4">
                 <h1 className="text-base font-bold text-neutral-900 leading-snug">{hymn.title}</h1>
                 <div className="flex items-center gap-3 flex-shrink-0 mt-0.5">
-                  <ShareButton path={`/h/${hymn.id}`} title={hymn.title} />
+                  <ShareButton path={`/hymns/${hymn.slug}`} title={hymn.title} />
                   <FavoriteButton
                     hymnId={hymn.id}
                     initialFavorited={isFavorited}

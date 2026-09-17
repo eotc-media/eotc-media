@@ -128,7 +128,7 @@ export default async function SermonPage({ params }: PageProps) {
               <div className="mt-4 flex items-start justify-between gap-4">
                 <h1 className="text-base font-bold text-neutral-900 leading-snug">{sermon.title}</h1>
                 <div className="flex items-center gap-3 flex-shrink-0 mt-0.5">
-                  <ShareButton path={`/s/${sermon.id}`} title={sermon.title} />
+                  <ShareButton path={`/sermons/${sermon.slug}`} title={sermon.title} />
                   <SermonFavoriteButton
                     sermonId={sermon.id}
                     initialFavorited={isFavorited}
