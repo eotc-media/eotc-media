@@ -300,11 +300,15 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
     )
   }
 
+  // Two shapes from one list: a horizontal tab strip on mobile, a vertical
+  // sidebar on desktop. The active marker follows suit — an underline under a
+  // tab, a bar down the side of a sidebar row — so neither reads as the other
+  // rotated ninety degrees.
   const sectionButtonClass = (active: boolean) =>
-    `group relative flex items-center gap-2.5 pl-3.5 pr-3 py-2 rounded-lg text-sm text-left transition-all duration-100 cursor-pointer whitespace-nowrap lg:w-full lg:whitespace-normal ${
+    `group relative flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-all duration-100 cursor-pointer whitespace-nowrap lg:w-full lg:whitespace-normal lg:rounded-lg lg:pl-3.5 lg:pr-3 ${
       active
-        ? "bg-blue-50 text-blue-700 font-semibold"
-        : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
+        ? "text-blue-700 font-semibold lg:bg-blue-50"
+        : "text-slate-600 hover:text-slate-900 lg:hover:bg-slate-100/80"
     }`
 
   const sectionList = (
@@ -338,8 +342,8 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                   className={sectionButtonClass(active)}
                 >
                   <span
-                    className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-full bg-blue-500 transition-all ${
-                      active ? "h-5 opacity-100" : "h-0 opacity-0"
+                    className={`absolute rounded-full bg-blue-500 transition-all inset-x-0 bottom-0 h-[2px] lg:inset-x-auto lg:left-0 lg:right-auto lg:bottom-auto lg:top-1/2 lg:w-1 lg:-translate-y-1/2 ${
+                      active ? "opacity-100 lg:h-5" : "opacity-0 lg:h-0"
                     }`}
                   />
                   {locale === "am" ? section.nameAmharic : section.nameEnglish}
