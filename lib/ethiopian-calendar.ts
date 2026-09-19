@@ -1,13 +1,11 @@
 // Ethiopian (Ge'ez) calendar arithmetic.
 //
 // Everything here is deterministic — no data source, no lookup table, no
-// network. The two things it computes are the Ge'ez date for a given day, and
-// ትንሣኤ (Fasika), from which every movable feast and fast follows at a fixed
-// offset.
+// network. It converts between Ge'ez and Gregorian dates, and computes ትንሣኤ,
+// from which every movable feast and fast would follow at a fixed offset.
 //
-// Nothing in this file names a feast or a saint. Those live in
-// lib/ethiopian-feasts.ts, which is meant to be reviewed and corrected by
-// someone who knows the tradition; this file only does the arithmetic.
+// Nothing here names a feast or a saint. That content has to come from a
+// church source, not from arithmetic.
 
 export interface EthiopianDate {
   year: number
