@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Play, Pause, BookOpenText, Check, Search } from "lucide-react"
+import { Play, Pause, BookOpenText, Check, Search, StickyNote } from "lucide-react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 
 // ── Types ──────────────────────────────────────────────
@@ -174,13 +174,16 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
   const roleLanguage: RoleLanguage = locale === "am" ? "amharic" : "english"
   const [globalAudioType, setGlobalAudioType] = useState<AudioType>("geez")
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null)
-  const [showRemarks, setShowRemarks] = useState(true)
+  // Notes belong to one text, so they are opened from that card's own icon
+  // rather than switched on for the whole page.
+  const [openNoteId, setOpenNoteId] = useState<number | null>(null)
   const [fontSizeIdx, setFontSizeIdx] = useState(1)
   const [query, setQuery] = useState("")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const sectionTabsRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const noteRef = useRef<HTMLDivElement>(null)
 
   const activeSection = useMemo(
     () => sections.find((s) => s.id === activeSectionId) ?? null,
@@ -243,6 +246,16 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
     if (mobileMenuOpen) document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [mobileMenuOpen])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (noteRef.current && !noteRef.current.contains(event.target as Node)) {
+        setOpenNoteId(null)
+      }
+    }
+    if (openNoteId !== null) document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [openNoteId])
 
   useEffect(() => {
     if (!sectionTabsRef.current) return
@@ -442,29 +455,6 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
           ))}
         </div>
       </div>
-
-      <div>
-        <button
-          onClick={() => setShowRemarks((v) => !v)}
-          className={`flex items-center gap-3 w-full px-2.5 py-2 rounded-xl border transition-colors text-left cursor-pointer ${
-            showRemarks ? "border-blue-200 bg-blue-50/60" : "border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          <span
-            className={`w-[18px] h-[18px] rounded-md flex items-center justify-center flex-shrink-0 transition-all ${
-              showRemarks ? "bg-blue-600" : "border-[1.5px] border-slate-200"
-            }`}
-          >
-            {showRemarks && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
-          </span>
-          <span className="min-w-0">
-            <span className={`block text-[13px] font-medium ${showRemarks ? "text-blue-800" : "text-slate-700"}`}>
-              {t("liturgy_directions")}
-            </span>
-            <span className="block text-[11px] text-slate-400">{t("liturgy_directions_sub")}</span>
-          </span>
-        </button>
-      </div>
     </div>
   )
 
@@ -553,6 +543,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                 const isPlaying = audioKey !== null && playingAudioId === audioKey
                 const roleName = getRoleName(text.role)
                 const monogram = ROLE_MONOGRAM[text.role.roleKey] ?? DEFAULT_MONOGRAM
+                const showGeez = languageVisibility.geez && !!text.textGeez
 
                 // Everything after the Ge'ez shares one presentation, the way a
                 // quiz card's choices do.
@@ -569,54 +560,84 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                       isPlaying ? "border-slate-400" : "border-slate-200"
                     }`}
                   >
-                    {/* Header band, exactly where a quiz card puts its question:
-                        the speaker's monogram stands in for the question number
-                        and the Ge'ez for the question itself. */}
-                    {/* py-2.5 rather than py-4: the speaker column grew by the
-                        name beneath the circle, so the padding gives back what
-                        the name takes and the band keeps its height. */}
+                    {/* Title bar: who is speaking on the left, what you can do
+                        with the text on the right. The Ge'ez moved out of here
+                        and into the body, so the bar stays one line tall
+                        whatever the length of the text beneath it. */}
                     <div className="px-5 py-2.5 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
-                      <span className="flex flex-col items-center gap-1 flex-shrink-0 w-16">
-                        <RoleAvatar roleKey={text.role.roleKey} roleName={roleName} tint={monogram} />
-                        <span
-                          title={roleName}
-                          className="w-full text-[10px] font-medium text-slate-500 leading-none text-center truncate"
-                        >
-                          {roleName}
-                        </span>
+                      <RoleAvatar roleKey={text.role.roleKey} roleName={roleName} tint={monogram} />
+                      <span
+                        title={roleName}
+                        className="flex-1 min-w-0 truncate text-[13px] font-medium text-slate-600"
+                      >
+                        {roleName}
                       </span>
 
-                      <div className="flex-1 min-w-0">
-                        {languageVisibility.geez && text.textGeez && (
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {/* Always present, so the bar does not change shape
+                            between a text that has a recording and one that is
+                            still waiting for one. */}
+                        <button
+                          onClick={() => audioPath && playAudio(audioPath, text.id)}
+                          disabled={!audioPath}
+                          aria-label={
+                            !audioPath ? t("liturgy_no_audio") : isPlaying ? "Pause" : "Play"
+                          }
+                          title={!audioPath ? t("liturgy_no_audio") : isPlaying ? "Pause" : "Play"}
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg transition-colors ${
+                            !audioPath
+                              ? "text-slate-300 bg-white border border-slate-100 cursor-not-allowed"
+                              : isPlaying
+                                ? "bg-slate-900 text-white cursor-pointer"
+                                : "text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 hover:text-slate-800 cursor-pointer"
+                          }`}
+                        >
+                          {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                        </button>
+
+                        {text.remark && (
+                          <div className="relative" ref={openNoteId === text.id ? noteRef : undefined}>
+                            <button
+                              onClick={() => setOpenNoteId((id) => (id === text.id ? null : text.id))}
+                              aria-label={t("liturgy_directions")}
+                              title={t("liturgy_directions")}
+                              className={`flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer transition-colors ${
+                                openNoteId === text.id
+                                  ? "bg-amber-500 text-white"
+                                  : "text-amber-600 bg-white border border-amber-200 hover:bg-amber-50"
+                              }`}
+                            >
+                              <StickyNote className="h-3.5 w-3.5" />
+                            </button>
+                            {openNoteId === text.id && (
+                              <div className="absolute right-0 top-full mt-2 w-64 sm:w-72 rounded-xl border border-amber-200 bg-amber-50 p-3 z-40 shadow-lg">
+                                <p
+                                  className="leading-relaxed text-amber-800 italic"
+                                  style={{ fontSize }}
+                                  dir="auto"
+                                >
+                                  {text.remark}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Body: Ge'ez first, in the weight it carried in the bar,
+                        then the other layers under their hairlines. */}
+                    {(showGeez || layers.length > 0) && (
+                      <div className="px-5 divide-y divide-slate-100">
+                        {showGeez && (
                           <p
-                            className="font-medium text-slate-900 leading-relaxed"
+                            className="font-medium text-slate-900 leading-relaxed py-3"
                             style={{ fontSize }}
                             dir="auto"
                           >
                             {text.textGeez}
                           </p>
                         )}
-                      </div>
-
-                      {audioPath && (
-                        <button
-                          onClick={() => playAudio(audioPath, text.id)}
-                          aria-label={isPlaying ? "Pause" : "Play"}
-                          className={`flex items-center gap-1.5 h-7 pl-2 pr-2.5 rounded-lg text-[12px] font-medium cursor-pointer transition-colors flex-shrink-0 ${
-                            isPlaying
-                              ? "bg-slate-900 text-white"
-                              : "text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 hover:text-slate-800"
-                          }`}
-                        >
-                          {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                          <span>{isPlaying ? "Pause" : "Play"}</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Body, where the choices sit */}
-                    {(layers.length > 0 || (showRemarks && text.remark)) && (
-                      <div className="px-5 divide-y divide-slate-100">
                         {layers.map((layer) => (
                           <p
                             key={layer.key}
@@ -627,12 +648,6 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                             {layer.text}
                           </p>
                         ))}
-
-                        {showRemarks && text.remark && (
-                          <p className="leading-relaxed text-amber-700 italic py-3" style={{ fontSize }} dir="auto">
-                            {text.remark}
-                          </p>
-                        )}
                       </div>
                     )}
                   </article>
