@@ -209,7 +209,7 @@ export const translations = {
     liturgy_find_section:   "Find a section",
     liturgy_no_sections:    "No sections found",
     liturgy_directions:     "Service directions",
-    liturgy_directions_sub: "Instructions for how the service is performed",
+    liturgy_no_audio:       "No recording yet",
     liturgy_text_size:      "Text size",
     liturgy_reading_label:  "Reading",
 
@@ -441,7 +441,7 @@ export const translations = {
     liturgy_find_section:   "ክፍል ይፈልጉ",
     liturgy_no_sections:    "ምንም ክፍል አልተገኘም",
     liturgy_directions:     "የሥርዓት መመሪያ",
-    liturgy_directions_sub: "ቅዳሴው እንዴት እንደሚከናወን የሚያሳይ መመሪያ",
+    liturgy_no_audio:       "ገና ድምፅ የለም",
     liturgy_text_size:      "የፊደል መጠን",
     liturgy_reading_label:  "ማንበቢያ",
 
