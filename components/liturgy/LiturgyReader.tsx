@@ -605,10 +605,13 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                               onClick={() => setOpenNoteId((id) => (id === text.id ? null : text.id))}
                               aria-label={t("liturgy_directions")}
                               title={t("liturgy_directions")}
+                              // Amber, not the slate of the play button beside
+                              // it: a note is worth noticing, and a neutral
+                              // icon disappeared into the bar.
                               className={`flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer transition-colors ${
                                 openNoteId === text.id
-                                  ? "bg-slate-900 text-white"
-                                  : "text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 hover:text-slate-800"
+                                  ? "bg-amber-500 text-white"
+                                  : "text-amber-600 bg-white border border-amber-200 hover:bg-amber-50"
                               }`}
                             >
                               <StickyNote className="h-3.5 w-3.5" />
