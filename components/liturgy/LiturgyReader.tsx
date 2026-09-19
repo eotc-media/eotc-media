@@ -607,8 +607,8 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                               title={t("liturgy_directions")}
                               className={`flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer transition-colors ${
                                 openNoteId === text.id
-                                  ? "bg-amber-500 text-white"
-                                  : "text-amber-600 bg-white border border-amber-200 hover:bg-amber-50"
+                                  ? "bg-slate-900 text-white"
+                                  : "text-slate-500 bg-white border border-slate-200 hover:bg-slate-100 hover:text-slate-800"
                               }`}
                             >
                               <StickyNote className="h-3.5 w-3.5" />
