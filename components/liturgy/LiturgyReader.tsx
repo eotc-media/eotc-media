@@ -556,7 +556,7 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                 return (
                   <article
                     key={text.id}
-                    className={`bg-white border rounded-xl overflow-hidden transition-colors ${
+                    className={`bg-white border rounded-xl transition-colors ${
                       isPlaying ? "border-slate-400" : "border-slate-200"
                     }`}
                   >
@@ -564,7 +564,11 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                         with the text on the right. The Ge'ez moved out of here
                         and into the body, so the bar stays one line tall
                         whatever the length of the text beneath it. */}
-                    <div className="px-5 py-2.5 border-b border-slate-100 bg-slate-50 flex items-center gap-3">
+                    {/* rounded-t-xl on the band rather than overflow-hidden on
+                        the card: the card has to let the note panel hang past
+                        its edge, and overflow-hidden was cutting long notes
+                        off at the bottom of the card. */}
+                    <div className="px-5 py-2.5 border-b border-slate-100 bg-slate-50 rounded-t-xl flex items-center gap-3">
                       <RoleAvatar roleKey={text.role.roleKey} roleName={roleName} tint={monogram} />
                       <span
                         title={roleName}
@@ -610,9 +614,20 @@ export function LiturgyReader({ sections }: LiturgyReaderProps) {
                               <StickyNote className="h-3.5 w-3.5" />
                             </button>
                             {openNoteId === text.id && (
-                              <div className="absolute right-0 top-full mt-2 w-64 sm:w-72 rounded-xl border border-amber-200 bg-amber-50 p-3 z-40 shadow-lg">
+                              // w-max sizes the panel to its own text, so a
+                              // three-word direction gets a three-word box;
+                              // max-w then wraps anything longer and keeps it
+                              // inside the viewport on a phone.
+                              <div
+                                role="tooltip"
+                                className="absolute right-0 top-full mt-2 z-40 w-max max-w-[15rem] sm:max-w-[22rem] rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left shadow-lg shadow-slate-900/10"
+                              >
+                                <span
+                                  aria-hidden="true"
+                                  className="absolute -top-[6px] right-2 h-3 w-3 rotate-45 rounded-[2px] border-l border-t border-slate-200 bg-white"
+                                />
                                 <p
-                                  className="leading-relaxed text-amber-800 italic"
+                                  className="relative leading-relaxed text-slate-700"
                                   style={{ fontSize }}
                                   dir="auto"
                                 >
