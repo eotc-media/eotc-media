@@ -1,81 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server'
-import sharp from 'sharp'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { putObject } from '@/lib/storage'
+import { objectExists } from '@/lib/storage'
+
+// The PDF and cover are uploaded straight to R2 by the browser (see
+// /api/books/upload-url). This receives only the filenames those uploads
+// produced, so the request stays well under Vercel's 4.5 MB body limit however
+// large the book is.
 
 function generateSlug(name: string): string {
-  return name.trim().replace(/\s+/g, '-').replace(/[^\w\u1200-\u137F-]/g, '').slice(0, 120) + '-' + Date.now().toString(36)
+  return name.trim().replace(/\s+/g, '-').replace(/[^\wሀ-፿-]/g, '').slice(0, 120) + '-' + Date.now().toString(36)
 }
 
-// Covers are displayed a few hundred pixels wide at most, but people upload
-// whatever their phone or scanner produced \u2014 often several megabytes, and every
-// one of those bytes then goes out on each book listing.
-const COVER_MAX_WIDTH = 600
-
-function compressCover(input: Uint8Array): Promise<Uint8Array> {
-  return sharp(input)
-    .rotate() // honour EXIF orientation, which stripping metadata would otherwise discard
-    .resize({ width: COVER_MAX_WIDTH, withoutEnlargement: true })
-    .webp({ quality: 80 })
-    .toBuffer()
-}
-
-// dir is the R2 key prefix ("files" for PDFs, "images" for covers). Returns the
-// stored filename; the matching serve route reads books/<dir>/<filename>.
-async function saveFile(file: File, dir: string): Promise<string> {
-  const original = Buffer.from(await file.arrayBuffer())
-
-  let buffer: Uint8Array = original
-  let ext = file.name.split('.').pop() ?? 'bin'
-  let type = file.type || 'application/octet-stream'
-
-  if (dir === 'images') {
-    try {
-      buffer = await compressCover(original)
-      ext = 'webp'
-      type = 'image/webp'
-    } catch {
-      // An unreadable or exotic image still gets stored as uploaded — a book
-      // submission is not worth losing over a cover sharp could not decode.
-      console.error('[books/submit] cover compression failed; storing original')
-    }
-  }
-
-  const filename = `book_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}.${ext}`
-  await putObject(`books/${dir}/${filename}`, buffer, type)
-  return filename
-}
+// Filenames come from the client, which was handed them by upload-url. Pin the
+// shape so a crafted value cannot point the record at some other object.
+const FILENAME = /^book_[a-z0-9]+_[a-z0-9]+\.(pdf|webp|jpg|png)$/
 
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const formData = await req.formData()
-  const name = formData.get('name') as string
-  const author = formData.get('author') as string
-  const description = formData.get('description') as string | null
-  const languageIds = JSON.parse(formData.get('languageIds') as string ?? '[]') as number[]
-  const categoryIds = JSON.parse(formData.get('categoryIds') as string ?? '[]') as number[]
-  const subCategoryIds = JSON.parse(formData.get('subCategoryIds') as string ?? '[]') as number[]
-  const fileField = formData.get('file') as File | null
-  const imageField = formData.get('image') as File | null
+  const body = await req.json()
+  const name = (body.name ?? '') as string
+  const author = (body.author ?? '') as string
+  const description = (body.description ?? null) as string | null
+  const languageIds = (body.languageIds ?? []) as number[]
+  const categoryIds = (body.categoryIds ?? []) as number[]
+  const subCategoryIds = (body.subCategoryIds ?? []) as number[]
+  const file = (body.file ?? '') as string
+  const image = (body.image ?? '') as string
 
   if (!name?.trim()) return NextResponse.json({ error: 'Book name is required' }, { status: 400 })
   if (!author?.trim()) return NextResponse.json({ error: 'Author is required' }, { status: 400 })
-  if (!fileField || fileField.size === 0) return NextResponse.json({ error: 'PDF file is required' }, { status: 400 })
-  if (!imageField || imageField.size === 0) return NextResponse.json({ error: 'Cover image is required' }, { status: 400 })
+  if (!FILENAME.test(file)) return NextResponse.json({ error: 'PDF file is required' }, { status: 400 })
+  if (!FILENAME.test(image)) return NextResponse.json({ error: 'Cover image is required' }, { status: 400 })
   if (languageIds.length === 0) return NextResponse.json({ error: 'At least one language is required' }, { status: 400 })
   if (categoryIds.length === 0) return NextResponse.json({ error: 'At least one category is required' }, { status: 400 })
   if (subCategoryIds.length === 0) return NextResponse.json({ error: 'At least one sub-category is required' }, { status: 400 })
 
+  // A browser upload can fail after the URL was handed out. Without this the
+  // book would be created pointing at an object that is not there.
+  const [hasFile, hasImage] = await Promise.all([
+    objectExists(`books/files/${file}`),
+    objectExists(`books/images/${image}`),
+  ])
+  if (!hasFile || !hasImage) {
+    return NextResponse.json({ error: 'Upload did not complete. Please try again.' }, { status: 400 })
+  }
+
   const pendingStatus = await prisma.cbApprovalStatus.findFirst({ where: { name: 'Submitted' } })
   if (!pendingStatus) return NextResponse.json({ error: 'System configuration incomplete' }, { status: 500 })
-
-  const [fileFilename, imageFilename] = await Promise.all([
-    saveFile(fileField, 'files'),
-    saveFile(imageField, 'images'),
-  ])
 
   const book = await prisma.cbBook.create({
     data: {
@@ -85,8 +59,8 @@ export async function POST(req: NextRequest) {
       slug: generateSlug(name),
       author: author.trim(),
       description: description?.trim() || null,
-      file: fileFilename,
-      image: imageFilename,
+      file,
+      image,
       updatedAt: new Date(),
     },
   })
