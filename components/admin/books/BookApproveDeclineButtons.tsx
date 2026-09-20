@@ -9,6 +9,13 @@ interface Author { id: number; name: string }
 interface Props {
   bookId: number
   currentStatus: string
+  /**
+   * "cells" renders three table cells the way the hymn list does, for the
+   * pending view where the row is a queue of actions. "inline" renders one
+   * group for the all-books view, where the status is the point and the
+   * actions are secondary.
+   */
+  variant?: "cells" | "inline"
 }
 
 // Persists the last author selection across rows within the same page session,
@@ -18,7 +25,7 @@ let persistedAuthorIds: number[] = []
 
 type ModalType = "accept" | "decline" | "new-author" | null
 
-export default function BookApproveDeclineButtons({ bookId, currentStatus }: Props) {
+export default function BookApproveDeclineButtons({ bookId, currentStatus, variant = "inline" }: Props) {
   const router = useRouter()
   const [modal, setModal] = useState<ModalType>(null)
 
@@ -142,40 +149,53 @@ export default function BookApproveDeclineButtons({ bookId, currentStatus }: Pro
   )
 
   const inputClass = "w-full rounded border border-input bg-background px-3 py-1.5 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-  const ghostBtn = "rounded border border-input px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:opacity-50 cursor-pointer"
+  const linkBtn = "cursor-pointer whitespace-nowrap text-xs hover:underline"
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {currentStatus === "Accepted" && (
-          <>
-            <span className="rounded-full bg-success/15 px-2 py-1 text-xs font-medium text-success">Accepted</span>
-            <button onClick={() => openModal("decline")} className={ghostBtn}>Decline</button>
-          </>
-        )}
-        {currentStatus === "Declined" && (
-          <>
-            <span className="rounded-full bg-destructive/15 px-2 py-1 text-xs font-medium text-destructive">Declined</span>
-            <button onClick={() => openModal("accept")} className={ghostBtn}>Approve</button>
-          </>
-        )}
-        {currentStatus !== "Accepted" && currentStatus !== "Declined" && (
-          <>
+      {variant === "cells" ? (
+        <>
+          <td className="px-4 py-2.5">
             <button onClick={() => openModal("new-author")}
-              className="cursor-pointer whitespace-nowrap text-xs text-muted-foreground hover:text-foreground hover:underline">
+              className={`${linkBtn} text-muted-foreground hover:text-foreground`}>
               new author
             </button>
-            <button onClick={() => openModal("accept")}
-              className="cursor-pointer text-xs text-primary hover:underline">
+          </td>
+          <td className="px-4 py-2.5">
+            <button onClick={() => openModal("accept")} className={`${linkBtn} text-primary`}>
               accept
             </button>
-            <button onClick={() => openModal("decline")}
-              className="cursor-pointer text-xs text-destructive hover:underline">
+          </td>
+          <td className="px-4 py-2.5">
+            <button onClick={() => openModal("decline")} className={`${linkBtn} text-destructive`}>
               decline
             </button>
-          </>
-        )}
-      </div>
+          </td>
+        </>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          {currentStatus === "Accepted" && (
+            <button onClick={() => openModal("decline")} className={`${linkBtn} text-destructive`}>
+              decline
+            </button>
+          )}
+          {currentStatus === "Declined" && (
+            <button onClick={() => openModal("accept")} className={`${linkBtn} text-primary`}>
+              accept
+            </button>
+          )}
+          {currentStatus !== "Accepted" && currentStatus !== "Declined" && (
+            <>
+              <button onClick={() => openModal("accept")} className={`${linkBtn} text-primary`}>
+                accept
+              </button>
+              <button onClick={() => openModal("decline")} className={`${linkBtn} text-destructive`}>
+                decline
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {modal === "accept" && modalShell(
         "Accept book",
