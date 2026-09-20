@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import BookApproveDeclineButtons from "@/components/admin/books/BookApproveDeclineButtons"
 import { PageHeader } from "@/components/admin/shared/PageHeader"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -13,6 +14,12 @@ import {
 } from "@/components/ui/table"
 
 const PAGE_SIZE = 20
+
+const statusVariant: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
+  Accepted: "success",
+  Submitted: "warning",
+  Declined: "destructive",
+}
 
 interface PageProps {
   searchParams: Promise<{ status?: string; page?: string; q?: string }>
@@ -103,12 +110,18 @@ export default async function AdminBooksPage({ searchParams }: PageProps) {
                 <TableHead className="px-4">Author</TableHead>
                 <TableHead className="px-4">Status</TableHead>
                 <TableHead className="px-4" />
+                {isPending && (
+                  <>
+                    <TableHead className="px-4" />
+                    <TableHead className="px-4" />
+                  </>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {books.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="px-4 py-10 text-center text-muted-foreground">No books</TableCell>
+                  <TableCell colSpan={isPending ? 9 : 7} className="px-4 py-10 text-center text-muted-foreground">No books</TableCell>
                 </TableRow>
               )}
               {books.map((book, i) => (
@@ -123,11 +136,27 @@ export default async function AdminBooksPage({ searchParams }: PageProps) {
                     {book.authors.length > 0 ? book.authors.map(a => a.author.name).join(", ") : book.author}
                   </TableCell>
                   <TableCell className="px-4">
-                    <BookApproveDeclineButtons bookId={book.id} currentStatus={book.approvalStatus?.name ?? ""} />
+                    <Badge variant={statusVariant[book.approvalStatus?.name ?? ""] ?? "secondary"}>
+                      {book.approvalStatus?.name ?? "—"}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="px-4">
-                    <Link href={`/books/admin/books/${book.id}/edit`} className="rounded-md border border-input px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground">Edit</Link>
-                  </TableCell>
+                  {isPending ? (
+                    <BookApproveDeclineButtons
+                      bookId={book.id}
+                      currentStatus={book.approvalStatus?.name ?? ""}
+                      variant="cells"
+                    />
+                  ) : (
+                    <TableCell className="px-4">
+                      <div className="flex items-center gap-3">
+                        <Link href={`/books/admin/books/${book.id}/edit`} className="text-xs text-muted-foreground hover:underline">Edit</Link>
+                        <BookApproveDeclineButtons
+                          bookId={book.id}
+                          currentStatus={book.approvalStatus?.name ?? ""}
+                        />
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
