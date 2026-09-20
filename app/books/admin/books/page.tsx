@@ -15,14 +15,30 @@ import {
 const PAGE_SIZE = 20
 
 interface PageProps {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ status?: string; page?: string; q?: string }>
 }
 
 export default async function AdminBooksPage({ searchParams }: PageProps) {
-  const { page: pageParam } = await searchParams
+  const { status, page: pageParam, q } = await searchParams
   const page = Math.max(1, parseInt(pageParam ?? "1") || 1)
+  const search = q?.trim() || undefined
 
-  const where = {}
+  // The sidebar sends ?status=pending for "New books"; without reading it back
+  // that entry listed every book in the library.
+  const where: Record<string, unknown> = {}
+  if (status === "pending") {
+    where.approvalStatus = { name: "Submitted" }
+  } else if (status === "approved") {
+    where.approvalStatus = { name: "Accepted" }
+  } else if (status === "rejected") {
+    where.approvalStatus = { name: "Declined" }
+  }
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { author: { contains: search, mode: "insensitive" } },
+    ]
+  }
 
   const [books, total] = await Promise.all([
     prisma.cbBook.findMany({
@@ -30,29 +46,50 @@ export default async function AdminBooksPage({ searchParams }: PageProps) {
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       orderBy: { createdAt: "desc" },
-      include: {
-        approvalStatus: true,
-        languages: { include: { language: true } },
-        categories: { include: { category: true } },
-        subCategories: { include: { subCategory: true } },
-        authors: { include: { author: true } },
-        user: { select: { id: true, name: true } },
+      // Explicit columns, as the hymn list does: `include` pulled the book's
+      // description for every row, which the table never shows.
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        author: true,
+        approvalStatus: { select: { id: true, name: true } },
+        languages: { select: { language: { select: { id: true, name: true } } }, take: 3 },
+        categories: { select: { category: { select: { id: true, name: true } } }, take: 2 },
+        authors: { select: { author: { select: { id: true, name: true } } }, take: 3 },
       },
     }),
     prisma.cbBook.count({ where }),
   ])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
+  const isPending = status === "pending"
+  const pageTitle = isPending ? "New books" : "All books"
 
   function buildUrl(p: number) {
-    return `/books/admin/books?page=${p}`
+    const qs = [status && `status=${status}`, search && `q=${encodeURIComponent(search)}`]
+      .filter(Boolean)
+      .join("&")
+    return `/books/admin/books?page=${p}${qs ? `&${qs}` : ""}`
   }
 
   const linkClass = "px-3 py-1.5 text-sm rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
 
   return (
     <div className="space-y-4 p-4 lg:p-6">
-      <PageHeader title="All books" description={`${total.toLocaleString()} books`} />
+      <PageHeader title={pageTitle} description={`${total.toLocaleString()} books`} />
+
+      <form method="GET" action="/books/admin/books" className="flex items-center gap-2 max-w-sm">
+        {status && <input type="hidden" name="status" value={status} />}
+        <input
+          type="search"
+          name="q"
+          defaultValue={search}
+          placeholder="Search by name or author…"
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] transition-[color,box-shadow]"
+        />
+        <button type="submit" className="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">Search</button>
+      </form>
 
       <Card>
         <CardContent className="p-0">
