@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react"
 import { Loader2, CheckCircle, ChevronDown, X } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import BookSidebar from "@/components/books/BookSidebar"
+import { compressCoverInBrowser, uploadBookFile } from "@/lib/book-upload"
 
 interface Language { id: number; name: string }
 interface Category { id: number; name: string; languageId?: number | null }
@@ -96,6 +97,7 @@ export default function SubmitBookPage() {
   const [allSubCategories, setAllSubCategories] = useState<SubCategory[]>([])
 
   const [saving, setSaving] = useState(false)
+  const [progress, setProgress] = useState<{ label: string; pct: number } | null>(null)
   const [error, setError] = useState("")
   const [submitted, setSubmitted] = useState(false)
 
@@ -143,22 +145,44 @@ export default function SubmitBookPage() {
     setSaving(true)
     setError("")
     try {
-      const formData = new FormData()
-      formData.set("name", name.trim())
-      formData.set("author", author.trim())
-      formData.set("description", description.trim())
-      formData.set("languageIds", JSON.stringify(selectedLanguageIds))
-      formData.set("categoryIds", JSON.stringify(selectedCategoryIds))
-      formData.set("subCategoryIds", JSON.stringify(selectedSubCategoryIds))
-      formData.set("file", pdfFile)
-      formData.set("image", imageFile)
+      // Straight to R2, not through the function: Vercel rejects a request
+      // body over 4.5 MB, which most books exceed on their own.
+      setProgress({ label: "Preparing cover…", pct: 0 })
+      const cover = await compressCoverInBrowser(imageFile)
 
-      const res = await fetch("/api/books/submit", { method: "POST", body: formData })
+      setProgress({ label: "Uploading cover…", pct: 0 })
+      const image = await uploadBookFile("images", cover, (pct) =>
+        setProgress({ label: "Uploading cover…", pct })
+      )
+
+      setProgress({ label: "Uploading book…", pct: 0 })
+      const file = await uploadBookFile("files", pdfFile, (pct) =>
+        setProgress({ label: "Uploading book…", pct })
+      )
+
+      setProgress({ label: "Saving…", pct: 100 })
+      const res = await fetch("/api/books/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          author: author.trim(),
+          description: description.trim(),
+          languageIds: selectedLanguageIds,
+          categoryIds: selectedCategoryIds,
+          subCategoryIds: selectedSubCategoryIds,
+          file,
+          image,
+        }),
+      })
       if (res.status === 401) { router.push("/auth/login"); return }
       if (!res.ok) { const d = await res.json(); setError(d.error ?? "Failed to submit"); return }
       setSubmitted(true)
+    } catch (err) {
+      setError((err as Error).message || "Something went wrong. Please try again.")
     } finally {
       setSaving(false)
+      setProgress(null)
     }
   }
 
@@ -276,6 +300,21 @@ export default function SubmitBookPage() {
 
                 {error && (
                   <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">{error}</p>
+                )}
+
+                {progress && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                      <span>{progress.label}</span>
+                      <span className="tabular-nums">{progress.pct}%</span>
+                    </div>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="h-full rounded-full bg-blue-600 transition-[width] duration-200"
+                        style={{ width: `${progress.pct}%` }}
+                      />
+                    </div>
+                  </div>
                 )}
 
                 <div className="flex items-center justify-end gap-3 pb-4">

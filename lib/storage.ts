@@ -58,6 +58,38 @@ export async function putObject(
   }
 }
 
+/**
+ * A short-lived URL the browser can PUT straight to.
+ *
+ * Vercel rejects a request body over 4.5 MB before the function runs, so a
+ * book's PDF can never reach us to be forwarded on. The browser uploads to R2
+ * itself instead, which also keeps the bytes off Vercel entirely.
+ *
+ * The bucket needs a CORS rule allowing PUT from the site's origin for this to
+ * work from a browser.
+ */
+export async function presignPutUrl(
+  key: string,
+  contentType: string,
+  expiresInSeconds = 900
+): Promise<string> {
+  const url = new URL(objectUrl(key))
+  url.searchParams.set("X-Amz-Expires", String(expiresInSeconds))
+
+  const signed = await getClient().sign(url.toString(), {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    aws: { signQuery: true },
+  })
+  return signed.url
+}
+
+/** Whether an object exists, used to confirm a browser upload actually landed. */
+export async function objectExists(key: string): Promise<boolean> {
+  const res = await getClient().fetch(objectUrl(key), { method: "HEAD" })
+  return res.ok
+}
+
 export interface StoredObject {
   body: ArrayBuffer
   contentType: string
