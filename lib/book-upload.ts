@@ -51,8 +51,16 @@ function putWithProgress(url: string, body: Blob, onProgress: (pct: number) => v
     xhr.onload = () =>
       xhr.status >= 200 && xhr.status < 300
         ? resolve()
-        : reject(new Error(`Upload failed (${xhr.status})`))
-    xhr.onerror = () => reject(new Error("Upload failed. Please check your connection."))
+        : reject(new Error(`Storage rejected the upload (${xhr.status}). ${xhr.responseText.slice(0, 200)}`))
+    // The browser reports a blocked cross-origin request exactly as it reports
+    // a dropped connection: no status, no body. Naming both beats guessing at
+    // one, and CORS is the likelier of the two when nothing uploads at all.
+    xhr.onerror = () =>
+      reject(new Error(
+        "The browser could not reach storage. This is usually a missing CORS rule on the bucket, " +
+        "or a lost connection. The browser console will say which."
+      ))
+    xhr.ontimeout = () => reject(new Error("The upload timed out. Please try again."))
     xhr.send(body)
   })
 }
