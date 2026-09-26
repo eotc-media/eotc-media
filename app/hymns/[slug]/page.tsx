@@ -175,7 +175,7 @@ export default async function HymnPage({ params }: PageProps) {
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 {hymn.channel?.title && (
                   <Link
-                    href={`/hymns/channels/${hymn.channel.id}`}
+                    href={`/hymns/channels/${hymn.channel.slug}`}
                     className="flex items-center gap-2"
                   >
                     {hymn.channel.thumbnailHigh ? (
@@ -200,7 +200,7 @@ export default async function HymnPage({ params }: PageProps) {
                     {hymn.channel?.title && <span className="text-neutral-300">·</span>}
                     {hymn.singers.map((s, i) => (
                       <span key={s.id}>
-                        <Link href={`/hymns/singer/${s.id}`} className="hover:text-neutral-800 transition-colors">
+                        <Link href={`/hymns/singer/${s.slug}`} className="hover:text-neutral-800 transition-colors">
                           {s.name}
                         </Link>
                         {i < (hymn.singers?.length ?? 0) - 1 && <span className="text-neutral-300">,</span>}

@@ -58,7 +58,7 @@ export default function HymnCard({ hymn, userId }: HymnCardProps) {
       <div className="flex gap-2.5 min-w-0 items-start">
         {/* Channel avatar */}
         {channelAvatar ? (
-          <Link href={`/hymns/channels/${hymn.channel!.id}`} prefetch={false} className="flex-shrink-0 mt-0.5">
+          <Link href={`/hymns/channels/${hymn.channel!.slug}`} prefetch={false} className="flex-shrink-0 mt-0.5">
             <Image
               src={channelAvatar}
               alt={hymn.channel!.title}
@@ -70,7 +70,7 @@ export default function HymnCard({ hymn, userId }: HymnCardProps) {
           </Link>
         ) : (
           <Link
-            href={hymn.channel ? `/hymns/channels/${hymn.channel.id}` : `/hymns/${hymn.slug}`}
+            href={hymn.channel ? `/hymns/channels/${hymn.channel.slug}` : `/hymns/${hymn.slug}`}
             prefetch={false}
             className="flex-shrink-0 mt-0.5 w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold select-none"
           >
@@ -90,7 +90,7 @@ export default function HymnCard({ hymn, userId }: HymnCardProps) {
           <div className="flex flex-col gap-0.5">
             {hymn.channel?.title && (
               <Link
-                href={`/hymns/channels/${hymn.channel.id}`}
+                href={`/hymns/channels/${hymn.channel.slug}`}
                 prefetch={false}
                 className="text-[12px] text-neutral-500 hover:text-neutral-800 transition-colors truncate"
               >
@@ -114,7 +114,7 @@ export default function HymnCard({ hymn, userId }: HymnCardProps) {
                 {singers.map((s, i) => (
                   <span key={s.id}>
                     <Link
-                      href={`/hymns/singer/${s.id}`}
+                      href={`/hymns/singer/${s.slug}`}
                       prefetch={false}
                       className="font-medium text-neutral-500 hover:text-neutral-700 transition-colors"
                     >

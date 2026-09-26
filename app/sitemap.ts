@@ -25,9 +25,9 @@ const getSitemapEntries = unstable_cache(
         select: { slug: true, updatedAt: true },
         take: 5000,
       }),
-      prisma.hmChannel.findMany({ select: { id: true, updatedAt: true } }),
-      prisma.smChannel.findMany({ select: { id: true, updatedAt: true } }),
-      prisma.hmSinger.findMany({ select: { id: true, updatedAt: true } }),
+      prisma.hmChannel.findMany({ select: { slug: true, updatedAt: true } }),
+      prisma.smChannel.findMany({ select: { slug: true, updatedAt: true } }),
+      prisma.hmSinger.findMany({ select: { slug: true, updatedAt: true } }),
       prisma.blVerse.findMany({
         select: { bookId: true, chapter: true },
         distinct: ["bookId", "chapter"],
@@ -82,21 +82,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }))
 
   const hymnChannelRoutes: MetadataRoute.Sitemap = hymnChannels.map(c => ({
-    url: `${SITE_URL}/hymns/channels/${c.id}`,
+    url: `${SITE_URL}/hymns/channels/${encodeURIComponent(c.slug)}`,
     lastModified: c.updatedAt,
     changeFrequency: "weekly",
     priority: 0.5,
   }))
 
   const sermonChannelRoutes: MetadataRoute.Sitemap = sermonChannels.map(c => ({
-    url: `${SITE_URL}/sermons/channels/${c.id}`,
+    url: `${SITE_URL}/sermons/channels/${encodeURIComponent(c.slug)}`,
     lastModified: c.updatedAt,
     changeFrequency: "weekly",
     priority: 0.5,
   }))
 
   const singerRoutes: MetadataRoute.Sitemap = singers.map(s => ({
-    url: `${SITE_URL}/hymns/singer/${s.id}`,
+    url: `${SITE_URL}/hymns/singer/${encodeURIComponent(s.slug)}`,
     lastModified: s.updatedAt,
     changeFrequency: "weekly",
     priority: 0.5,

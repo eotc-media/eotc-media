@@ -188,7 +188,7 @@ export default function SermonPlayAllPlayer({ sermons: initialSermons, userId }:
           {/* Channel + preachers + clicks */}
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             {currentSermon.channel?.name && (
-              <Link href={`/sermons/channels/${currentSermon.channel.id}`} className="flex items-center gap-2">
+              <Link href={`/sermons/channels/${currentSermon.channel.slug}`} className="flex items-center gap-2">
                 {(currentSermon.channel.thumbnailDefault || currentSermon.channel.thumbnailMedium || currentSermon.channel.thumbnailHigh) ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img

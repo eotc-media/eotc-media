@@ -7,6 +7,7 @@ import { Tv, Loader2 } from "lucide-react"
 interface Channel {
   id: number
   name: string
+  slug: string
   thumbnailDefault: string | null
   thumbnailMedium: string | null
   thumbnailHigh: string | null
@@ -82,7 +83,7 @@ export default function SermonChannelInfiniteGrid({
         {channels.map(channel => (
           <Link
             key={channel.id}
-            href={`/sermons/channels/${channel.id}`}
+            href={`/sermons/channels/${channel.slug}`}
             prefetch={false}
             className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/40 transition-colors text-center"
           >

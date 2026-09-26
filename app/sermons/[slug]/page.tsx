@@ -141,7 +141,7 @@ export default async function SermonPage({ params }: PageProps) {
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 {sermon.channel?.name && (
                   <Link
-                    href={`/sermons/channels/${sermon.channel.id}`}
+                    href={`/sermons/channels/${sermon.channel.slug}`}
                     className="flex items-center gap-2"
                   >
                     {sermon.channel.thumbnailHigh ? (

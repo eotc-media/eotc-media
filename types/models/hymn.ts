@@ -31,7 +31,7 @@ export interface HmHymn {
 export interface HmCategory { id: number; name: string; languageId?: number | null; slug?: string | null }
 export interface HmSubCategory { id: number; name: string; categoryId: number; slug?: string | null }
 export interface HmLanguage { id: number; name: string; slug?: string | null }
-export interface HmSinger { id: number; name: string }
+export interface HmSinger { id: number; name: string; slug: string }
 export interface HmChannel {
   id: number
   title: string

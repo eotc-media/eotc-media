@@ -126,7 +126,7 @@ function mapHymn(raw: {
   categories?: { category: { id: number; name: string } }[]
   subCategories?: { subCategory: { id: number; name: string; categoryId: number } }[]
   languages?: { language: { id: number; name: string } }[]
-  singers?: { singer: { id: number; name: string } }[]
+  singers?: { singer: { id: number; name: string; slug: string } }[]
   channel?: { id: number; title: string; slug: string; handle: string; description?: string | null; thumbnailDefault?: string | null; thumbnailMedium?: string | null; thumbnailHigh?: string | null; coverImage?: string | null; publishedAt?: Date | null } | null
   approvalStatus?: { id: number; name: string } | null
 }): HmHymn {
@@ -196,7 +196,7 @@ const HYMN_CARD_SELECT = {
   updatedAt: true,
   // HymnCard shows the singer. It shows no categories, subcategories or
   // languages, and each of those is a separate round trip.
-  singers: { select: { singer: { select: { id: true, name: true } } } },
+  singers: { select: { singer: { select: { id: true, name: true, slug: true } } } },
   channel: {
     select: {
       id: true, title: true, slug: true, handle: true,
@@ -689,7 +689,7 @@ export async function getRelatedHymns(
       createdAt: true,
       updatedAt: true,
       channel: { select: { id: true, title: true, slug: true, handle: true, thumbnailDefault: true, thumbnailMedium: true, thumbnailHigh: true } },
-      singers: { select: { singer: { select: { id: true, name: true } } } },
+      singers: { select: { singer: { select: { id: true, name: true, slug: true } } } },
     },
   })
 
