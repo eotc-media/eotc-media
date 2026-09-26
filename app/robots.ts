@@ -9,12 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: [
           "/api/",
-          // Share short links. They only redirect to the canonical page, which
-          // is in the sitemap already, so crawling them adds nothing — but
-          // there are thousands, each costs a database round trip, and Google
-          // had accumulated 1,470 of them as "Server error (5xx)".
-          "/h/",
-          "/s/",
           "/admin/",
           "/auth/",
           "/profile",
