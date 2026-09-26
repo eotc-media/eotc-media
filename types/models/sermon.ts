@@ -18,6 +18,7 @@ export interface SmLanguage {
 export interface SmPreacher {
   id: number
   name: string
+  slug: string
 }
 
 export interface SmChannel {

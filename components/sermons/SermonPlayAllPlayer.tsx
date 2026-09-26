@@ -211,7 +211,9 @@ export default function SermonPlayAllPlayer({ sermons: initialSermons, userId }:
                 {currentSermon.channel?.name && <span className="text-neutral-300">·</span>}
                 {currentSermon.preachers.map((p, i) => (
                   <span key={p.id}>
-                    <span className="text-neutral-700 font-medium">{p.name}</span>
+                    <Link href={`/sermons/preacher/${p.slug}`} className="text-neutral-700 font-medium hover:text-neutral-900 transition-colors">
+                      {p.name}
+                    </Link>
                     {i < (currentSermon.preachers?.length ?? 0) - 1 && <span className="text-neutral-300">,</span>}
                   </span>
                 ))}

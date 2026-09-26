@@ -166,7 +166,9 @@ export default async function SermonPage({ params }: PageProps) {
                     {sermon.channel?.name && <span className="text-neutral-300">·</span>}
                     {sermon.preachers.map((p, i) => (
                       <span key={p.id}>
-                        <span className="text-neutral-700 font-medium">{p.name}</span>
+                        <Link href={`/sermons/preacher/${p.slug}`} className="text-neutral-700 font-medium hover:text-neutral-900 transition-colors">
+                          {p.name}
+                        </Link>
                         {i < (sermon.preachers?.length ?? 0) - 1 && <span className="text-neutral-300">,</span>}
                       </span>
                     ))}

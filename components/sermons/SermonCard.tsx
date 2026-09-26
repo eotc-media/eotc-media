@@ -109,7 +109,13 @@ export default function SermonCard({ sermon, userId: _userId }: SermonCardProps)
               <div className="flex items-center gap-1 flex-wrap text-[11px] text-neutral-400">
                 {preachers.map((p, i) => (
                   <span key={p.id}>
-                    <span className="font-medium text-neutral-500">{p.name}</span>
+                    <Link
+                      href={`/sermons/preacher/${p.slug}`}
+                      prefetch={false}
+                      className="font-medium text-neutral-500 hover:text-neutral-800 transition-colors"
+                    >
+                      {p.name}
+                    </Link>
                     {i < preachers.length - 1 && <span>,</span>}
                   </span>
                 ))}

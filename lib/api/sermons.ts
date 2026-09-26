@@ -29,7 +29,7 @@ function mapSermon(raw: {
   categories?: { category: { id: number; name: string } }[]
   subCategories?: { subCategory: { id: number; name: string; categoryId: number } }[]
   languages?: { language: { id: number; name: string } }[]
-  preachers?: { preacher: { id: number; name: string } }[]
+  preachers?: { preacher: { id: number; name: string; slug: string } }[]
   channel?: { id: number; name: string; slug: string | null; handle: string; description?: string | null; thumbnailDefault?: string | null; thumbnailMedium?: string | null; thumbnailHigh?: string | null; coverImage?: string | null; publishedAt?: Date | null } | null
   approvalStatus?: { id: number; name: string } | null
 }): SmSermon {
@@ -90,7 +90,7 @@ const SERMON_CARD_SELECT = {
   createdAt: true,
   updatedAt: true,
   // SermonCard shows the preacher and nothing else relational.
-  preachers: { select: { preacher: { select: { id: true, name: true } } } },
+  preachers: { select: { preacher: { select: { id: true, name: true, slug: true } } } },
   channel: {
     select: {
       id: true, name: true, slug: true, handle: true,
@@ -318,7 +318,7 @@ export async function getRelatedSermons(
       createdAt: true,
       updatedAt: true,
       categories: { select: { category: { select: { id: true, name: true } } } },
-      preachers:  { select: { preacher: { select: { id: true, name: true } } } },
+      preachers:  { select: { preacher: { select: { id: true, name: true, slug: true } } } },
       channel: {
         select: {
           id: true, name: true, slug: true, handle: true,

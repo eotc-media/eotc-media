@@ -28,6 +28,7 @@ const getSitemapEntries = unstable_cache(
       prisma.hmChannel.findMany({ select: { slug: true, updatedAt: true } }),
       prisma.smChannel.findMany({ select: { slug: true, updatedAt: true } }),
       prisma.hmSinger.findMany({ select: { slug: true, updatedAt: true } }),
+      prisma.smPreacher.findMany({ select: { slug: true, updatedAt: true } }),
       prisma.blVerse.findMany({
         select: { bookId: true, chapter: true },
         distinct: ["bookId", "chapter"],
@@ -57,7 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // If the DB is unreachable, let this throw: a 5xx tells crawlers "retry later"
   // and they keep the previous sitemap. Returning 200 with only the static
   // routes would instead announce that the other ~40k URLs no longer exist.
-  const [hymns, sermons, books, hymnChannels, sermonChannels, singers, bibleChapters] =
+  const [hymns, sermons, books, hymnChannels, sermonChannels, singers, preachers, bibleChapters] =
     await getSitemapEntries()
 
   const hymnRoutes: MetadataRoute.Sitemap = hymns.map(h => ({
@@ -102,6 +103,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }))
 
+  const preacherRoutes: MetadataRoute.Sitemap = preachers.map(p => ({
+    url: `${SITE_URL}/sermons/preacher/${encodeURIComponent(p.slug)}`,
+    lastModified: p.updatedAt,
+    changeFrequency: "weekly",
+    priority: 0.5,
+  }))
+
   // Bible chapters for the default Amharic 1954 version — the canonical reading URLs
   const bibleRoutes: MetadataRoute.Sitemap = bibleChapters.map(v => ({
     url: `${SITE_URL}/bible/amharic/1954/${v.bookId}/${v.chapter}`,
@@ -118,6 +126,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...hymnChannelRoutes,
     ...sermonChannelRoutes,
     ...singerRoutes,
+    ...preacherRoutes,
     ...bibleRoutes,
   ]
 }
