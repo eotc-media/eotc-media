@@ -38,7 +38,7 @@ export default async function Home() {
       icon: BookOpen,
       title: "መጽሃፍ ቅዱስ",
       titleEn: "Bible",
-      description: "መጽሐፍ ቅዱስ በአማርኛ፣ በእንግሊዝኛ፣ በኦሮምኛ እና በሌሎችም",
+      description: "መጽሐፍ ቅዱስ በአማርኛ፣ በእንግሊዝኛ፣ በኦሮምኛ እና በሌሎችም ቋንቋዎች",
       descriptionEn: "The Bible in Amharic, English, Afaan Oromo, and more",
       href: "/bible/amharic/1954/1/1",
       color: "from-blue-500 to-blue-600",
