@@ -18,6 +18,11 @@ export default function robots(): MetadataRoute.Robots {
           "/hymns/my-hymns",
           "/hymns/admin/",
           "/hymns/submit",
+          // Players, not pages. They hold no text of their own and exist to
+          // start playback of a list that is already browsable elsewhere, so
+          // crawling them only spends budget that the hymns themselves need.
+          "/hymns/play-all",
+          "/sermons/play-all",
           "/sermons/favorites",
           "/sermons/my-sermons",
           "/sermons/admin/",
