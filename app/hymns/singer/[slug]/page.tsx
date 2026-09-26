@@ -10,7 +10,7 @@ import HymnInfiniteGrid from "@/components/hymns/HymnInfiniteGrid"
 import Link from "next/link"
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
   searchParams: Promise<{
     language?: string
     category?: string
@@ -20,8 +20,8 @@ interface PageProps {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params
-  const singer = await prisma.hmSinger.findUnique({ where: { id: parseInt(id) } })
+  const { slug } = await params
+  const singer = await prisma.hmSinger.findUnique({ where: { slug: decodeURIComponent(slug) } })
   if (!singer) return { title: "Singer — EOTC Media" }
   return { title: `Hymns by ${singer.name} — EOTC Media` }
 }
@@ -29,9 +29,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 const PAGE_SIZE = 24
 
 export default async function SingerHymnsPage({ params, searchParams }: PageProps) {
-  const { id } = await params
-  const singerId = parseInt(id)
-  if (isNaN(singerId)) notFound()
+  const { slug } = await params
+  const singerSlug = decodeURIComponent(slug)
 
   const { language, category, subCategory, sort } = await searchParams
 
@@ -42,17 +41,22 @@ export default async function SingerHymnsPage({ params, searchParams }: PageProp
   const session = await auth()
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
 
-  const [singer, { hymns, total }, { categories, subCategories, languages, singers, singersByLanguage }] =
+  // The hymn query needs the singer's id, so the lookup can no longer run
+  // alongside it. The filter data still can.
+  const [singer, { categories, subCategories, languages, singers, singersByLanguage }] =
     await Promise.all([
-      prisma.hmSinger.findUnique({ where: { id: singerId } }),
-      getHymns({ singerId, languageId, categoryId, subCategoryId, sort, userId }),
+      prisma.hmSinger.findUnique({ where: { slug: singerSlug } }),
       getHymnsFilterData(),
     ])
 
   if (!singer) notFound()
 
+  const { hymns, total } = await getHymns({
+    singerId: singer.id, languageId, categoryId, subCategoryId, sort, userId,
+  })
+
   const totalPages = Math.ceil(total / PAGE_SIZE)
-  const basePath = `/hymns/singer/${id}`
+  const basePath = `/hymns/singer/${slug}`
 
   return (
     <div className="min-h-screen bg-white">
@@ -92,7 +96,7 @@ export default async function SingerHymnsPage({ params, searchParams }: PageProp
               initialHymns={hymns}
               initialTotal={total}
               initialTotalPages={totalPages}
-              filters={{ language, category, subCategory, singer: id, sort }}
+              filters={{ language, category, subCategory, singer: String(singer.id), sort }}
               userId={userId}
             />
           </main>

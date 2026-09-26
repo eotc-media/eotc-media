@@ -578,6 +578,7 @@ model HmApprovalStatus {
 model HmSinger {
   id        Int      @id @default(autoincrement())
   name      String
+  slug      String   @unique
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -824,7 +825,7 @@ model SmPreacher {
 model SmChannel {
   id               Int       @id @default(autoincrement())
   name             String
-  slug             String?   @unique
+  slug             String    @unique
   ytChannelId      String?   @unique @map("yt_channel_id")
   handle           String    @default("")
   description      String?

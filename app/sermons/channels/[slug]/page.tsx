@@ -3,15 +3,15 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
-import { getHymns, getHymnsFilterData } from "@/lib/api/hymns"
+import { getSermons, getSermonsFilterData } from "@/lib/api/sermons"
 import Navbar from "@/components/Navbar"
-import HymnSidebar from "@/components/hymns/HymnSidebar"
-import HymnSearchFilters from "@/components/hymns/HymnSearchFilters"
-import HymnInfiniteGrid from "@/components/hymns/HymnInfiniteGrid"
-import ChannelCoverImage from "@/components/hymns/ChannelCoverImage"
+import SermonSidebar from "@/components/sermons/SermonSidebar"
+import SermonSearchFilters from "@/components/sermons/SermonSearchFilters"
+import SermonInfiniteGrid from "@/components/sermons/SermonInfiniteGrid"
+import SermonChannelCoverImage from "@/components/sermons/SermonChannelCoverImage"
 
 interface PageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ slug: string }>
   searchParams: Promise<{
     language?: string
     category?: string
@@ -21,20 +21,17 @@ interface PageProps {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params
-  const channelId = parseInt(id)
-  if (isNaN(channelId)) return { title: "Channel — EOTC Media" }
-  const channel = await prisma.hmChannel.findUnique({ where: { id: channelId } })
+  const { slug } = await params
+  const channel = await prisma.smChannel.findUnique({ where: { slug: decodeURIComponent(slug) } })
   if (!channel) return { title: "Channel — EOTC Media" }
-  return { title: `${channel.title} — Hymns | EOTC Media` }
+  return { title: `${channel.name} — Sermons | EOTC Media` }
 }
 
 const PAGE_SIZE = 24
 
-export default async function ChannelHymnsPage({ params, searchParams }: PageProps) {
-  const { id } = await params
-  const channelId = parseInt(id)
-  if (isNaN(channelId)) notFound()
+export default async function SermonChannelPage({ params, searchParams }: PageProps) {
+  const { slug } = await params
+  const channelSlug = decodeURIComponent(slug)
 
   const { language, category, subCategory, sort } = await searchParams
 
@@ -45,22 +42,26 @@ export default async function ChannelHymnsPage({ params, searchParams }: PagePro
   const session = await auth()
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
 
-  const [channel, { hymns, total }, { categories, subCategories, languages, singers, singersByLanguage }] =
+  // The sermon query needs the channel's id, so the lookup can no longer run
+  // alongside it. The filter data still can.
+  const [channel, { categories, subCategories, languages, categoriesByLanguage }] =
     await Promise.all([
-      prisma.hmChannel.findUnique({
-        where: { id: channelId },
-        include: { _count: { select: { hymns: true } } },
+      prisma.smChannel.findUnique({
+        where: { slug: channelSlug },
+        include: { _count: { select: { sermons: true } } },
       }),
-      getHymns({ channelId, languageId, categoryId, subCategoryId, sort, userId }),
-      getHymnsFilterData(),
+      getSermonsFilterData(),
     ])
 
   if (!channel) notFound()
 
-  const totalPages = Math.ceil(total / PAGE_SIZE)
-  const basePath = `/hymns/channels/${id}`
+  const { sermons, total } = await getSermons({
+    channelId: channel.id, languageId, categoryId, subCategoryId, sort, userId,
+  })
 
-  // Strip any existing Google CDN params (=s0, =w400, etc.) before appending crop params
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+  const basePath = `/sermons/channels/${slug}`
+
   const coverBase = channel.coverImage
     ? channel.coverImage.replace(/=\w[^/]*$/, "")
     : null
@@ -72,16 +73,15 @@ export default async function ChannelHymnsPage({ params, searchParams }: PagePro
       <Navbar />
       <div className="pt-16">
         <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
-
-          <HymnSidebar userId={userId} />
+          <SermonSidebar userId={userId} />
 
           <main className="pb-8">
             {/* Cover image banner */}
             <div className="relative w-full h-32 sm:h-44 bg-gradient-to-r from-blue-100 to-slate-100">
               {coverBase && (
-                <ChannelCoverImage
+                <SermonChannelCoverImage
                   src={`${coverBase}=w1707-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj`}
-                  alt={channel.title}
+                  alt={channel.name}
                 />
               )}
             </div>
@@ -89,30 +89,27 @@ export default async function ChannelHymnsPage({ params, searchParams }: PagePro
             {/* Channel identity */}
             <div className="px-4 sm:px-6 lg:px-8">
               <div className="flex items-end gap-4 -mt-8 sm:-mt-10 mb-4">
-                {/* Avatar */}
                 <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-4 border-white bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center flex-shrink-0 shadow-sm">
                   <span className="text-2xl font-bold text-blue-600">
-                    {channel.title.charAt(0).toUpperCase()}
+                    {channel.name.charAt(0).toUpperCase()}
                   </span>
                   {avatarSrc && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={avatarSrc}
-                      alt={channel.title}
+                      alt={channel.name}
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                   )}
                 </div>
-                {/* Back link — aligned to bottom of avatar row */}
                 <div className="pb-1 ml-auto">
-                  <Link href="/hymns/channels" className="text-xs text-slate-400 hover:text-slate-700 transition-colors">
+                  <Link href="/sermons/channels" className="text-xs text-slate-400 hover:text-slate-700 transition-colors">
                     ← All Channels
                   </Link>
                 </div>
               </div>
 
-              {/* Title + meta */}
-              <h1 className="text-lg font-bold text-slate-900 leading-snug">{channel.title}</h1>
+              <h1 className="text-lg font-bold text-slate-900 leading-snug">{channel.name}</h1>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-400">
                 {channel.handle && (
                   <a
@@ -124,7 +121,7 @@ export default async function ChannelHymnsPage({ params, searchParams }: PagePro
                     {channel.handle.startsWith("@") ? channel.handle : `@${channel.handle}`}
                   </a>
                 )}
-                <span>{channel._count.hymns} {channel._count.hymns === 1 ? "hymn" : "hymns"}</span>
+                <span>{channel._count.sermons} {channel._count.sermons === 1 ? "sermon" : "sermons"}</span>
               </div>
               {channel.description && (
                 <p className="mt-2 text-xs text-slate-500 leading-relaxed line-clamp-3 max-w-2xl">
@@ -138,23 +135,21 @@ export default async function ChannelHymnsPage({ params, searchParams }: PagePro
             {/* Filters + grid */}
             <div className="px-4 sm:px-6 lg:px-8 mt-6">
               <div className="mb-5">
-                <HymnSearchFilters
+                <SermonSearchFilters
                   categories={categories}
                   subCategories={subCategories}
                   languages={languages}
-                  singers={singers}
-                  singersByLanguage={singersByLanguage}
+                  categoriesByLanguage={categoriesByLanguage}
                   basePath={basePath}
-                  hideSingerMode
                 />
               </div>
-
-              <HymnInfiniteGrid
-                initialHymns={hymns}
+              <SermonInfiniteGrid
+                initialSermons={sermons}
                 initialTotal={total}
                 initialTotalPages={totalPages}
-                filters={{ language, category, subCategory, sort, channel: id }}
+                filters={{ language, category, subCategory, sort, channel: String(channel.id) }}
                 userId={userId}
+                basePath={basePath}
               />
             </div>
           </main>

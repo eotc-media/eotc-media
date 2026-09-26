@@ -190,7 +190,7 @@ export default function PlayAllPlayer({ hymns: initialHymns, userId }: Props) {
           {/* Channel + singers + clicks */}
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             {currentHymn.channel?.title && (
-              <Link href={`/hymns/channels/${currentHymn.channel.id}`} className="flex items-center gap-2">
+              <Link href={`/hymns/channels/${currentHymn.channel.slug}`} className="flex items-center gap-2">
                 {(currentHymn.channel.thumbnailDefault || currentHymn.channel.thumbnailMedium || currentHymn.channel.thumbnailHigh) ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
@@ -213,7 +213,7 @@ export default function PlayAllPlayer({ hymns: initialHymns, userId }: Props) {
                 {currentHymn.channel?.title && <span className="text-neutral-300">·</span>}
                 {currentHymn.singers.map((s, i) => (
                   <span key={s.id}>
-                    <Link href={`/hymns/singer/${s.id}`} className="hover:text-neutral-800 transition-colors">
+                    <Link href={`/hymns/singer/${s.slug}`} className="hover:text-neutral-800 transition-colors">
                       {s.name}
                     </Link>
                     {i < (currentHymn.singers?.length ?? 0) - 1 && <span className="text-neutral-300">,</span>}

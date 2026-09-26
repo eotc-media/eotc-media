@@ -15,6 +15,7 @@ function sortQuery(s: SortOption) {
 interface Channel {
   id: number
   title: string
+  slug: string
   thumbnailDefault: string | null
   thumbnailMedium: string | null
   thumbnailHigh: string | null
@@ -129,7 +130,7 @@ export default function ChannelInfiniteGrid({
         {channels.map(channel => (
           <Link
             key={channel.id}
-            href={`/hymns/channels/${channel.id}`}
+            href={`/hymns/channels/${channel.slug}`}
             prefetch={false}
             className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/40 transition-colors text-center"
           >

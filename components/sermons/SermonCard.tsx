@@ -55,7 +55,7 @@ export default function SermonCard({ sermon, userId: _userId }: SermonCardProps)
       <div className="flex gap-2.5 min-w-0">
         {/* Channel avatar */}
         {channelAvatar ? (
-          <Link href={`/sermons/channels/${sermon.channel!.id}`} prefetch={false} className="flex-shrink-0 mt-0.5">
+          <Link href={`/sermons/channels/${sermon.channel!.slug}`} prefetch={false} className="flex-shrink-0 mt-0.5">
             <Image
               src={channelAvatar}
               alt={sermon.channel!.name}
@@ -67,7 +67,7 @@ export default function SermonCard({ sermon, userId: _userId }: SermonCardProps)
           </Link>
         ) : (
           <Link
-            href={sermon.channel ? `/sermons/channels/${sermon.channel.id}` : `/sermons/${sermon.slug}`}
+            href={sermon.channel ? `/sermons/channels/${sermon.channel.slug}` : `/sermons/${sermon.slug}`}
             prefetch={false}
             className="flex-shrink-0 mt-0.5 w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold select-none"
           >
@@ -86,7 +86,7 @@ export default function SermonCard({ sermon, userId: _userId }: SermonCardProps)
           <div className="flex flex-col gap-0.5">
             {sermon.channel?.name && (
               <Link
-                href={`/sermons/channels/${sermon.channel.id}`}
+                href={`/sermons/channels/${sermon.channel.slug}`}
                 prefetch={false}
                 className="text-[12px] text-neutral-500 hover:text-neutral-800 transition-colors truncate"
               >
