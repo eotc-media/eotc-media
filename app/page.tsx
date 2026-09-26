@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 // already unbeatable on its own; the phrase people actually search for was
 // nowhere in the strongest signal on the page.
 export const metadata: Metadata = {
-  title: { absolute: "Ethiopian Orthodox Tewahedo Church Resources | EOTC Media — መጽሐፍ ቅዱስ፣ መዝሙር፣ ስብከት" },
+  title: { absolute: "Ethiopian Orthodox Tewahedo Church Resources | EOTC Media — Bible, Liturgy, Mezmur, Sermons, Books & Quiz" },
   description: SITE_DESCRIPTION,
   alternates: { canonical: "/" },
 };
@@ -30,16 +30,16 @@ export default async function Home() {
   } : null;
 
   // Card text is the only prose on the home page, so it is where the terms
-  // people search have to live: the church's full name, "mezmur", "kidase",
-  // the Bible's languages. Each line still describes the section honestly —
-  // it reads as a description first and carries the words as a consequence.
+  // people search have to live: both churches by name, "mezmur", "kidase".
+  // Kept short deliberately — these are cards, and a card that reads as a
+  // keyword list serves nobody.
   const features = [
     {
       icon: BookOpen,
       title: "መጽሃፍ ቅዱስ",
       titleEn: "Bible",
-      description: "የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን መጽሐፍ ቅዱስ በአማርኛ፣ በግዕዝ፣ በኦሮምኛ፣ በትግርኛና በእንግሊዝኛ",
-      descriptionEn: "The Ethiopian Orthodox Tewahedo Church Bible in Amharic, Ge'ez, Afaan Oromo, Tigrigna and English",
+      description: "መጽሐፍ ቅዱስ በአማርኛ፣ በእንግሊዝኛ፣ በኦሮምኛ እና በሌሎችም",
+      descriptionEn: "The Bible in Amharic, English, Afaan Oromo, and more",
       href: "/bible/amharic/1954/1/1",
       color: "from-blue-500 to-blue-600",
       bgColor: "bg-blue-50",
@@ -49,8 +49,8 @@ export default async function Home() {
       icon: Mic,
       title: "ቅዳሴ",
       titleEn: "Liturgy",
-      description: "የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ሥርዓተ ቅዳሴ በካህን፣ በዲያቆንና በሕዝብ ተከፋፍሎ",
-      descriptionEn: "The Ethiopian Orthodox Tewahedo Church Divine Liturgy (Kidase), set out by priest, deacon and people",
+      description: "የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ሥርዓተ ቅዳሴ",
+      descriptionEn: "The Ethiopian Orthodox Tewahedo Church Divine Liturgy (Kidase)",
       href: "/liturgy",
       color: "from-blue-500 to-blue-600",
       bgColor: "bg-blue-50",
@@ -60,8 +60,8 @@ export default async function Home() {
       icon: BookMarked,
       title: "መጻህፍት",
       titleEn: "Books",
-      description: "የኦርቶዶክስ ተዋሕዶ መንፈሳዊ መጻሕፍት — በቀደሙ የቤተ ክርስቲያን አባቶችና በዘመናዊ መምህራን የተጻፉ",
-      descriptionEn: "Orthodox Tewahedo spiritual books, by the early church fathers and contemporary teachers",
+      description: "በቀደሙ የቤተክርስትያን አባቶችና በአሁኑ ዘመን የተጻፉ የቤተ ክርስቲያን መጻህፍት",
+      descriptionEn: "Books by early church fathers and contemporary church teachers",
       href: "/books",
       color: "from-green-500 to-green-600",
       bgColor: "bg-green-50",
@@ -71,8 +71,8 @@ export default async function Home() {
       icon: Music,
       title: "መዝሙራት",
       titleEn: "Hymns",
-      description: "የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን መዝሙራት — በዘማሪ፣ በቋንቋና በአርእስት ተለይተው",
-      descriptionEn: "Ethiopian Orthodox Tewahedo Church mezmur, browsable by zemari, language and topic",
+      description: "የኢትዮጵያና የኤርትራ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን መዝሙራት",
+      descriptionEn: "Ethiopian and Eritrean Orthodox Tewahedo Church mezmur (hymns)",
       href: "/hymns",
       color: "from-amber-500 to-amber-600",
       bgColor: "bg-amber-50",
@@ -82,8 +82,8 @@ export default async function Home() {
       icon: MessageSquare,
       title: "ስብከቶች",
       titleEn: "Sermons",
-      description: "የኦርቶዶክስ ተዋሕዶ ስብከቶችና ትምህርተ ወንጌል — በሰባኪና በአርእስት ተለይተው",
-      descriptionEn: "Orthodox Tewahedo sermons and gospel teaching, browsable by preacher and topic",
+      description: "የኢትዮጵያና የኤርትራ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ስብከቶች",
+      descriptionEn: "Ethiopian and Eritrean Orthodox Tewahedo Church sermons",
       href: "/sermons",
       color: "from-rose-500 to-rose-600",
       bgColor: "bg-rose-50",
