@@ -27,10 +27,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!result) return {}
   const { hymn } = result
   const singers = hymn.singers?.map(s => s.name).join(", ")
+  // Only promise lyrics when the hymn has them. The fallback used to say "with
+  // lyrics" on every hymn, so most pages offered Google something they did not
+  // have — and a snippet a page does not deliver is worse than a plain one.
+  const hasLyrics = !!hymn.lyrics?.trim()
   const description =
     hymn.description ??
-    `Listen to the Ethiopian Orthodox Tewahedo mezmur "${hymn.title}"${singers ? ` by ${singers}` : ""} with lyrics on EOTC Media. ` +
-    `"${hymn.title}" መዝሙር ከግጥሙ ጋር ያዳምጡ።`
+    (hasLyrics
+      ? `Listen to the Ethiopian Orthodox Tewahedo mezmur "${hymn.title}"${singers ? ` by ${singers}` : ""} with lyrics on EOTC Media. ` +
+        `"${hymn.title}" መዝሙር ከግጥሙ ጋር ያዳምጡ።`
+      : `Listen to the Ethiopian Orthodox Tewahedo mezmur "${hymn.title}"${singers ? ` by ${singers}` : ""} on EOTC Media. ` +
+        `"${hymn.title}" መዝሙር ያዳምጡ።`)
   const thumbnail = hymn.thumbnailMaxres || hymn.thumbnailStandard || hymn.thumbnailHigh
   return {
     title: `${hymn.title} — Mezmur | መዝሙር`,
@@ -66,6 +73,7 @@ export default async function HymnPage({ params }: PageProps) {
   if (!result) notFound()
 
   const { hymn, isFavorited, comments } = result
+  const hasLyrics = !!hymn.lyrics?.trim()
 
   const filterData = await getHymnsFilterData()
   const related = await getRelatedHymns({
@@ -87,7 +95,7 @@ export default async function HymnPage({ params }: PageProps) {
             "@context": "https://schema.org",
             "@type": "VideoObject",
             name: hymn.title,
-            description: hymn.description ?? `Ethiopian Orthodox Tewahedo mezmur "${hymn.title}" with lyrics.`,
+            description: hymn.description ?? `Ethiopian Orthodox Tewahedo mezmur "${hymn.title}"${hasLyrics ? " with lyrics" : ""}.`,
             thumbnailUrl: [hymn.thumbnailMaxres, hymn.thumbnailStandard, hymn.thumbnailHigh].filter(Boolean),
             uploadDate: (hymn.publishedAt ?? hymn.createdAt).toISOString(),
             embedUrl: `https://www.youtube.com/embed/${hymn.videoId}`,
