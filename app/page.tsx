@@ -10,8 +10,12 @@ import { BookOpen, BookMarked, Music, MessageSquare, Mic, ArrowRight } from "luc
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// The title led with the brand — "EOTC Media — Amharic Bible, Mezmur…" — which
+// tells Google what the site is called rather than what it is for. The name is
+// already unbeatable on its own; the phrase people actually search for was
+// nowhere in the strongest signal on the page.
 export const metadata: Metadata = {
-  title: { absolute: "EOTC Media — Amharic Bible, Mezmur, Sermons & Spiritual Books | መጽሐፍ ቅዱስ፣ መዝሙር፣ ስብከት" },
+  title: { absolute: "Ethiopian Orthodox Tewahedo Church Resources | EOTC Media — መጽሐፍ ቅዱስ፣ መዝሙር፣ ስብከት" },
   description: SITE_DESCRIPTION,
   alternates: { canonical: "/" },
 };
@@ -25,13 +29,17 @@ export default async function Home() {
     roles: session.user.roles || []
   } : null;
 
+  // Card text is the only prose on the home page, so it is where the terms
+  // people search have to live: the church's full name, "mezmur", "kidase",
+  // the Bible's languages. Each line still describes the section honestly —
+  // it reads as a description first and carries the words as a consequence.
   const features = [
     {
       icon: BookOpen,
       title: "መጽሃፍ ቅዱስ",
       titleEn: "Bible",
-      description: "መጽሃፍ ቅዱስ በተለያዩ ቋንቋዎች: አማርኛ፣ እንግሊዝኛ፣ ኦሮምኛ፣ ትግርኛ፣ እና ሌሎችም",
-      descriptionEn: "The Bible in different languages: Amharic, English, Afaan Oromo, Tigrigna, and more",
+      description: "የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን መጽሐፍ ቅዱስ በአማርኛ፣ በግዕዝ፣ በኦሮምኛ፣ በትግርኛና በእንግሊዝኛ",
+      descriptionEn: "The Ethiopian Orthodox Tewahedo Church Bible in Amharic, Ge'ez, Afaan Oromo, Tigrigna and English",
       href: "/bible/amharic/1954/1/1",
       color: "from-blue-500 to-blue-600",
       bgColor: "bg-blue-50",
@@ -41,8 +49,8 @@ export default async function Home() {
       icon: Mic,
       title: "ቅዳሴ",
       titleEn: "Liturgy",
-      description: "የኢትዮጵያ ኦርቶዶክስ ተዋህዶ ቤተክርስቲያን የቅዳሴ ስርዓቶች",
-      descriptionEn: "Ethiopian Orthodox Tewahedo Church liturgical services",
+      description: "የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ሥርዓተ ቅዳሴ በካህን፣ በዲያቆንና በሕዝብ ተከፋፍሎ",
+      descriptionEn: "The Ethiopian Orthodox Tewahedo Church Divine Liturgy (Kidase), set out by priest, deacon and people",
       href: "/liturgy",
       color: "from-blue-500 to-blue-600",
       bgColor: "bg-blue-50",
@@ -52,8 +60,8 @@ export default async function Home() {
       icon: BookMarked,
       title: "መጻህፍት",
       titleEn: "Books",
-      description: "በቀደሙ የቤተክርስትያን አባቶችና በአሁኑ ዘመን የተጻፉ የቤተ ክርስቲያን መጻህፍት",
-      descriptionEn: "Books by early church fathers and contemporary church teachers",
+      description: "የኦርቶዶክስ ተዋሕዶ መንፈሳዊ መጻሕፍት — በቀደሙ የቤተ ክርስቲያን አባቶችና በዘመናዊ መምህራን የተጻፉ",
+      descriptionEn: "Orthodox Tewahedo spiritual books, by the early church fathers and contemporary teachers",
       href: "/books",
       color: "from-green-500 to-green-600",
       bgColor: "bg-green-50",
@@ -63,8 +71,8 @@ export default async function Home() {
       icon: Music,
       title: "መዝሙራት",
       titleEn: "Hymns",
-      description: "የሚፈልጉትን መዝሙር በቀላሉ ለማግኘት በሚያስችል መንገድ የቀረቡ መንፈሳዊ መዝሙራት",
-      descriptionEn: "Spiritual hymns organized for easy access",
+      description: "የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን መዝሙራት — በዘማሪ፣ በቋንቋና በአርእስት ተለይተው",
+      descriptionEn: "Ethiopian Orthodox Tewahedo Church mezmur, browsable by zemari, language and topic",
       href: "/hymns",
       color: "from-amber-500 to-amber-600",
       bgColor: "bg-amber-50",
@@ -74,8 +82,8 @@ export default async function Home() {
       icon: MessageSquare,
       title: "ስብከቶች",
       titleEn: "Sermons",
-      description: "የቀረቡ መንፈሳዊ ስብከቶችን በቀላሉ ለማግኘት የተዘጋጀ የስብከቶች ማውጫ",
-      descriptionEn: "Spiritual sermons organized for easy access",
+      description: "የኦርቶዶክስ ተዋሕዶ ስብከቶችና ትምህርተ ወንጌል — በሰባኪና በአርእስት ተለይተው",
+      descriptionEn: "Orthodox Tewahedo sermons and gospel teaching, browsable by preacher and topic",
       href: "/sermons",
       color: "from-rose-500 to-rose-600",
       bgColor: "bg-rose-50",
