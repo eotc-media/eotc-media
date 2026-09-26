@@ -2,12 +2,13 @@
 
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { accessiblePanels } from "@/lib/admin-panels"
 import {
   LayoutDashboard, Music, Mic, FileText, Globe, Tag, Layers, CheckSquare,
   MessageSquare, MessageCircle, BookMarked, BookOpen, User, Users, HelpCircle, Award,
@@ -57,10 +58,30 @@ export function AdminShell({
   const { data: session } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [panelsOpen, setPanelsOpen] = useState(false)
+  const panelsRef = useRef<HTMLDivElement>(null)
 
   const user = session?.user
   const userName = user?.name || "User"
   const BrandIcon = ICONS[brandIcon] ?? LayoutDashboard
+
+  // Only the panels this admin can actually open. Someone who runs one module
+  // sees no switcher at all, and the brand stays a plain link out to the site.
+  // Which panel we are in comes from the path rather than the brand text, so a
+  // renamed heading cannot make a panel list itself.
+  const panels = accessiblePanels(session ?? null)
+  const otherPanels = panels.filter(
+    p => pathname !== p.href && !pathname.startsWith(p.href + "/")
+  )
+  const canSwitch = otherPanels.length > 0
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (panelsRef.current && !panelsRef.current.contains(e.target as Node)) setPanelsOpen(false)
+    }
+    if (panelsOpen) document.addEventListener("mousedown", onClickOutside)
+    return () => document.removeEventListener("mousedown", onClickOutside)
+  }, [panelsOpen])
 
   function isActive(item: AdminNavItem) {
     const base = item.href.split("?")[0]
@@ -108,25 +129,81 @@ export function AdminShell({
           collapsed ? "w-[4.5rem]" : "w-64"
         )}
       >
-        {/* Logo */}
-        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
-          <Link href={backHref} className={cn("flex items-center gap-2", collapsed && "mx-auto")}>
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground">
-              <BrandIcon className="h-5 w-5" />
-            </div>
-            {!collapsed && (
-              <div className="flex flex-col">
-                <span className="text-sm font-bold leading-tight text-sidebar-foreground">{brandTitle}</span>
-                <span className="text-xs text-sidebar-foreground/50">{brandSubtitle}</span>
+        {/* Logo, and the panel switcher when this admin runs more than one */}
+        <div className="relative flex h-16 items-center justify-between border-b border-sidebar-border px-4" ref={panelsRef}>
+          {canSwitch ? (
+            <button
+              onClick={() => setPanelsOpen(v => !v)}
+              title={collapsed ? "Switch panel" : undefined}
+              aria-haspopup="menu"
+              aria-expanded={panelsOpen}
+              className={cn(
+                "flex items-center gap-2 rounded-md py-1 pr-2 text-left transition-colors hover:bg-sidebar-accent cursor-pointer",
+                collapsed ? "mx-auto px-1" : "-ml-1 pl-1 min-w-0 flex-1"
+              )}
+            >
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-primary text-primary-foreground">
+                <BrandIcon className="h-5 w-5" />
               </div>
-            )}
-          </Link>
+              {!collapsed && (
+                <>
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate text-sm font-bold leading-tight text-sidebar-foreground">{brandTitle}</span>
+                    <span className="truncate text-xs text-sidebar-foreground/50">{brandSubtitle}</span>
+                  </div>
+                  <ChevronDown className={cn(
+                    "ml-auto h-4 w-4 flex-shrink-0 text-sidebar-foreground/50 transition-transform",
+                    panelsOpen && "rotate-180"
+                  )} />
+                </>
+              )}
+            </button>
+          ) : (
+            <Link href={backHref} className={cn("flex items-center gap-2", collapsed && "mx-auto")}>
+              <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground">
+                <BrandIcon className="h-5 w-5" />
+              </div>
+              {!collapsed && (
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold leading-tight text-sidebar-foreground">{brandTitle}</span>
+                  <span className="text-xs text-sidebar-foreground/50">{brandSubtitle}</span>
+                </div>
+              )}
+            </Link>
+          )}
+
           <button
             className="text-sidebar-foreground hover:text-sidebar-foreground/70 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           >
             <X className="h-5 w-5" />
           </button>
+
+          {panelsOpen && (
+            <div
+              role="menu"
+              className="absolute left-2 right-2 top-full z-50 mt-1 overflow-hidden rounded-md border border-sidebar-border bg-sidebar py-1 shadow-lg"
+            >
+              <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                Switch panel
+              </p>
+              {otherPanels.map(p => {
+                const Icon = ICONS[p.icon] ?? LayoutDashboard
+                return (
+                  <Link
+                    key={p.key}
+                    href={p.href}
+                    role="menuitem"
+                    onClick={() => { setPanelsOpen(false); setSidebarOpen(false) }}
+                    className="flex items-center gap-3 px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  >
+                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{p.title}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Collapse toggle (desktop) */}
