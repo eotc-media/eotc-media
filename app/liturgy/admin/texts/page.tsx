@@ -30,9 +30,6 @@ interface LiturgicalText {
   roleId: number
   orderIndex: number
   textGeez: string
-  textAmharic: string
-  textEnglishTransliteration: string
-  textEnglishTranslation: string
   remark: string | null
   audioGeezFilePath: string | null
   audioEzilFilePath: string | null
@@ -152,20 +149,14 @@ export default function TextsPage() {
       },
     },
     {
+      // The Ge'ez is the original, and the line an admin recognises. The
+      // preview showed the English translation, which meant finding a text
+      // by reading a translation of it.
       accessorKey: "textGeez",
-      header: "ግዕዝ",
-      cell: ({ row }) => (
-        <div className="max-w-[300px] text-sm text-foreground">
-          {truncateText(row.getValue("textGeez"))}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "textEnglishTranslation",
       header: "Text preview",
       cell: ({ row }) => (
-        <div className="max-w-[300px] text-sm text-muted-foreground">
-          {truncateText(row.getValue("textEnglishTranslation"))}
+        <div className="max-w-[360px] text-sm text-foreground">
+          {truncateText(row.getValue("textGeez"))}
         </div>
       ),
     },
@@ -248,7 +239,7 @@ export default function TextsPage() {
         <DataTable
           columns={columns}
           data={texts}
-          searchKey="textEnglishTranslation"
+          searchKey="textGeez"
           searchPlaceholder="Search by text content..."
           isLoading={isLoading}
         />

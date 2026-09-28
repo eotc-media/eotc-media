@@ -56,19 +56,16 @@ export async function GET(request: NextRequest) {
         skip,
         ...(limit ? { take: limit } : {}),
         orderBy: { [sortBy]: sortOrder },
-        // The table shows an order index, section, role, the Ge'ez and a
-        // preview of the English translation, the remark and whether audio
-        // exists. Amharic and the transliteration are never shown here and the
-        // edit page loads its own copy of the row, so those two TEXT columns
-        // stay out. Ge'ez is the text an admin recognises a line by, so it is
-        // worth its weight on an admin list that is paginated anyway.
+        // The table shows an order index, section, role, a preview of the
+        // Ge'ez, the remark and whether audio exists. The other three TEXT
+        // bodies are never shown here and the edit page loads its own copy of
+        // the row, so they stay out.
         select: {
           id: true,
           sectionId: true,
           roleId: true,
           orderIndex: true,
           textGeez: true,
-          textEnglishTranslation: true,
           remark: true,
           audioGeezFilePath: true,
           audioEzilFilePath: true,
