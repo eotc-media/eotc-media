@@ -152,6 +152,15 @@ export default function TextsPage() {
       },
     },
     {
+      accessorKey: "textGeez",
+      header: "ግዕዝ",
+      cell: ({ row }) => (
+        <div className="max-w-[300px] text-sm text-foreground">
+          {truncateText(row.getValue("textGeez"))}
+        </div>
+      ),
+    },
+    {
       accessorKey: "textEnglishTranslation",
       header: "Text preview",
       cell: ({ row }) => (
