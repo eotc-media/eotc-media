@@ -169,14 +169,26 @@ export async function getRandomQuestions({
   if (languageId) where.languages = { some: { languageId } }
   if (difficultyId) where.difficultyId = difficultyId
 
-  // Get total count, then fetch random subset
-  const total = await prisma.qzQuestion.count({ where })
-  const skip = Math.max(0, Math.floor(Math.random() * Math.max(0, total - count)))
+  // A random offset followed by `take: count` returns rows that are adjacent
+  // in the table, not rows drawn from across it — and questions were imported
+  // a book at a time, so ten adjacent rows are ten questions about the same
+  // book. Shuffling them afterwards reordered that one book; it never widened
+  // the draw.
+  //
+  // Sampling the ids first costs one extra query of nothing but integers, and
+  // every question in the filtered set then has the same chance of being
+  // picked. ORDER BY RANDOM() would also be correct but sorts the whole set on
+  // every request.
+  const ids = await prisma.qzQuestion.findMany({ where, select: { id: true } })
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[ids[i], ids[j]] = [ids[j], ids[i]]
+  }
+  const picked = ids.slice(0, count).map(r => r.id)
+  if (picked.length === 0) return []
 
   const raws = await prisma.qzQuestion.findMany({
-    where,
-    skip,
-    take: count,
+    where: { id: { in: picked } },
     include: {
       type: true,
       difficulty: true,
@@ -186,7 +198,8 @@ export async function getRandomQuestions({
     },
   })
 
-  // Shuffle the results
+  // `id: { in: … }` comes back in id order, which would present the questions
+  // in the order they were written. Shuffle what was drawn.
   for (let i = raws.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[raws[i], raws[j]] = [raws[j], raws[i]]
