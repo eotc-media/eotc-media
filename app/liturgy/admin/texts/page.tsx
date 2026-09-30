@@ -59,7 +59,9 @@ export default function TextsPage() {
     try {
       // No limit: the table pages in the browser, and a fixed window hid texts
       // that fell outside it — a newly saved one looked like it had not saved.
-      const response = await fetch("/api/liturgy/admin/texts")
+      // Highest order index first, so the end of a section — where new texts
+      // are added — is the first thing on screen.
+      const response = await fetch("/api/liturgy/admin/texts?sortOrder=desc")
       const data = await response.json()
 
       if (response.ok) {
