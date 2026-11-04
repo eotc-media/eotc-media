@@ -20,6 +20,12 @@ function LoginForm() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
   const [isLoading, setIsLoading] = useState(false)
   const registered = searchParams.get('registered')
+  // Where to go once signed in. Only a path on this site: anything absolute,
+  // or protocol-relative ("//evil.example", and "/\evil.example", which
+  // browsers read the same way), would turn the login page into an open
+  // redirect.
+  const next = searchParams.get('callbackUrl')
+  const destination = next && /^\/(?![/\\])/.test(next) ? next : '/'
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -36,14 +42,14 @@ function LoginForm() {
       if (!result?.error) {
         // Re-fetch session so UI updates with new user data
         await getSession()
-        router.push("/")
+        router.push(destination)
         return
       }
 
       // If error, check if session is actually authenticated (race condition fix)
       const session = await getSession()
       if (session?.user) {
-        router.push("/")
+        router.push(destination)
         return
       }
 

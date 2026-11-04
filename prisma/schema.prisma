@@ -48,6 +48,7 @@ model User {
   blCollections      BlCollection[]
   accounts           Account[]
   sessions           Session[]
+  readingPlans       ReadingPlan[]
 
   @@map("users")
 }
@@ -1286,4 +1287,51 @@ model EmailCampaignRecipient {
   @@unique([campaignId, userId])
   @@index([campaignId, sentAt])
   @@map("email_campaign_recipients")
+}
+
+// ── Reading plans ────────────────────────────────────────────────────────────
+//
+// A plan is generated once, from its config, into one row per day. Keeping the
+// days rather than recomputing them means a plan never shifts under a reader if
+// the generator changes, and catching up is a matter of re-dating the rows
+// still to read.
+model ReadingPlan {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  title     String
+  // Where the readings come from. Only "bible" exists today; this is here so a
+  // library book or a hand-written plan can be added without reshaping tables.
+  source    String   @default("bible")
+  // What the plan was generated from: preset, books, tracks, rest days. Kept so
+  // a plan can describe itself and be rescheduled.
+  config    Json
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  totalDays Int      @map("total_days")
+  // active | completed | archived. One active plan per reader at a time.
+  status    String   @default("active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days ReadingPlanDay[]
+
+  @@index([userId, status])
+  @@map("reading_plans")
+}
+
+model ReadingPlanDay {
+  id          Int       @id @default(autoincrement())
+  planId      Int       @map("plan_id")
+  dayNumber   Int       @map("day_number")
+  date        DateTime  @db.Date
+  // [{ bookId, osis, from, to }] — whole chapters, one entry per track.
+  readings    Json
+  completedAt DateTime? @map("completed_at")
+
+  plan ReadingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, dayNumber])
+  @@index([planId, date])
+  @@map("reading_plan_days")
 }
