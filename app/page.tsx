@@ -155,7 +155,6 @@ export default async function Home() {
                 ዕቅድ ይጀምሩ · Start a plan
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <span className="text-sm text-neutral-400">ነፃ · Free, at your own pace</span>
             </div>
           </div>
 
