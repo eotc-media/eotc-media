@@ -13,13 +13,13 @@ import ExploreGrid from "@/components/home/ExploreGrid"
 import ListenSection from "@/components/home/ListenSection"
 import TimezoneSync from "@/components/home/TimezoneSync"
 
-// The new homepage, built here first and moved to / once it is right. Kept out
-// of search results until then, so it never competes with the page that ranks.
+// The reading-plan page, linked from the homepage; it may replace / later.
 export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
-  title: "Today — EOTC Media",
-  robots: { index: false, follow: false },
+  title: "Bible Reading Plan — EOTC Media",
+  description: "Read the whole Bible in a year, or any books at your own pace, with today's reading, your progress and the Ethiopian calendar in one place.",
+  alternates: { canonical: "/today" },
 }
 
 /** Admin-featured items first; if none are set, whatever the section leads with. */

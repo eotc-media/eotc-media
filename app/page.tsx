@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { auth } from "@/auth";
 import { SITE_DESCRIPTION } from "@/lib/seo";
-import { BookOpen, BookMarked, Music, MessageSquare, Mic, ArrowRight } from "lucide-react";
+import { BookOpen, BookMarked, Music, MessageSquare, Mic, ArrowRight, CalendarCheck } from "lucide-react";
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -131,6 +131,40 @@ export default async function Home() {
             <Link href="/auth/login" className="text-blue-500 hover:underline">Sign in</Link> to contribute.
           </p>
         </div>
+      </div>
+
+      {/* Reading plan — the newest feature, so it gets a band of its own
+          above the section cards rather than a seventh card among them. */}
+      <div className="px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16">
+        <Link
+          href="/today"
+          className="group relative block overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 shadow-lg hover:shadow-xl transition-shadow"
+        >
+          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10" />
+          <div className="absolute -right-4 bottom-[-5rem] h-40 w-40 rounded-full bg-white/5" />
+          <div className="relative flex flex-col gap-6 p-6 sm:p-8 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl bg-white/15">
+                <CalendarCheck className="h-7 w-7 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-200">አዲስ · New</p>
+                <h2 className="mt-1 text-xl sm:text-2xl font-bold text-white">የመጽሐፍ ቅዱስ ንባብ ዕቅድ</h2>
+                <p className="text-sm font-medium text-blue-100">Bible reading plan</p>
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-blue-50/90">
+                  መጽሐፍ ቅዱስን በዓመት ወይም በፈለጉት ጊዜ ያንብቡ — የዕለት ንባብዎ፣ ሂደትዎ እና የኢትዮጵያ ቀን መቁጠሪያ በአንድ ቦታ።
+                </p>
+                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-blue-100/80">
+                  Read the whole Bible in a year, or any books at your own pace — today&apos;s reading, your progress and the Ethiopian calendar in one place.
+                </p>
+              </div>
+            </div>
+            <span className="inline-flex flex-shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-white px-6 py-3 text-sm font-semibold text-blue-700 shadow-sm group-hover:bg-blue-50 md:self-center">
+              ዕቅድ ይጀምሩ · Start a plan
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </span>
+          </div>
+        </Link>
       </div>
 
       {/* Features Grid */}
