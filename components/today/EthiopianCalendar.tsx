@@ -5,30 +5,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 import {
   ETHIOPIAN_MONTHS_AM, ETHIOPIAN_MONTHS_EN, WEEKDAYS_AM, WEEKDAYS_EN,
-  ethiopianMonthLength, ethiopianToGregorian, gregorianToEthiopian, sameDay,
-  type EthiopianDate,
+  buildMonthGrid, ethiopianMonthLength, gregorianToEthiopian, sameDay,
 } from "@/lib/ethiopian-calendar"
-
-interface Cell {
-  ethiopian: EthiopianDate
-  gregorian: Date
-  inMonth: boolean
-}
-
-/** The 6×7 grid for one Ge'ez month, padded with the neighbouring months. */
-function buildGrid(year: number, month: number): Cell[] {
-  const firstGregorian = ethiopianToGregorian({ year, month, day: 1 })
-  const leadingBlanks = firstGregorian.getUTCDay()
-  const cells: Cell[] = []
-
-  for (let i = 0; i < 42; i++) {
-    const offset = i - leadingBlanks
-    const g = new Date(firstGregorian.getTime() + offset * 86_400_000)
-    const e = gregorianToEthiopian(g)
-    cells.push({ ethiopian: e, gregorian: g, inMonth: e.year === year && e.month === month })
-  }
-  return cells
-}
 
 export default function EthiopianCalendar({ todayIso }: { todayIso: string }) {
   const { locale } = useLocale()
@@ -40,7 +18,7 @@ export default function EthiopianCalendar({ todayIso }: { todayIso: string }) {
   const [view, setView] = useState({ year: todayEt.year, month: todayEt.month })
   const [selected, setSelected] = useState<Date>(today)
 
-  const grid = useMemo(() => buildGrid(view.year, view.month), [view])
+  const grid = useMemo(() => buildMonthGrid(view.year, view.month), [view])
   const selectedEt = gregorianToEthiopian(selected)
 
   const monthNames = am ? ETHIOPIAN_MONTHS_AM : ETHIOPIAN_MONTHS_EN

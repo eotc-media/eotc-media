@@ -152,3 +152,26 @@ export function todayUTC(): Date {
   const now = new Date()
   return toUTCDate(now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate())
 }
+
+// ── Month grid ────────────────────────────────────────────────────────────────
+
+export interface CalendarCell {
+  ethiopian: EthiopianDate
+  gregorian: Date
+  /** False for the leading and trailing days borrowed from neighbouring months. */
+  inMonth: boolean
+}
+
+/** The 6×7 grid for one Ge'ez month, padded with the neighbouring months so
+ *  every week row is full and the grid never changes height. */
+export function buildMonthGrid(year: number, month: number): CalendarCell[] {
+  const first = ethiopianToGregorian({ year, month, day: 1 })
+  const leading = first.getUTCDay()
+  const cells: CalendarCell[] = []
+  for (let i = 0; i < 42; i++) {
+    const g = new Date(first.getTime() + (i - leading) * 86_400_000)
+    const e = gregorianToEthiopian(g)
+    cells.push({ ethiopian: e, gregorian: g, inMonth: e.year === year && e.month === month })
+  }
+  return cells
+}
