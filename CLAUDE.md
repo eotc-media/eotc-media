@@ -2,6 +2,9 @@
 
 - The owner is the sole developer. Commit and push straight to `main`; no
   branches or pull requests.
+- Database migrations are applied automatically by production deploys
+  (`scripts/migrate.mjs`, run from `npm run build`), so pushing a migration
+  changes the production database.
 - Database changes: never remove or rewrite existing data unless the owner
   asks for it specifically. Additive changes (new tables, new nullable
   columns) are fine, but tell the owner what will change and wait for their
