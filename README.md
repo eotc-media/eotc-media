@@ -77,6 +77,7 @@ The app is built for **Vercel** with:
 - **Supabase** for PostgreSQL (use the Transaction pooler connection string in `DATABASE_URL`)
 - **Cloudflare R2** for uploaded files (book PDFs/covers, liturgy audio, profile pictures)
 - **Vercel Cron** (`vercel.json`) for the daily stats job
+- **Migrations** apply themselves: a production build runs `scripts/migrate.mjs`, which applies any new folder in `prisma/migrations` through `DIRECT_URL` (Supabase's session pooler, port 5432) before building. Preview builds never touch the database.
 
 Set the environment variables from `.env.example` in the Vercel project settings.
 

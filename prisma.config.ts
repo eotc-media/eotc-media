@@ -6,7 +6,10 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
+  // The CLI (migrations) connects through DIRECT_URL when it is set: the
+  // transaction pooler in DATABASE_URL cannot hold a migration's lock. The app
+  // itself connects in lib/prisma.ts and is unaffected.
   datasource: {
-    url: env("DATABASE_URL"),
+    url: process.env.DIRECT_URL ?? env("DATABASE_URL"),
   },
 });
