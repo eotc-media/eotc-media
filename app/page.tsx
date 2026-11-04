@@ -142,10 +142,10 @@ export default async function Home() {
             <h2 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">የመጽሐፍ ቅዱስ ንባብ ዕቅድ</h2>
             <p className="mt-1 text-base font-medium text-neutral-500">Bible reading plan</p>
             <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-neutral-600">
-              መጽሐፍ ቅዱስን በዓመት ወይም በፈለጉት ጊዜ ያንብቡ። የዕለት ንባብዎ፣ ሂደትዎ እና የኢትዮጵያ ቀን መቁጠሪያ በአንድ ቦታ።
+              መጽሐፍ ቅዱስን በዓመት ወይም በፈለጉት ጊዜ ያንብቡ። የዕለት ንባብዎና ሂደትዎ በአንድ ቦታ።
             </p>
             <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-neutral-400">
-              Read the whole Bible in a year, or any books at your own pace, with today&apos;s reading and the Ethiopian calendar in one place.
+              Read the whole Bible in a year, or any books at your own pace, with today&apos;s reading and your progress in one place.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
               <Link
