@@ -466,7 +466,7 @@ export default function PlanBuilder({
                     {result.days.length > 0 && (
                       <p className="mt-3 text-sm text-slate-600">
                         {tr("የሚጠናቀቀው", "Finishes")}{" "}
-                        <span className="font-semibold text-slate-900">{longDate(result.days[result.days.length - 1].date)}</span>
+                        <span className="font-semibold text-slate-900">{longDate(result.days[result.days.length - 1].date, am)}</span>
                       </p>
                     )}
 
@@ -482,7 +482,7 @@ export default function PlanBuilder({
                           <span className="min-w-0 flex-1 text-sm text-slate-800">
                             {d.readings.map(r => readingText(r, names, am)).join(" · ")}
                           </span>
-                          <span className="flex-shrink-0 text-xs text-slate-400">{shortDate(d.date)}</span>
+                          <span className="flex-shrink-0 text-xs text-slate-400">{shortDate(d.date, am)}</span>
                         </li>
                       ))}
                     </ol>

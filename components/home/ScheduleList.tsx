@@ -94,7 +94,7 @@ export default function ScheduleList({
                       <p className={`text-xs font-semibold ${isToday ? "text-blue-700" : "text-slate-500"}`}>
                         {isToday ? tr("ዛሬ", "Today") : tr(`ቀን ${d.dayNumber}`, `Day ${d.dayNumber}`)}
                       </p>
-                      <p className="text-[11px] text-slate-400">{shortDate(d.date)}</p>
+                      <p className="text-[11px] text-slate-400">{shortDate(d.date, am)}</p>
                     </div>
                     <div className="min-w-0 flex-1 text-sm">
                       {d.readings.map((r, i) => (

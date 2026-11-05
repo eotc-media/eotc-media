@@ -34,7 +34,7 @@ export default function EthiopianCalendar({ todayIso }: { todayIso: string }) {
   }
 
   const gregorianLabel = (d: Date) =>
-    d.toLocaleDateString("en-GB", {
+    d.toLocaleDateString(am ? "am-ET" : "en-GB", {
       weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC",
     })
 
@@ -43,11 +43,11 @@ export default function EthiopianCalendar({ todayIso }: { todayIso: string }) {
   const straddles = useMemo(() => {
     const inMonth = grid.filter((c) => c.inMonth)
     const fmt = (d: Date) =>
-      d.toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" })
+      d.toLocaleDateString(am ? "am-ET" : "en-GB", { month: "long", year: "numeric", timeZone: "UTC" })
     const first = fmt(inMonth[0].gregorian)
     const last = fmt(inMonth[inMonth.length - 1].gregorian)
     return first === last ? first : `${first} – ${last}`
-  }, [grid])
+  }, [grid, am])
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-10 sm:pt-10 sm:pb-14">

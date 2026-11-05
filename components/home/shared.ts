@@ -28,18 +28,15 @@ export function readingText(r: Reading, names: BookNames, am: boolean): string {
 export const WEEKDAY_SHORT_AM = ["እሑ", "ሰኞ", "ማክ", "ረቡ", "ሐሙ", "ዓር", "ቅዳ"] as const
 export const WEEKDAY_SHORT_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
 
-// Gregorian dates are always written in English, Latin script, whatever the
-// interface language: that is how the Gregorian calendar is read here.
-
-/** "Wed, 4 Nov" from a YYYY-MM-DD date. */
-export function shortDate(iso: string): string {
-  return new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", {
+/** "Wed, 4 Nov" in either language, from a YYYY-MM-DD date. */
+export function shortDate(iso: string, am: boolean): string {
+  return new Date(iso + "T00:00:00Z").toLocaleDateString(am ? "am-ET" : "en-GB", {
     weekday: "short", day: "numeric", month: "short", timeZone: "UTC",
   })
 }
 
-export function longDate(iso: string): string {
-  return new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", {
+export function longDate(iso: string, am: boolean): string {
+  return new Date(iso + "T00:00:00Z").toLocaleDateString(am ? "am-ET" : "en-GB", {
     weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC",
   })
 }
