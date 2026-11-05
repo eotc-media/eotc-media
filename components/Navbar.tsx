@@ -19,6 +19,7 @@ import {
   HelpCircle,
   BookMarked,
   MessageSquare,
+  CalendarCheck,
 } from "lucide-react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 
@@ -82,6 +83,7 @@ export default function Navbar() {
   const moreLinks = [
     { href: "/sermons", label: t("nav_sermons"), icon: MessageSquare },
     { href: "/books", label: t("nav_books"), icon: BookMarked },
+    { href: "/today", label: t("nav_reading_plan"), icon: CalendarCheck },
     { href: "/quiz", label: t("nav_quiz"), icon: HelpCircle },
   ]
 

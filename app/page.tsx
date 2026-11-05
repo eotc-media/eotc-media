@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { auth } from "@/auth";
 import { SITE_DESCRIPTION } from "@/lib/seo";
-import { BookOpen, BookMarked, Music, MessageSquare, Mic, ArrowRight } from "lucide-react";
+import { BookOpen, BookMarked, Music, MessageSquare, Mic, ArrowRight, CalendarCheck } from "lucide-react";
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -89,6 +89,17 @@ export default async function Home() {
       bgColor: "bg-rose-50",
       iconColor: "text-rose-600"
     },
+    {
+      icon: CalendarCheck,
+      title: "የንባብ ዕቅድ",
+      titleEn: "Reading Plan",
+      description: "መጽሐፍ ቅዱስን በዓመት ወይም በፈለጉት ጊዜ ያንብቡ፤ የዕለት ንባብዎና ሂደትዎ በአንድ ቦታ",
+      descriptionEn: "Read the whole Bible in a year, or any books at your own pace",
+      href: "/today",
+      color: "from-teal-500 to-teal-600",
+      bgColor: "bg-teal-50",
+      iconColor: "text-teal-600"
+    },
   ];
 
   return (
@@ -132,65 +143,6 @@ export default async function Home() {
           </p>
         </div>
       </div>
-
-      {/* Reading plan — a plain card with a glimpse of an actual reading
-          day, so people see what they would get rather than a slogan. */}
-      <section className="px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16">
-        <div className="grid overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm md:grid-cols-[1fr_minmax(0,420px)]">
-          <div className="flex flex-col justify-center p-6 sm:p-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">አዲስ · New</p>
-            <h2 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">የመጽሐፍ ቅዱስ ንባብ ዕቅድ</h2>
-            <p className="mt-1 text-base font-medium text-neutral-500">Bible reading plan</p>
-            <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-neutral-600">
-              መጽሐፍ ቅዱስን በዓመት ወይም በፈለጉት ጊዜ ያንብቡ። የዕለት ንባብዎና ሂደትዎ በአንድ ቦታ።
-            </p>
-            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-neutral-400">
-              Read the whole Bible in a year, or any books at your own pace, with today&apos;s reading and your progress in one place.
-            </p>
-            <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <Link
-                href="/today"
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
-              >
-                ዕቅድ ይጀምሩ · Start a plan
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-          </div>
-
-          <div className="hidden border-t border-neutral-200 bg-neutral-50 p-6 sm:block sm:p-8 md:border-l md:border-t-0" aria-hidden="true">
-            <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-neutral-900">Today&apos;s reading</p>
-                <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-500">Day 42 of 365</span>
-              </div>
-              <div className="mt-3 h-1.5 rounded-full bg-neutral-100">
-                <div className="h-full w-[12%] rounded-full bg-blue-600" />
-              </div>
-              <ul className="mt-4 space-y-2 text-sm">
-                {[
-                  ["bg-amber-500", "Exodus 9–10"],
-                  ["bg-blue-500", "Matthew 26"],
-                  ["bg-emerald-500", "Psalm 42"],
-                ].map(([dot, text]) => (
-                  <li key={text} className="flex items-center gap-3 rounded-lg border border-neutral-100 px-3 py-2.5 text-neutral-700">
-                    <span className={`h-2 w-2 rounded-full ${dot}`} />
-                    {text}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                {[["12", "day streak"], ["41", "days read"], ["~15", "min a day"]].map(([n, label]) => (
-                  <div key={label} className="rounded-lg bg-neutral-50 py-2">
-                    <p className="text-base font-semibold text-neutral-900">{n}</p>
-                    <p className="text-[11px] text-neutral-400">{label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Features Grid */}
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
