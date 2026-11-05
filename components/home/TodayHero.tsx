@@ -52,7 +52,7 @@ export default function TodayHero({
           <p className="text-xl font-medium text-white sm:text-2xl">
             {am ? `${month} ${et.day}፣ ${et.year} ዓ.ም.` : `${et.day} ${month} ${et.year} E.C.`}
           </p>
-          <p className="text-sm text-white/65 sm:text-base">{longDate(today, am)}</p>
+          <p className="text-sm text-white/65 sm:text-base">{longDate(today)}</p>
         </div>
       </div>
     </section>
