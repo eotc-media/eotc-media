@@ -287,7 +287,7 @@ function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: s
               <p className="font-semibold text-slate-900">{tr("ዛሬ የዕረፍት ቀን ነው", "Today is a day off")}</p>
               {nextDay && (
                 <p className="mt-1 text-sm text-slate-600">
-                  {tr("ቀጣዩ ንባብ", "Next reading")} · {shortDate(nextDay.date, am)} ·{" "}
+                  {tr("ቀጣዩ ንባብ", "Next reading")} · {shortDate(nextDay.date)} ·{" "}
                   <span className="font-medium text-slate-800">{nextDay.readings.map(r => readingText(r, plan.bookNames, am)).join(" · ")}</span>
                 </p>
               )}
@@ -315,7 +315,7 @@ function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: s
             <ul className="mt-2 divide-y divide-slate-100">
               {upcoming.map(d => (
                 <li key={d.dayNumber} className="flex items-center gap-4 py-2.5">
-                  <span className="w-20 flex-shrink-0 text-xs font-medium text-slate-400">{shortDate(d.date, am)}</span>
+                  <span className="w-20 flex-shrink-0 text-xs font-medium text-slate-400">{shortDate(d.date)}</span>
                   <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
                     {d.readings.map(r => readingText(r, plan.bookNames, am)).join(" · ")}
                   </span>

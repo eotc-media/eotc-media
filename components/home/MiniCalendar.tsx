@@ -31,7 +31,7 @@ export default function MiniCalendar({ today, marks }: { today: string; marks?: 
   const weekdays = am ? WEEKDAY_SHORT_AM : WEEKDAY_SHORT_EN
   const inMonth = grid.filter(c => c.inMonth)
   const gregSpan = (() => {
-    const fmt = (d: Date) => d.toLocaleDateString(am ? "am-ET" : "en-GB", { month: "short", year: "numeric", timeZone: "UTC" })
+    const fmt = (d: Date) => d.toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" })
     const a = fmt(inMonth[0].gregorian)
     const b = fmt(inMonth[inMonth.length - 1].gregorian)
     return a === b ? a : `${a} – ${b}`
