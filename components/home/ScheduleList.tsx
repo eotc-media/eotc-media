@@ -53,7 +53,7 @@ export default function ScheduleList({
     if (!confirm(tr("ይህን ዕቅድ ማቆም ይፈልጋሉ? ያነበቡት ታሪክ ይቀመጣል።", "Stop this plan? What you've read stays in your history."))) return
     setStopping(true)
     await fetch(`/api/reading-plans/${planId}`, { method: "DELETE" })
-    router.push("/today")
+    router.push("/")
     router.refresh()
   }
 
@@ -61,8 +61,8 @@ export default function ScheduleList({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-      <Link href="/today" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800">
-        <ArrowLeft className="h-4 w-4" /> {tr("ወደ ዛሬ", "Back to today")}
+      <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800">
+        <ArrowLeft className="h-4 w-4" /> {tr("ወደ መነሻ ገጽ", "Back to home")}
       </Link>
       <h1 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{planTitle(config, totalDays, am ? "am" : "en")}</h1>
       <p className="mt-1 text-sm text-slate-500">

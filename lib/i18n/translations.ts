@@ -3,11 +3,11 @@ export type Locale = "en" | "am"
 export const translations = {
   en: {
     // ── Navigation ──────────────────────────────
+    nav_home:           "Home",
     nav_bible:          "Bible",
     nav_liturgy:        "Liturgy",
     nav_hymns:          "Hymns",
     nav_more:           "More",
-    nav_reading_plan:   "Reading Plan",
     nav_quiz:           "Quiz",
     nav_books:          "Books",
     nav_sermons:        "Sermons",
@@ -237,11 +237,11 @@ export const translations = {
 
   am: {
     // ── Navigation ──────────────────────────────
+    nav_home:           "መነሻ",
     nav_bible:          "መጽሐፍ ቅዱስ",
     nav_liturgy:        "ቅዳሴ",
     nav_hymns:          "መዝሙራት",
     nav_more:           "ተጨማሪ",
-    nav_reading_plan:   "የንባብ ዕቅድ",
     nav_quiz:           "ጥያቄዎች",
     nav_books:          "መጻሕፍት",
     nav_sermons:        "ስብከቶች",

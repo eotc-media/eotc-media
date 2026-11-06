@@ -1,5 +1,6 @@
 "use client"
 
+import { useSyncExternalStore } from "react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 import { bookLabel, formatReading, type Reading } from "@/lib/reading-plan"
 
@@ -42,4 +43,21 @@ export function longDate(iso: string): string {
   return new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC",
   })
+}
+
+const noSubscribe = () => () => {}
+function clientNow(): string {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}|${d.getHours()}`
+}
+
+/** The reader's own date and hour once the page is running in their browser;
+ *  the server's guess until then. The homepage can be served from Cloudflare's
+ *  cache to signed-out visitors, so the server's answer may be hours old. */
+export function useLocalNow(server: { today: string; hour: number }): { today: string; hour: number } {
+  const snap = useSyncExternalStore(noSubscribe, clientNow, () => null)
+  if (!snap) return server
+  const [today, hour] = snap.split("|")
+  return { today, hour: Number(hour) }
 }

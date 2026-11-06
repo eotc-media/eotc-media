@@ -143,7 +143,7 @@ export default function PlanBuilder({
     if (!signedIn) {
       // Keep what they built through the sign-in round trip.
       try { localStorage.setItem(DRAFT_KEY, JSON.stringify(finalConfig)) } catch {}
-      router.push(`/auth/login?callbackUrl=${encodeURIComponent("/today?resume=1")}`)
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent("/?resume=1")}`)
       return
     }
     setSaving(true)

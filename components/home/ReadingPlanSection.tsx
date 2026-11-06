@@ -11,16 +11,17 @@ import { PRESETS, minutesFor, planTitle, type PlanConfig, type PresetKey } from 
 import type { ActivePlanView } from "@/lib/reading-plan-server"
 import PlanBuilder, { DRAFT_KEY } from "./PlanBuilder"
 import MiniCalendar, { type DayMark } from "./MiniCalendar"
-import { useTr, readingHref, readingText, shortDate } from "./shared"
+import { useTr, readingHref, readingText, shortDate, useLocalNow } from "./shared"
 
 export default function ReadingPlanSection({
-  plan, signedIn, today, resume,
+  plan, signedIn, today: serverToday, resume,
 }: {
   plan: ActivePlanView | null
   signedIn: boolean
   today: string
   resume: boolean
 }) {
+  const { today } = useLocalNow({ today: serverToday, hour: 0 })
   const [builder, setBuilder] = useState<{ preset?: PresetKey; draft?: PlanConfig | null } | null>(null)
   const [draftDismissed, setDraftDismissed] = useState(false)
 
@@ -327,7 +328,7 @@ function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: s
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-3.5 sm:px-8">
-        <Link href="/today/plan" className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+        <Link href="/reading-plan" className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
           {tr("ሙሉ መርሐ ግብር", "Full schedule")} <ArrowRight className="h-4 w-4" />
         </Link>
         {!finished && (

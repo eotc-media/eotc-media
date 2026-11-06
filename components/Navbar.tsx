@@ -19,7 +19,7 @@ import {
   HelpCircle,
   BookMarked,
   MessageSquare,
-  CalendarCheck,
+  Home,
 } from "lucide-react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 
@@ -64,7 +64,7 @@ export default function Navbar() {
   }, [isMobileMenuOpen])
 
   const isActive = (link: { href: string; activePrefix?: string }) =>
-    pathname?.startsWith(link.activePrefix ?? link.href)
+    link.href === "/" ? pathname === "/" : pathname?.startsWith(link.activePrefix ?? link.href)
 
   const roles = (user as { roles?: string[] })?.roles ?? []
   const hasMainAdmin = roles.some(r => ["super_admin", "admin"].includes(r))
@@ -75,6 +75,7 @@ export default function Navbar() {
   const hasQuizAdmin = roles.some(r => ["super_admin", "admin", "quiz_admin"].includes(r))
 
   const navLinks = [
+    { href: "/", label: t("nav_home"), icon: Home },
     { href: "/bible/amharic/1954/1/1", activePrefix: "/bible", label: t("nav_bible"), icon: BookOpen },
     { href: "/liturgy", activePrefix: "/liturgy", label: t("nav_liturgy"), icon: Mic },
     { href: "/hymns", activePrefix: "/hymns", label: t("nav_hymns"), icon: Music },
@@ -83,7 +84,6 @@ export default function Navbar() {
   const moreLinks = [
     { href: "/sermons", label: t("nav_sermons"), icon: MessageSquare },
     { href: "/books", label: t("nav_books"), icon: BookMarked },
-    { href: "/today", label: t("nav_reading_plan"), icon: CalendarCheck },
     { href: "/quiz", label: t("nav_quiz"), icon: HelpCircle },
   ]
 

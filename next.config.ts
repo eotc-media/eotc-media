@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // The reading plan page became the homepage.
+      { source: '/today', destination: '/', permanent: true },
+      { source: '/today/plan', destination: '/reading-plan', permanent: true },
       // ── Hymns ──────────────────────────────────────────────────────────────
       // Individual hymn page (most SEO-critical)
       {

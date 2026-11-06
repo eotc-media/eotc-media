@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default async function PlanSchedulePage() {
   const session = await auth()
-  if (!session?.user?.id) redirect(`/auth/login?callbackUrl=${encodeURIComponent("/today/plan")}`)
+  if (!session?.user?.id) redirect(`/auth/login?callbackUrl=${encodeURIComponent("/reading-plan")}`)
   const userId = parseInt(session.user.id)
 
   const current = await prisma.readingPlan.findFirst({
@@ -24,10 +24,10 @@ export default async function PlanSchedulePage() {
     orderBy: { createdAt: "desc" },
     select: { id: true },
   })
-  if (!current) redirect("/today")
+  if (!current) redirect("/")
 
   const schedule = await getPlanSchedule(userId, current.id)
-  if (!schedule) redirect("/today")
+  if (!schedule) redirect("/")
 
   const today = localToday((await cookies()).get("tz")?.value)
 
