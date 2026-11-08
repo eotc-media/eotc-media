@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { sendPlanReminders } from "@/lib/push"
 
-// Called every hour by .github/workflows/plan-reminders.yml (Vercel's own cron
-// runs only daily on this plan). Same guard as the other cron routes: the
-// secret as a Bearer token, and a 404 for anything else.
+// Runs every hour (vercel.json), so each subscriber is reached at 10 pm on their
+// own clock. Same guard as the other cron routes: Vercel sends CRON_SECRET as a
+// Bearer token, and anything else gets a 404.
 
 export const runtime = "nodejs"
 

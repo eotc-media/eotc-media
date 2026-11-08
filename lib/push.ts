@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma"
 import { bookLabel, formatReading, parseDate, type Reading } from "@/lib/reading-plan"
 import { localToday } from "@/lib/reading-plan-server"
 
-// Evening reminders for reading plans. An hourly job (see
-// .github/workflows/plan-reminders.yml) calls sendPlanReminders(); each
+// Evening reminders for reading plans. An hourly Vercel cron (vercel.json)
+// calls sendPlanReminders(); each
 // subscription is reminded once, at REMIND_HOUR on its own clock, and only on a
 // day that has a reading still unread.
 
