@@ -388,7 +388,7 @@ export default function PlanBuilder({
 
                 {/* Start */}
                 <label className="flex items-center gap-3 text-sm text-slate-600">
-                  <span className="w-24 flex-shrink-0">{tr("የሚጀመረው", "Starts")}</span>
+                  <span className="w-24 flex-shrink-0">{tr("መጀመሪያ ቀን", "Starts")}</span>
                   <input
                     type="date"
                     value={startDate}
@@ -465,7 +465,7 @@ export default function PlanBuilder({
                     </div>
                     {result.days.length > 0 && (
                       <p className="mt-3 text-sm text-slate-600">
-                        {tr("የሚጠናቀቀው", "Finishes")}{" "}
+                        {tr("የሚጠናቀቅበት ቀን፦", "Finishes")}{" "}
                         <span className="font-semibold text-slate-900">{longDate(result.days[result.days.length - 1].date)}</span>
                       </p>
                     )}
@@ -510,7 +510,7 @@ export default function PlanBuilder({
               className="flex items-center justify-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {signedIn ? tr("ዕቅዱን ጀምር", "Start this plan") : tr("ለመጀመር ይግቡ", "Sign in to start")}
+              {signedIn ? tr("ዕቅዱን ይጀምሩ", "Start this plan") : tr("ለመጀመር ይግቡ", "Sign in to start")}
             </button>
           </div>
         )}

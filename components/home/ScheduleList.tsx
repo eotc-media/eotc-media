@@ -83,7 +83,7 @@ export default function ScheduleList({
                   <li key={d.dayNumber} className={`flex items-center gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 ${isToday ? "bg-blue-50/50" : ""}`}>
                     <button
                       onClick={() => toggle(d)}
-                      aria-label={isDone ? tr("እንዳልተነበበ ምልክት አድርግ", "Mark unread") : tr("እንደተነበበ ምልክት አድርግ", "Mark read")}
+                      aria-label={isDone ? tr("እንዳልተነበበ ይመዝሱ", "Mark unread") : tr("እንደተነበበ ይመዝግቡ", "Mark read")}
                       className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors cursor-pointer ${
                         isDone ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 hover:border-slate-400"
                       }`}
@@ -121,7 +121,7 @@ export default function ScheduleList({
           className="flex items-center gap-2 text-sm font-medium text-rose-600 hover:text-rose-700 disabled:opacity-50 cursor-pointer"
         >
           {stopping && <Loader2 className="h-4 w-4 animate-spin" />}
-          {tr("ይህን ዕቅድ አቁም", "Stop this plan")}
+          {tr("ይህን ዕቅድ ያቁሙ", "Stop this plan")}
         </button>
       </div>
     </div>

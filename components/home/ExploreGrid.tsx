@@ -8,12 +8,12 @@ const MODULES = [
   {
     href: "/bible/amharic/1954/1/1", Icon: BookOpen, tint: "from-blue-500 to-indigo-600",
     am: "መጽሐፍ ቅዱስ", en: "Bible",
-    dAm: "በአማርኛ፣ በእንግሊዝኛ፣ በኦሮምኛ እና በሌሎችም ቋንቋዎች", dEn: "In Amharic, English, Afaan Oromo and more",
+    dAm: "በግዕዝ፣ በአማርኛ፣ በእንግሊዝኛ፣ በአፋን ኦሮሞና በሌሎችም ቋንቋዎች", dEn: "In Amharic, English, Afaan Oromo and more",
   },
   {
     href: "/liturgy", Icon: Mic, tint: "from-amber-500 to-orange-600",
     am: "ቅዳሴ", en: "Liturgy",
-    dAm: "ሥርዓተ ቅዳሴ በካህን፣ በዲያቆንና በሕዝብ", dEn: "The Divine Liturgy, by priest, deacon and people",
+    dAm: "ሥርዓተ ቅዳሴ፦ የካህን፣ የዲያቆንና የሕዝብ ተሰጥኦ", dEn: "The Divine Liturgy, by priest, deacon and people",
   },
   {
     href: "/hymns", Icon: Music, tint: "from-rose-500 to-pink-600",
@@ -33,7 +33,7 @@ const MODULES = [
   {
     href: "/quiz", Icon: HelpCircle, tint: "from-sky-500 to-cyan-600",
     am: "ጥያቄዎች", en: "Quiz",
-    dAm: "እውቀትዎን ይፈትኑ፣ ከሌሎች ጋር ይወዳደሩ", dEn: "Test yourself, or play with others",
+    dAm: "ዕውቀትዎን ይፈትኑ፣ ከሌሎችም ጋር ይወዳደሩ", dEn: "Test yourself, or play with others",
   },
 ]
 
@@ -43,7 +43,7 @@ export default function ExploreGrid() {
     <section>
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{tr("ያስሱ", "Explore")}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{tr("ይዳስሱ", "Explore")}</p>
           <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900">{tr("ሁሉም በአንድ ቦታ", "Everything in one place")}</h2>
         </div>
       </div>

@@ -13,7 +13,7 @@ export default function ContributeSection({ signedIn }: { signedIn: boolean }) {
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-neutral-400 sm:text-base">
           {tr(
-            "መንፈሳዊ ሥራዎችዎን ለሌሎች ያጋሩ፤ ለኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ማኅበረሰብ አስተዋጽኦ ያድርጉ።",
+            "መንፈሳዊ መዝሙራትን፣ ስብከቶችንና መጻሕፍትን ለሌሎች ያጋሩ፤ ለኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ማኅበረሰብም የበኩልዎን ያበርክቱ።",
             "Share your spiritual resources with others and contribute to the Ethiopian Orthodox Tewahedo Church community.",
           )}
         </p>
@@ -23,7 +23,7 @@ export default function ContributeSection({ signedIn }: { signedIn: boolean }) {
               href="/auth/register"
               className="inline-flex items-center justify-center rounded-lg bg-white px-7 py-2.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-neutral-100"
             >
-              {tr("አካውንት ይክፈቱ", "Create account")}
+              {tr("መለያ ይክፈቱ", "Create account")}
             </Link>
           )}
           <Link
@@ -38,7 +38,7 @@ export default function ContributeSection({ signedIn }: { signedIn: boolean }) {
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center rounded-lg border border-neutral-700 px-7 py-2.5 text-sm font-semibold text-neutral-400 transition-colors hover:border-neutral-500 hover:text-neutral-200"
           >
-            {tr("በ GitHub ያበርክቱ", "Contribute on GitHub")}
+            {tr("በGitHub አስተዋጽኦ ያድርጉ", "Contribute on GitHub")}
           </a>
         </div>
       </div>
