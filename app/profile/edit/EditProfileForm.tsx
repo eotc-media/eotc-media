@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, FormEvent } from "react"
-import { getSession } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -20,6 +20,7 @@ interface EditProfileFormProps {
 
 export default function EditProfileForm({ user }: EditProfileFormProps) {
   const router = useRouter()
+  const { update } = useSession()
   
   const [formData, setFormData] = useState({
     name: user.name,
@@ -110,24 +111,23 @@ export default function EditProfileForm({ user }: EditProfileFormProps) {
         formDataToSend.append('image', imageFile)
       }
 
-      console.log('Submitting form with name:', formData.name, 'Image:', imageFile?.name)
-
       const response = await fetch('/api/main/profile/update', {
         method: 'POST',
         body: formDataToSend,
       })
 
       const data = await response.json()
-      console.log('Response:', response.ok, data)
 
       if (!response.ok) {
         console.error('Update failed:', data)
         setErrors(data.errors || { name: data.error || 'Update failed' })
       } else {
-        // Re-fetch session so UI updates with new user data
-        await getSession()
-        // Optionally, you can update local UI state or redirect as needed
+        // The session caches the name and picture. update() with an argument
+        // makes the server re-read them from the database (auth.ts, trigger
+        // "update"); called bare it only re-reads the cached session.
+        await update({})
         router.push('/profile')
+        router.refresh()
       }
     } catch (error) {
       console.error('Error during submission:', error)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GEMINI_MODEL } from '@/lib/gemini'
 
 // Keep the function well under the client's abort window so a stalled model
 // call comes back as a clean error instead of hanging the request.
@@ -70,7 +71,7 @@ Return format: {"bookId": <number>, "chapter": <number>, "verse": <number or nul
 If nothing intelligible or no verse found: {"error": "no verse found"}`
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL })
     const result = await Promise.race([
       model.generateContent([
         { inlineData: { mimeType: audioMimeType, data: audioBase64 } },

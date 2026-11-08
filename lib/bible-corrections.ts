@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GEMINI_MODEL } from '@/lib/gemini'
 
 export interface VerseScanInput {
   verseId: number
@@ -25,7 +26,7 @@ export async function scanChapterWithGemini(
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set')
 
   const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: GEMINI_MODEL })
 
   const verseList = verses
     .map(v => `${v.verseId}\t${v.verseNum}\t${v.text || ''}`)

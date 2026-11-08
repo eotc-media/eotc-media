@@ -9,7 +9,8 @@
 //
 // Caveats: the video must be public or unlisted, and only one video per request.
 
-const GEMINI_MODEL = 'gemini-2.5-flash'
+import { GEMINI_MODEL } from '@/lib/gemini'
+
 const GEMINI_TIMEOUT_MS = 55_000
 
 /**

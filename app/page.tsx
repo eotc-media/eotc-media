@@ -6,6 +6,7 @@ import { getHymns } from "@/lib/api/hymns"
 import { getSermons } from "@/lib/api/sermons"
 import { getActivePlan, localHour, localToday } from "@/lib/reading-plan-server"
 import { SITE_DESCRIPTION } from "@/lib/seo"
+import { nameInBothScripts } from "@/lib/name-script"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import TodayHero from "@/components/home/TodayHero"
@@ -62,14 +63,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ r
     listenItems(userId),
   ])
 
-  const firstName = session?.user?.name?.trim().split(/\s+/)[0] ?? null
+  const firstName = session?.user?.name?.trim().split(/\s+/)[0] || null
+  const greetName = firstName ? await nameInBothScripts(firstName) : null
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <TimezoneSync />
       <main className="pt-16">
-        <TodayHero today={today} hour={hour} firstName={firstName} />
+        <TodayHero today={today} hour={hour} name={greetName} />
 
         {/* The plan card rises into the hero, so the page's main feature is
             the first thing below the greeting rather than below the fold. */}

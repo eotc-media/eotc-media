@@ -14,13 +14,14 @@ function greeting(hour: number, am: boolean): string {
 }
 
 export default function TodayHero({
-  firstName, ...server
+  name, ...server
 }: {
   today: string
   hour: number
-  firstName?: string | null
+  /** The first name in each alphabet; shown in the one the visitor reads. */
+  name: { am: string; en: string } | null
 }) {
-  const { am, tr } = useTr()
+  const { am } = useTr()
   const { today, hour } = useLocalNow(server)
   const et = gregorianToEthiopian(new Date(today + "T00:00:00Z"))
   const month = am ? ETHIOPIAN_MONTHS_AM[et.month - 1] : ETHIOPIAN_MONTHS_EN[et.month - 1]
@@ -41,12 +42,9 @@ export default function TodayHero({
       <div className="absolute inset-x-0 bottom-0 -z-10 h-32 bg-gradient-to-t from-slate-50 to-transparent" />
 
       <div className="mx-auto max-w-6xl px-4 pb-28 pt-24 sm:px-6 sm:pb-36 sm:pt-28 lg:px-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-200/80">
-          {tr("ዛሬ", "Today")}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
+        <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">
           {greeting(hour, am)}
-          {firstName ? <span className="text-white/70">{am ? "፣ " : ", "}{firstName}</span> : null}
+          {name ? <span className="text-white/70">{am ? `፣ ${name.am}` : `, ${name.en}`}</span> : null}
         </h1>
 
         <div className="mt-6 flex flex-wrap items-end gap-x-6 gap-y-2">
