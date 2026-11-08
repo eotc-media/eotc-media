@@ -20,6 +20,7 @@ function LoginForm() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
   const [isLoading, setIsLoading] = useState(false)
   const registered = searchParams.get('registered')
+  const reset = searchParams.get('reset')
   // Where to go once signed in. Only a path on this site: anything absolute,
   // or protocol-relative ("//evil.example", and "/\evil.example", which
   // browsers read the same way), would turn the login page into an open
@@ -77,6 +78,12 @@ function LoginForm() {
           {registered && (
             <div className="mb-3 p-2.5 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
               Registration successful! Please log in with your credentials.
+            </div>
+          )}
+
+          {reset && (
+            <div className="mb-3 p-2.5 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
+              Your password has been changed. Sign in with your new password.
             </div>
           )}
 

@@ -93,6 +93,38 @@ export async function sendCampaign(opts: {
   return { sent, failed, error: firstError }
 }
 
+/** Send one email to one person (password resets and the like). */
+export async function sendEmail(opts: {
+  to: string
+  subject: string
+  htmlContent: string
+  textContent: string
+}): Promise<{ ok: boolean; error: string | null }> {
+  const apiKey = process.env.BREVO_API_KEY
+  if (!apiKey) return { ok: false, error: "BREVO_API_KEY is not configured." }
+  const sender = getSender()
+  if (!sender.email) return { ok: false, error: "BREVO_SENDER_EMAIL is not configured." }
+
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "api-key": apiKey, "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        sender,
+        to: [{ email: opts.to }],
+        subject: opts.subject,
+        htmlContent: opts.htmlContent,
+        textContent: opts.textContent,
+      }),
+    })
+    if (res.ok) return { ok: true, error: null }
+    const detail = await res.text().catch(() => "")
+    return { ok: false, error: `Brevo ${res.status}: ${detail.slice(0, 300)}` }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
 export type EmailVariant = "rich" | "simple"
 
 export function buildEmailHtml({
