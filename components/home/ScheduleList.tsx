@@ -83,7 +83,7 @@ export default function ScheduleList({
                   <li key={d.dayNumber} className={`flex items-center gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 ${isToday ? "bg-blue-50/50" : ""}`}>
                     <button
                       onClick={() => toggle(d)}
-                      aria-label={isDone ? tr("እንዳልተነበበ ይመዝሱ", "Mark unread") : tr("እንደተነበበ ይመዝግቡ", "Mark read")}
+                      aria-label={isDone ? tr("እንዳልተነበበ ይመዝግቡ", "Mark unread") : tr("እንደተነበበ ይመዝግቡ", "Mark read")}
                       className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors cursor-pointer ${
                         isDone ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 hover:border-slate-400"
                       }`}
