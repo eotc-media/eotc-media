@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft, Check, Loader2 } from "lucide-react"
 import { ETHIOPIAN_MONTHS_AM, ETHIOPIAN_MONTHS_EN, gregorianToEthiopian } from "@/lib/ethiopian-calendar"
 import { planTitle, type PlanConfig, type Reading } from "@/lib/reading-plan"
-import { useTr, readingHref, readingText, shortDate, type BookNames } from "./shared"
+import { useTr, readingText, shortDate, type BookNames } from "./shared"
 
 interface Day { dayNumber: number; date: string; readings: Reading[]; completed: boolean }
 
@@ -100,7 +100,7 @@ export default function ScheduleList({
                       {d.readings.map((r, i) => (
                         <span key={i}>
                           {i > 0 && <span className="text-slate-300"> · </span>}
-                          <Link href={readingHref(r, am)} className={`hover:text-blue-700 hover:underline ${isDone ? "text-slate-400" : "text-slate-800"}`}>
+                          <Link href={`/reading-plan/day/${d.dayNumber}#passage-${i}`} className={`hover:text-blue-700 hover:underline ${isDone ? "text-slate-400" : "text-slate-800"}`}>
                             {readingText(r, bookNames, am)}
                           </Link>
                         </span>

@@ -1329,6 +1329,8 @@ model ReadingPlanDay {
   // [{ bookId, osis, from, to }] — whole chapters, one entry per track.
   readings    Json
   completedAt DateTime? @map("completed_at")
+  // The reader's own note on the day's reading.
+  note        String?   @db.Text
 
   plan ReadingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 

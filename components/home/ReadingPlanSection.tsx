@@ -12,7 +12,7 @@ import type { ActivePlanView } from "@/lib/reading-plan-server"
 import PlanBuilder, { DRAFT_KEY } from "./PlanBuilder"
 import MiniCalendar, { type DayMark } from "./MiniCalendar"
 import ReminderToggle from "./ReminderToggle"
-import { useTr, readingHref, readingText, shortDate, useLocalNow } from "./shared"
+import { useTr, readingText, shortDate, useLocalNow } from "./shared"
 
 export default function ReadingPlanSection({
   plan, signedIn, today: serverToday, resume,
@@ -316,11 +316,13 @@ function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: s
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{tr("ቀጣይ ንባቦች", "Coming up")}</p>
             <ul className="mt-2 divide-y divide-slate-100">
               {upcoming.map(d => (
-                <li key={d.dayNumber} className="flex items-center gap-4 py-2.5">
-                  <span className="w-20 flex-shrink-0 text-xs font-medium text-slate-400">{shortDate(d.date)}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
-                    {d.readings.map(r => readingText(r, plan.bookNames, am)).join(" · ")}
-                  </span>
+                <li key={d.dayNumber}>
+                  <Link href={`/reading-plan/day/${d.dayNumber}`} className="flex items-center gap-4 py-2.5 hover:text-blue-700">
+                    <span className="w-20 flex-shrink-0 text-xs font-medium text-slate-400">{shortDate(d.date)}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
+                      {d.readings.map(r => readingText(r, plan.bookNames, am)).join(" · ")}
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -365,7 +367,7 @@ function TodayReading({
         {day.readings.map((r, i) => (
           <li key={i}>
             <Link
-              href={readingHref(r, am)}
+              href={`/reading-plan/day/${day.dayNumber}#passage-${i}`}
               className="group flex items-center gap-4 rounded-2xl border border-slate-200 px-4 py-3.5 transition-all hover:border-blue-300 hover:bg-blue-50/40"
             >
               <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${TRACK_DOTS[i % TRACK_DOTS.length]}`} />

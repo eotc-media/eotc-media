@@ -315,3 +315,99 @@ export async function getPlanSchedule(userId: number, planId: number) {
     bookNames: Object.fromEntries(names.map(n => [n.id, { osis: n.osisCode, englishName: n.englishName, amharicName: n.amharicName }])),
   }
 }
+
+/** The plan the reader is on now: active, or just finished. */
+export async function currentPlanId(userId: number): Promise<number | null> {
+  const plan = await prisma.readingPlan.findFirst({
+    where: { userId, status: { in: ["active", "completed"] } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  })
+  return plan?.id ?? null
+}
+
+export interface PassageVerse { chapter: number; verse: number; am: string; en: string }
+export interface PlanDayPage {
+  planId: number
+  title: { config: PlanConfig; totalDays: number }
+  dayNumber: number
+  date: string
+  completed: boolean
+  note: string
+  hasPrev: boolean
+  hasNext: boolean
+  passages: { reading: Reading; verses: PassageVerse[] }[]
+  bookNames: Record<number, { osis: string; englishName: string; amharicName: string | null }>
+}
+
+/**
+ * One day of a plan with the text of its passages, in Amharic (1954) and
+ * English (KJV), so the page can follow the reader's language without a
+ * round trip when they switch it.
+ */
+export async function getPlanDay(userId: number, planId: number, dayNumber: number): Promise<PlanDayPage | null> {
+  const plan = await ownPlan(userId, planId)
+  if (!plan) return null
+  const day = await prisma.readingPlanDay.findUnique({ where: { planId_dayNumber: { planId, dayNumber } } })
+  if (!day) return null
+
+  const readings = day.readings as unknown as Reading[]
+  const translations = await prisma.blTranslation.findMany({
+    where: { code: { in: ["am-1954", "en-kjv"] } },
+    select: { id: true, code: true },
+  })
+  const amId = translations.find(t => t.code === "am-1954")?.id
+  const enId = translations.find(t => t.code === "en-kjv")?.id
+
+  const passages = await Promise.all(readings.map(async reading => {
+    const { bookId, startChapter: sc, endChapter: ec } = reading
+    // A reading without verse bounds covers whole chapters.
+    const fromVerse = reading.startVerse ? [{ OR: [{ chapter: { gt: sc } }, { verse: { gte: reading.startVerse } }] }] : []
+    const toVerse = reading.endVerse ? [{ OR: [{ chapter: { lt: ec } }, { verse: { lte: reading.endVerse } }] }] : []
+    const rows = await prisma.blVerse.findMany({
+      where: { bookId, chapter: { gte: sc, lte: ec }, AND: [...fromVerse, ...toVerse] },
+      orderBy: [{ chapter: "asc" }, { verse: "asc" }],
+      select: { chapter: true, verse: true, texts: { select: { translationId: true, text: true } } },
+    })
+    return {
+      reading,
+      verses: rows.map(v => ({
+        chapter: v.chapter,
+        verse: v.verse,
+        am: v.texts.find(t => t.translationId === amId)?.text ?? "",
+        en: v.texts.find(t => t.translationId === enId)?.text ?? "",
+      })),
+    }
+  }))
+
+  const names = await prisma.blBook.findMany({
+    where: { id: { in: readings.map(r => r.bookId) } },
+    select: { id: true, osisCode: true, englishName: true, amharicName: true },
+  })
+
+  return {
+    planId,
+    title: { config: plan.config as unknown as PlanConfig, totalDays: plan.totalDays },
+    dayNumber,
+    date: isoOf(day.date),
+    completed: day.completedAt !== null,
+    note: day.note ?? "",
+    hasPrev: dayNumber > 1,
+    hasNext: dayNumber < plan.totalDays,
+    passages,
+    bookNames: Object.fromEntries(names.map(n => [n.id, { osis: n.osisCode, englishName: n.englishName, amharicName: n.amharicName }])),
+  }
+}
+
+export const NOTE_MAX = 5000
+
+export async function setDayNote(userId: number, planId: number, dayNumber: number, note: string) {
+  const plan = await ownPlan(userId, planId)
+  if (!plan) return false
+  const text = note.slice(0, NOTE_MAX).trim()
+  await prisma.readingPlanDay.update({
+    where: { planId_dayNumber: { planId, dayNumber } },
+    data: { note: text || null },
+  })
+  return true
+}

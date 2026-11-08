@@ -39,7 +39,7 @@ export async function sendPlanReminders(now = new Date()): Promise<{ checked: nu
     const today = localToday(sub.timeZone)
     const day = await prisma.readingPlanDay.findFirst({
       where: { date: parseDate(today), completedAt: null, plan: { userId: sub.userId, status: "active" } },
-      select: { readings: true },
+      select: { dayNumber: true, readings: true },
     })
     if (!day) continue // read already, a day off, or no plan
 
@@ -48,7 +48,7 @@ export async function sendPlanReminders(now = new Date()): Promise<{ checked: nu
     const payload = JSON.stringify({
       title: am ? "የዛሬው ንባብ ይጠብቅዎታል" : "Today's reading is waiting",
       body: `${await readingSummary(readings, am)}${am ? " · ቀኑ ከማለቁ በፊት ያንብቡ።" : " · There's still time today."}`,
-      url: "/",
+      url: `/reading-plan/day/${day.dayNumber}`,
       tag: "plan-reminder",
     })
 
