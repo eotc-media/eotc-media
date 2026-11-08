@@ -49,6 +49,7 @@ model User {
   accounts           Account[]
   sessions           Session[]
   readingPlans       ReadingPlan[]
+  pushSubscriptions  PushSubscription[]
 
   @@map("users")
 }
@@ -1334,4 +1335,23 @@ model ReadingPlanDay {
   @@unique([planId, dayNumber])
   @@index([planId, date])
   @@map("reading_plan_days")
+}
+
+/// A browser or installed app that agreed to receive notifications. One person
+/// can have several (phone and laptop); each is reminded on its own clock.
+model PushSubscription {
+  id             Int       @id @default(autoincrement())
+  userId         Int       @map("user_id")
+  endpoint       String    @unique
+  p256dh         String
+  auth           String
+  timeZone       String    @default("UTC") @map("time_zone")
+  locale         String    @default("am")
+  lastRemindedOn DateTime? @map("last_reminded_on") @db.Date
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

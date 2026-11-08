@@ -11,6 +11,7 @@ import { PRESETS, minutesFor, planTitle, type PlanConfig, type PresetKey } from 
 import type { ActivePlanView } from "@/lib/reading-plan-server"
 import PlanBuilder, { DRAFT_KEY } from "./PlanBuilder"
 import MiniCalendar, { type DayMark } from "./MiniCalendar"
+import ReminderToggle from "./ReminderToggle"
 import { useTr, readingHref, readingText, shortDate, useLocalNow } from "./shared"
 
 export default function ReadingPlanSection({
@@ -325,6 +326,8 @@ function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: s
             </ul>
           </div>
         )}
+
+        {!finished && <ReminderToggle />}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-3.5 sm:px-8">

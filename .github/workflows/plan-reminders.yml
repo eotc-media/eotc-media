@@ -1,0 +1,21 @@
+# Reading plan reminders. Runs hourly so each subscriber can be reminded at
+# 10 pm on their own clock (Vercel's cron on this plan runs only once a day).
+# Needs the repository secret CRON_SECRET, the same value as on Vercel.
+
+name: Plan reminders
+
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send due reminders
+        run: |
+          curl --fail-with-body -sS -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://eotcmedia.com/api/cron/plan-reminders
