@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { AlignJustify, ArrowLeft, BookOpen, Check, List, Loader2, NotebookPen } from "lucide-react"
 import { planTitle } from "@/lib/reading-plan"
 import type { PlanDayPage } from "@/lib/reading-plan-server"
+import { buildVerseGroups } from "@/lib/verse-groups"
 import { useTr, readingHref, readingText, longDate } from "./shared"
 
 type SaveState = "idle" | "saving" | "saved" | "error"
@@ -157,15 +158,25 @@ function Passage({ verses, am, view, chapterLabel }: {
     )
   }
 
+  // Verse by verse, empty numbers merge into the verse that carries their text
+  // ("2–3"), as in the Bible reader. Groups never cross a chapter break.
+  const chapters: (typeof verses)[] = []
+  verses.forEach((v, j) => {
+    if (j === 0 || breakBefore(j)) chapters.push([])
+    chapters[chapters.length - 1].push(v)
+  })
+
   return (
     <div className="mt-4 space-y-2">
-      {verses.map((v, j) => (
-        <Fragment key={`${v.chapter}:${v.verse}`}>
-          {breakBefore(j) && heading(v.chapter)}
-          <p className="flex gap-3 text-[17px] leading-8 text-slate-800">
-            <span className="w-6 flex-shrink-0 pt-0.5 text-right text-xs font-semibold leading-8 text-slate-400">{v.verse}</span>
-            <span className="min-w-0">{am ? v.am : v.en}</span>
-          </p>
+      {chapters.map((chapterVerses, c) => (
+        <Fragment key={chapterVerses[0].chapter}>
+          {c > 0 && heading(chapterVerses[0].chapter)}
+          {buildVerseGroups(chapterVerses, v => (am ? v.am : v.en)).map(g => (
+            <p key={g.label} className="flex gap-3 text-[17px] leading-8 text-slate-800">
+              <span className="w-9 flex-shrink-0 pt-0.5 text-right text-xs font-semibold leading-8 text-slate-400">{g.label}</span>
+              <span className="min-w-0">{g.text}</span>
+            </p>
+          ))}
         </Fragment>
       ))}
     </div>

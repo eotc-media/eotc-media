@@ -2,51 +2,9 @@
 
 import { BookOpen } from "lucide-react"
 import { BlVerse } from "@/types/models/bible"
+import { buildVerseGroups } from "@/lib/verse-groups"
 
 export type VerseViewMode = "paragraph" | "line"
-
-// ── Verse group (for line mode: empty verses merged with next verse) ──
-type VerseGroup = {
-  ids: number[]        // all verse IDs in the group
-  nums: number[]       // all verse numbers (e.g. [2, 3] for a merged group)
-  text: string | null  // text from the last (non-empty) verse
-}
-
-// Treat a verse as "empty" if it has no text or only Ethiopic / common punctuation
-// e.g. "፤", "።", "፡" alone should merge with the next verse
-const PUNCT_ONLY_RE = /^[\s፠-፨!?,.;:·÷\-_]+$/
-
-function hasTextContent(text: string | null | undefined): boolean {
-  if (!text) return false
-  const trimmed = text.trim()
-  if (trimmed.length === 0) return false
-  return !PUNCT_ONLY_RE.test(trimmed)
-}
-
-function buildVerseGroups(verses: BlVerse[]): VerseGroup[] {
-  const groups: VerseGroup[] = []
-  const buffer: { id: number; num: number }[] = []
-
-  for (const v of verses) {
-    if (!hasTextContent(v.text)) {
-      buffer.push({ id: v.id, num: v.verse })
-    } else {
-      groups.push({
-        ids:  [...buffer.map(b => b.id),  v.id],
-        nums: [...buffer.map(b => b.num), v.verse],
-        text: v.text,
-      })
-      buffer.length = 0
-    }
-  }
-
-  // Trailing empty verses (no following verse with text)
-  if (buffer.length > 0) {
-    groups.push({ ids: buffer.map(b => b.id), nums: buffer.map(b => b.num), text: null })
-  }
-
-  return groups
-}
 
 interface VerseListProps {
   verses: BlVerse[]
@@ -137,7 +95,7 @@ export default function VerseList({
   }
 
   // ── Verse-per-line mode ─────────────────────────────────
-  const groups = buildVerseGroups(verses)
+  const groups = buildVerseGroups(verses, v => v.text).map(g => ({ ...g, ids: g.items.map(v => v.id) }))
 
   return (
     <div dir={dir}>
@@ -153,10 +111,6 @@ export default function VerseList({
           ? { backgroundColor: bgColor, borderRadius: "6px" }
           : undefined
 
-        // Verse number label: "3" or "2–3" for merged groups
-        const numLabel = group.nums.length === 1
-          ? String(group.nums[0])
-          : `${group.nums[0]}–${group.nums[group.nums.length - 1]}`
 
         return (
           <div
@@ -179,7 +133,7 @@ export default function VerseList({
                 isSelected ? "text-blue-600" : "text-blue-300"
               }`}
             >
-              {numLabel}
+              {group.label}
             </span>
             <span
               className="flex-1 font-serif leading-[1.7] text-slate-800 tracking-[0.005em]"
