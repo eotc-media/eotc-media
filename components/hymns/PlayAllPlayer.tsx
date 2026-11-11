@@ -303,7 +303,7 @@ export default function PlayAllPlayer({ hymns: initialHymns, userId }: Props) {
         {/* Right: Lyrics */}
         <aside className="lg:sticky lg:top-16 lg:self-start">
           <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-5">
-            <LyricsPanel lyrics={currentHymn.lyrics} lyricsSuggestion={currentHymn.lyricsSuggestion} aiLyrics={currentHymn.aiLyrics} hymnId={currentHymn.id} userId={userId} />
+            <LyricsPanel key={currentHymn.id} lyrics={currentHymn.lyrics} lyricsSuggestion={currentHymn.lyricsSuggestion} aiLyrics={currentHymn.aiLyrics} hymnId={currentHymn.id} userId={userId} />
           </div>
         </aside>
       </div>

@@ -151,7 +151,7 @@ export default async function HymnPage({ params }: PageProps) {
               {/* Lyrics panel — mobile only */}
               <div className="lg:hidden mt-4">
                 <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-3">
-                  <LyricsPanel lyrics={hymn.lyrics} lyricsSuggestion={hymn.lyricsSuggestion} aiLyrics={hymn.aiLyrics} hymnId={hymn.id} userId={userId} />
+                  <LyricsPanel key={hymn.id} lyrics={hymn.lyrics} lyricsSuggestion={hymn.lyricsSuggestion} aiLyrics={hymn.aiLyrics} hymnId={hymn.id} userId={userId} />
                 </div>
               </div>
 
@@ -223,7 +223,7 @@ export default async function HymnPage({ params }: PageProps) {
             {/* Right: Lyrics panel — desktop only */}
             <aside className="hidden lg:block lg:sticky lg:top-16 lg:self-start">
               <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-3">
-                <LyricsPanel lyrics={hymn.lyrics} lyricsSuggestion={hymn.lyricsSuggestion} aiLyrics={hymn.aiLyrics} hymnId={hymn.id} userId={userId} />
+                <LyricsPanel key={hymn.id} lyrics={hymn.lyrics} lyricsSuggestion={hymn.lyricsSuggestion} aiLyrics={hymn.aiLyrics} hymnId={hymn.id} userId={userId} />
               </div>
             </aside>
           </div>

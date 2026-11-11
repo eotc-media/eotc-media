@@ -151,6 +151,9 @@ function LyricsEditor({
   )
 }
 
+// Keeps its own copy of the suggestion and AI lyrics (they change as a member
+// edits or generates), seeded from props once. Render it with key={hymnId} so a
+// different hymn gets a fresh panel instead of the previous hymn's text.
 export default function LyricsPanel({ lyrics, lyricsSuggestion, aiLyrics, hymnId, userId }: LyricsPanelProps) {
   const [editing, setEditing] = useState(false)
   const [generating, setGenerating] = useState(false)
