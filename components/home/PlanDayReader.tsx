@@ -190,22 +190,39 @@ function Passage({ verses, am, view, chapterLabel }: {
   )
 }
 
-/** A day's chapters from a work of the Fathers. The text is the English
- *  translation in either language; only the titles around it are translated. */
+/** A day's chapters from a work of the Fathers. In Amharic, chapters with an
+ *  approved translation are shown in Amharic, marked as AI-translated, with a
+ *  switch to the 1885 English they were made from. */
 function WorkPassage({ passage, am }: { passage: Extract<DayPassage, { kind: "work" }>; am: boolean }) {
+  const [english, setEnglish] = useState(false)
+  const anyAmharic = passage.sections.some(s => s.paragraphsAm)
+  const showAm = am && anyAmharic && !english
   return (
     <>
       <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
         {am ? (passage.authorAm ?? passage.author) : passage.author}
       </p>
       <h2 className="mt-1 text-lg font-semibold text-slate-900">{am ? (passage.titleAm ?? passage.title) : passage.title}</h2>
-      {am && <p className="mt-2 text-xs text-slate-400">ጽሑፉ በእንግሊዝኛ ትርጉም ብቻ ይገኛል።</p>}
+      {am && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+          <span>
+            {anyAmharic
+              ? "ትርጉሙ በ AI የተሠራና የተገመገመ ነው፤ ዋናው የ1885 የእንግሊዝኛ ትርጉም ነው።"
+              : "ጽሑፉ በእንግሊዝኛ ትርጉም ብቻ ይገኛል።"}
+          </span>
+          {anyAmharic && (
+            <button onClick={() => setEnglish(e => !e)} className="font-medium text-blue-600 hover:underline cursor-pointer">
+              {english ? "አማርኛውን አሳይ" : "እንግሊዝኛውን አሳይ"}
+            </button>
+          )}
+        </div>
+      )}
       <div className="mt-5 space-y-7">
         {passage.sections.map(sec => (
           <section key={sec.position}>
-            <h3 className="text-sm font-semibold text-slate-700">{sec.title}</h3>
+            <h3 className="text-sm font-semibold text-slate-700">{showAm && sec.paragraphsAm && sec.titleAm ? sec.titleAm : sec.title}</h3>
             <div className="mt-2 space-y-4 text-[17px] leading-8 text-slate-800">
-              {sec.paragraphs.map((para, k) => <p key={k}>{para}</p>)}
+              {(showAm && sec.paragraphsAm ? sec.paragraphsAm : sec.paragraphs).map((para, k) => <p key={k}>{para}</p>)}
             </div>
           </section>
         ))}

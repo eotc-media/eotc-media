@@ -13,6 +13,7 @@ const nav: AdminNavItem[] = [
   { title: "Comments", href: `${BASE}/comments`, icon: "messageCircle" },
   { title: "Featured items", href: `${BASE}/featured`, icon: "star" },
   { title: "Verse corrections", href: `${BASE}/verse-corrections`, icon: "bookOpen" },
+  { title: "Church Fathers", href: `${BASE}/fathers`, icon: "bookMarked" },
   { title: "Email members", href: `${BASE}/email`, icon: "mail" },
 ]
 

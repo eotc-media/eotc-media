@@ -420,7 +420,14 @@ export async function currentPlanId(userId: number, requested?: number): Promise
 }
 
 export interface PassageVerse { chapter: number; verse: number; am: string; en: string }
-export interface WorkPassageSection { position: number; title: string; paragraphs: string[] }
+export interface WorkPassageSection {
+  position: number
+  title: string
+  paragraphs: string[]
+  /** The approved Amharic translation, when there is one. */
+  titleAm: string | null
+  paragraphsAm: string[] | null
+}
 export type DayPassage =
   | { kind: "bible"; reading: Reading; verses: PassageVerse[] }
   | { kind: "work"; reading: WorkReading; title: string; titleAm: string | null; author: string; authorAm: string | null; sections: WorkPassageSection[] }
@@ -465,7 +472,7 @@ export async function getPlanDay(userId: number, planId: number, dayNumber: numb
           sections: {
             where: { position: { gte: reading.fromSection, lte: reading.toSection } },
             orderBy: { position: "asc" },
-            select: { position: true, title: true, body: true },
+            select: { position: true, title: true, titleAm: true, body: true, bodyAm: true, bodyAmApproved: true },
           },
         },
       })
@@ -473,7 +480,13 @@ export async function getPlanDay(userId: number, planId: number, dayNumber: numb
         kind: "work", reading,
         title: work?.title ?? reading.short, titleAm: work?.titleAm ?? null,
         author: work?.author ?? "", authorAm: work?.authorAm ?? null,
-        sections: (work?.sections ?? []).map(s => ({ position: s.position, title: s.title, paragraphs: s.body.split("\n\n") })),
+        sections: (work?.sections ?? []).map(s => ({
+          position: s.position,
+          title: s.title,
+          paragraphs: s.body.split("\n\n"),
+          titleAm: s.bodyAmApproved ? s.titleAm : null,
+          paragraphsAm: s.bodyAmApproved && s.bodyAm ? s.bodyAm.split("\n\n") : null,
+        })),
       }
     }
     const { bookId, startChapter: sc, endChapter: ec } = reading

@@ -44,3 +44,6 @@ next-env.d.ts
 
 /generated
 /prisma/data/
+
+# Translation files made by scripts/fathers/translate.mjs; uploaded on the site, not committed
+scripts/fathers/*.am.json

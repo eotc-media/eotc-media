@@ -1392,6 +1392,11 @@ model CfSection {
   title    String
   body     String
   words    Int
+  /// Amharic translation (AI, from scripts/fathers/translate.mjs), paragraphs
+  /// matching body's. Shown to readers only once an admin approves it.
+  titleAm        String?  @map("title_am")
+  bodyAm         String?  @map("body_am")
+  bodyAmApproved Boolean  @default(false) @map("body_am_approved")
 
   work CfWork @relation(fields: [workId], references: [id], onDelete: Cascade)
 
