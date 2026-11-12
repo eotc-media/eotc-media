@@ -4,7 +4,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { getHymns } from "@/lib/api/hymns"
 import { getSermons } from "@/lib/api/sermons"
-import { getActivePlan, localHour, localToday } from "@/lib/reading-plan-server"
+import { getActivePlans, getStoppedPlans, localHour, localToday } from "@/lib/reading-plan-server"
 import { SITE_DESCRIPTION } from "@/lib/seo"
 import { nameInBothScripts } from "@/lib/name-script"
 import Navbar from "@/components/Navbar"
@@ -58,8 +58,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ r
   const hour = localHour(tz)
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
 
-  const [plan, listen] = await Promise.all([
-    userId ? getActivePlan(userId, today) : Promise.resolve(null),
+  const [plans, listen] = await Promise.all([
+    userId ? Promise.all([getActivePlans(userId, today), getStoppedPlans(userId)]) : Promise.resolve(null),
     listenItems(userId),
   ])
 
@@ -76,7 +76,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ r
         {/* The plan card rises into the hero, so the page's main feature is
             the first thing below the greeting rather than below the fold. */}
         <div className="relative z-10 mx-auto -mt-20 max-w-6xl px-4 sm:-mt-24 sm:px-6 lg:px-8">
-          <ReadingPlanSection plan={plan} signedIn={!!userId} today={today} resume={resume === "1"} />
+          <ReadingPlanSection plans={plans?.[0] ?? []} stopped={plans?.[1] ?? []} signedIn={!!userId} today={today} resume={resume === "1"} />
         </div>
 
         <div className="mx-auto mt-16 max-w-6xl space-y-16 px-4 pb-20 sm:px-6 lg:px-8">

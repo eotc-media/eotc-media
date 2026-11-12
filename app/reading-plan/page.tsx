@@ -2,8 +2,7 @@ import type { Metadata } from "next"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
-import { getPlanSchedule, localToday } from "@/lib/reading-plan-server"
+import { currentPlanId, getPlanSchedule, localToday } from "@/lib/reading-plan-server"
 import Navbar from "@/components/Navbar"
 import ScheduleList from "@/components/home/ScheduleList"
 
@@ -14,19 +13,18 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default async function PlanSchedulePage() {
+export default async function PlanSchedulePage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
+  const { plan } = await searchParams
   const session = await auth()
-  if (!session?.user?.id) redirect(`/auth/login?callbackUrl=${encodeURIComponent("/reading-plan")}`)
+  if (!session?.user?.id) {
+    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/reading-plan${plan ? `?plan=${plan}` : ""}`)}`)
+  }
   const userId = parseInt(session.user.id)
 
-  const current = await prisma.readingPlan.findFirst({
-    where: { userId, status: { in: ["active", "completed"] } },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  })
-  if (!current) redirect("/")
+  const planId = await currentPlanId(userId, Number(plan) || undefined)
+  if (!planId) redirect("/")
 
-  const schedule = await getPlanSchedule(userId, current.id)
+  const schedule = await getPlanSchedule(userId, planId)
   if (!schedule) redirect("/")
 
   const today = localToday((await cookies()).get("tz")?.value)

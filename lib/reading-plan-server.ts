@@ -145,14 +145,19 @@ export function parseConfig(raw: unknown, books: BookMeta[], works: WorkMeta[]):
 
 // ── Creating ──────────────────────────────────────────────────────────────────
 
-/** Generate and save a plan. Any plan the reader already has running is
- *  archived — one plan at a time, kept in their history. */
+/** Plans a reader can run side by side. Each is a card on the homepage. */
+export const MAX_ACTIVE_PLANS = 5
+
+/** Generate and save a plan, next to any the reader already has running. */
 export async function createPlan(userId: number, config: AnyPlanConfig) {
+  const running = await prisma.readingPlan.count({ where: { userId, status: { in: ["active", "completed"] } } })
+  if (running >= MAX_ACTIVE_PLANS) {
+    throw new Error(`You can follow up to ${MAX_ACTIVE_PLANS} plans at a time. Stop one to start another.`)
+  }
   const { days, summary } = await generateFor(config)
   if (days.length === 0) throw new Error("This selection has nothing to read.")
 
   return prisma.$transaction(async tx => {
-    await tx.readingPlan.updateMany({ where: { userId, status: "active" }, data: { status: "archived" } })
     const plan = await tx.readingPlan.create({
       data: {
         userId,
@@ -211,13 +216,19 @@ export interface ActivePlanView {
   bookNames: Record<number, { osis: string; englishName: string; amharicName: string | null }>
 }
 
-export async function getActivePlan(userId: number, today: string): Promise<ActivePlanView | null> {
-  const plan = await prisma.readingPlan.findFirst({
+/** Every plan the reader is following (or has just finished), oldest first. */
+export async function getActivePlans(userId: number, today: string): Promise<ActivePlanView[]> {
+  const plans = await prisma.readingPlan.findMany({
     where: { userId, status: { in: ["active", "completed"] } },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "asc" },
   })
-  if (!plan) return null
+  return Promise.all(plans.map(plan => planView(plan, today)))
+}
 
+async function planView(
+  plan: { id: number; config: unknown; startDate: Date; endDate: Date; totalDays: number },
+  today: string,
+): Promise<ActivePlanView> {
   const [completedDays, behind, past, window] = await Promise.all([
     prisma.readingPlanDay.count({ where: { planId: plan.id, completedAt: { not: null } } }),
     prisma.readingPlanDay.count({ where: { planId: plan.id, completedAt: null, date: { lt: dbDate(today) } } }),
@@ -330,10 +341,43 @@ export async function catchUp(userId: number, planId: number, today: string) {
   return true
 }
 
+/** Stop a plan. Nothing is deleted: its days and notes stay, and it can be resumed. */
 export async function archivePlan(userId: number, planId: number) {
   const plan = await ownPlan(userId, planId)
   if (!plan) return false
   await prisma.readingPlan.update({ where: { id: planId }, data: { status: "archived" } })
+  return true
+}
+
+export interface StoppedPlanView { id: number; config: AnyPlanConfig; totalDays: number; completedDays: number; stoppedAt: string }
+
+/** Plans the reader stopped (or set aside by starting another, before plans
+ *  could run side by side), most recent first. */
+export async function getStoppedPlans(userId: number): Promise<StoppedPlanView[]> {
+  const plans = await prisma.readingPlan.findMany({
+    where: { userId, status: "archived" },
+    orderBy: { updatedAt: "desc" },
+    take: 20,
+    select: { id: true, config: true, totalDays: true, updatedAt: true, _count: { select: { days: { where: { completedAt: { not: null } } } } } },
+  })
+  return plans.map(p => ({
+    id: p.id,
+    config: p.config as unknown as AnyPlanConfig,
+    totalDays: p.totalDays,
+    completedDays: p._count.days,
+    stoppedAt: isoOf(p.updatedAt),
+  }))
+}
+
+/** Bring a stopped plan back where it was. If it is behind, the card offers
+ *  "Pick up today" as for any plan. */
+export async function resumePlan(userId: number, planId: number): Promise<true | string> {
+  const plan = await ownPlan(userId, planId)
+  if (!plan || plan.status !== "archived") return "Not found."
+  const running = await prisma.readingPlan.count({ where: { userId, status: { in: ["active", "completed"] } } })
+  if (running >= MAX_ACTIVE_PLANS) return `You can follow up to ${MAX_ACTIVE_PLANS} plans at a time. Stop one to resume this.`
+  const unread = await prisma.readingPlanDay.count({ where: { planId, completedAt: null } })
+  await prisma.readingPlan.update({ where: { id: planId }, data: { status: unread === 0 ? "completed" : "active" } })
   return true
 }
 
@@ -363,13 +407,15 @@ export async function getPlanSchedule(userId: number, planId: number) {
   }
 }
 
-/** The plan the reader is on now: active, or just finished. */
-export async function currentPlanId(userId: number): Promise<number | null> {
-  const plan = await prisma.readingPlan.findFirst({
-    where: { userId, status: { in: ["active", "completed"] } },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  })
+/** The plan a page is about: the one asked for if it is the reader's and
+ *  running, otherwise their most recently started running plan. */
+export async function currentPlanId(userId: number, requested?: number): Promise<number | null> {
+  const running = { userId, status: { in: ["active", "completed"] } }
+  if (requested) {
+    const own = await prisma.readingPlan.findFirst({ where: { ...running, id: requested }, select: { id: true } })
+    if (own) return own.id
+  }
+  const plan = await prisma.readingPlan.findFirst({ where: running, orderBy: { createdAt: "desc" }, select: { id: true } })
   return plan?.id ?? null
 }
 

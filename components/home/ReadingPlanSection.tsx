@@ -5,19 +5,22 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   ArrowRight, BookOpen, Check, CheckCircle2, Cross, Flame, Loader2, Music2, BookHeart,
-  RotateCcw, Sparkles, CalendarRange, Coffee, PartyPopper, ListChecks, Library,
+  RotateCcw, Sparkles, CalendarRange, Coffee, PartyPopper, ListChecks, Library, Plus, ChevronLeft, ChevronRight, ChevronDown,
 } from "lucide-react"
 import { PRESETS, minutesFor, planTitle, type AnyPlanConfig, type PresetKey } from "@/lib/reading-plan"
-import type { ActivePlanView } from "@/lib/reading-plan-server"
+import type { ActivePlanView, StoppedPlanView } from "@/lib/reading-plan-server"
 import PlanBuilder, { DRAFT_KEY, type PlanSource } from "./PlanBuilder"
 import MiniCalendar, { type DayMark } from "./MiniCalendar"
 import ReminderToggle from "./ReminderToggle"
-import { useTr, readingText, shortDate, useLocalNow } from "./shared"
+import {
+  useTr, readingText, shortDate, useLocalNow, useSelectedPlanId, selectPlan, planDayHref, planScheduleHref,
+} from "./shared"
 
 export default function ReadingPlanSection({
-  plan, signedIn, today: serverToday, resume,
+  plans, stopped, signedIn, today: serverToday, resume,
 }: {
-  plan: ActivePlanView | null
+  plans: ActivePlanView[]
+  stopped: StoppedPlanView[]
   signedIn: boolean
   today: string
   resume: boolean
@@ -37,6 +40,12 @@ export default function ReadingPlanSection({
   }, [resume, signedIn, draftDismissed, draftRaw])
   const open = builder ?? (draft ? { draft } : null)
 
+  // Several plans run side by side; the card shows one at a time.
+  const selectedId = useSelectedPlanId()
+  const index = Math.max(0, plans.findIndex(p => p.id === selectedId))
+  const plan = plans[index] ?? null
+  const go = (step: number) => selectPlan(plans[(index + step + plans.length) % plans.length].id)
+
   const marks = useMemo(() => {
     if (!plan) return undefined
     const m: Record<string, DayMark> = {}
@@ -49,10 +58,16 @@ export default function ReadingPlanSection({
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0">
           {plan ? (
-            <ActivePlan plan={plan} today={today} onNewPlan={() => setBuilder({})} />
+            <ActivePlan
+              plan={plan}
+              today={today}
+              position={{ index, count: plans.length, prev: () => go(-1), next: () => go(1) }}
+              onAddPlan={plans.length < MAX_PLANS ? () => setBuilder({}) : undefined}
+            />
           ) : (
             <Picker onPick={preset => setBuilder({ preset })} onFathers={() => setBuilder({ source: "fathers" })} />
           )}
+          {signedIn && stopped.length > 0 && <StoppedPlans stopped={stopped} canResume={plans.length < MAX_PLANS} />}
         </div>
         <div className="space-y-6">
           <MiniCalendar today={today} marks={marks} />
@@ -68,12 +83,15 @@ export default function ReadingPlanSection({
           initialPreset={open.preset}
           initialConfig={open.draft}
           initialSource={"source" in open ? open.source : undefined}
-          replacing={!!plan && plan.completedDays < plan.totalDays}
+          adding={plans.length > 0}
         />
       )}
     </>
   )
 }
+
+/** Matches MAX_ACTIVE_PLANS on the server. */
+const MAX_PLANS = 5
 
 const noSubscribe = () => () => {}
 function readDraft(): string | null {
@@ -179,7 +197,15 @@ function Picker({ onPick, onFathers }: { onPick: (p: PresetKey) => void; onFathe
 
 const TRACK_DOTS = ["bg-amber-400", "bg-blue-500", "bg-emerald-500", "bg-violet-500"]
 
-function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: string; onNewPlan: () => void }) {
+interface PlanPosition { index: number; count: number; prev: () => void; next: () => void }
+
+function ActivePlan({ plan, today, position, onAddPlan }: {
+  plan: ActivePlanView
+  today: string
+  position: PlanPosition
+  /** Absent when the reader already follows as many plans as allowed. */
+  onAddPlan?: () => void
+}) {
   const { am, tr } = useTr()
   const router = useRouter()
   const [pending, setPending] = useState<number | null>(null)
@@ -216,6 +242,14 @@ function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: s
     }
   }
 
+  // A finished plan leaves the card; it stays among the reader's stopped plans.
+  const [puttingAway, setPuttingAway] = useState(false)
+  async function putAway() {
+    setPuttingAway(true)
+    await fetch(`/api/reading-plans/${plan.id}`, { method: "DELETE" }).catch(() => null)
+    router.refresh()
+  }
+
   async function catchUp() {
     setCatching(true)
     try {
@@ -236,7 +270,10 @@ function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: s
       <div className="border-b border-slate-100 px-6 pb-5 pt-6 sm:px-8">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">{tr("የንባብ ዕቅድ", "Reading plan")}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">{tr("የንባብ ዕቅድ", "Reading plan")}</p>
+              {position.count > 1 && <PlanNavigator position={position} />}
+            </div>
             <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
           </div>
           <p className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 tabular-nums">
@@ -277,9 +314,20 @@ function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: s
             </span>
             <p className="mt-4 text-lg font-semibold text-slate-900">{tr("ዕቅዱን ጨርሰዋል!", "You finished the plan!")}</p>
             <p className="mt-1 text-sm text-slate-500">{tr(`${plan.totalDays} ቀናት፣ ሁሉም ተነቧል።`, `${plan.totalDays} days, every one read.`)}</p>
-            <button onClick={onNewPlan} className="mt-5 flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer">
-              <Sparkles className="h-4 w-4" /> {tr("አዲስ ዕቅድ ይጀምሩ", "Start a new plan")}
-            </button>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+              {onAddPlan && (
+                <button onClick={onAddPlan} className="flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer">
+                  <Sparkles className="h-4 w-4" /> {tr("ሌላ ዕቅድ ያክሉ", "Add a plan")}
+                </button>
+              )}
+              <button
+                onClick={putAway}
+                disabled={puttingAway}
+                className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
+              >
+                {tr("ከዝርዝሩ ያንሱ", "Put away")}
+              </button>
+            </div>
           </div>
         ) : todayDay ? (
           <TodayReading
@@ -326,7 +374,7 @@ function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: s
             <ul className="mt-2 divide-y divide-slate-100">
               {upcoming.map(d => (
                 <li key={d.dayNumber}>
-                  <Link href={`/reading-plan/day/${d.dayNumber}`} className="flex items-center gap-4 py-2.5 hover:text-blue-700">
+                  <Link href={planDayHref(plan.id, d.dayNumber)} className="flex items-center gap-4 py-2.5 hover:text-blue-700">
                     <span className="w-20 flex-shrink-0 text-xs font-medium text-slate-400">{shortDate(d.date)}</span>
                     <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
                       {d.readings.map(r => readingText(r, plan.bookNames, am)).join(" · ")}
@@ -342,12 +390,12 @@ function ActivePlan({ plan, today, onNewPlan }: { plan: ActivePlanView; today: s
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-3.5 sm:px-8">
-        <Link href="/reading-plan" className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+        <Link href={planScheduleHref(plan.id)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
           {tr("ሙሉ መርሐ ግብር", "Full schedule")} <ArrowRight className="h-4 w-4" />
         </Link>
-        {!finished && (
-          <button onClick={onNewPlan} className="text-sm font-medium text-slate-500 hover:text-slate-800 cursor-pointer">
-            {tr("ሌላ ዕቅድ ጀምር", "Start a different plan")}
+        {onAddPlan && (
+          <button onClick={onAddPlan} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 cursor-pointer">
+            <Plus className="h-4 w-4" /> {tr("ሌላ ዕቅድ ያክሉ", "Add a plan")}
           </button>
         )}
       </div>
@@ -376,7 +424,7 @@ function TodayReading({
         {day.readings.map((r, i) => (
           <li key={i}>
             <Link
-              href={`/reading-plan/day/${day.dayNumber}#passage-${i}`}
+              href={planDayHref(plan.id, day.dayNumber, i)}
               className="group flex items-center gap-4 rounded-2xl border border-slate-200 px-4 py-3.5 transition-all hover:border-blue-300 hover:bg-blue-50/40"
             >
               <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${TRACK_DOTS[i % TRACK_DOTS.length]}`} />
@@ -415,6 +463,92 @@ function Stat({ icon, value, label }: { icon: React.ReactNode; value: number; la
         <span className="text-lg font-semibold text-slate-900 tabular-nums">{value}</span>
       </div>
       <p className="mt-0.5 text-[11px] text-slate-500">{label}</p>
+    </div>
+  )
+}
+
+function PlanNavigator({ position }: { position: PlanPosition }) {
+  const { tr } = useTr()
+  const btn = "flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+  return (
+    <div className="flex items-center gap-0.5" aria-label={tr("ዕቅዶች", "Plans")}>
+      <button onClick={position.prev} className={btn} aria-label={tr("ቀዳሚ ዕቅድ", "Previous plan")}>
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      <span className="min-w-[2.75rem] text-center text-xs font-semibold text-slate-500 tabular-nums">
+        {tr(`${position.index + 1} ከ ${position.count}`, `${position.index + 1} of ${position.count}`)}
+      </span>
+      <button onClick={position.next} className={btn} aria-label={tr("ቀጣይ ዕቅድ", "Next plan")}>
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
+// ── Stopped plans ─────────────────────────────────────────────────────────────
+
+/** Plans the reader stopped, with a way back into each. Folded away by default. */
+function StoppedPlans({ stopped, canResume }: { stopped: StoppedPlanView[]; canResume: boolean }) {
+  const { am, tr } = useTr()
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState<number | null>(null)
+  const [error, setError] = useState("")
+
+  async function resume(id: number) {
+    setBusy(id)
+    setError("")
+    const res = await fetch(`/api/reading-plans/${id}/resume`, { method: "POST" }).catch(() => null)
+    if (res?.ok) {
+      selectPlan(id)
+      router.refresh()
+    } else {
+      setError((await res?.json().catch(() => null))?.error ?? tr("መቀጠል አልተቻለም።", "Could not resume the plan."))
+    }
+    setBusy(null)
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-slate-200 bg-white/80">
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between px-5 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 cursor-pointer"
+      >
+        <span>{tr(`የቆሙ ዕቅዶች (${stopped.length})`, `Stopped plans (${stopped.length})`)}</span>
+        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <ul className="divide-y divide-slate-100 border-t border-slate-100">
+          {stopped.map(p => {
+            const finished = p.completedDays >= p.totalDays
+            return (
+              <li key={p.id} className="flex items-center gap-4 px-5 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-800">{planTitle(p.config, p.totalDays, am ? "am" : "en")}</p>
+                  <p className="text-xs text-slate-400">
+                    {tr(`${p.completedDays} ከ ${p.totalDays} ቀናት ተነበዋል`, `${p.completedDays} of ${p.totalDays} days read`)}
+                  </p>
+                </div>
+                {finished ? (
+                  <span className="text-xs font-medium text-emerald-600">{tr("ተጠናቋል", "Finished")}</span>
+                ) : (
+                  <button
+                    onClick={() => resume(p.id)}
+                    disabled={!canResume || busy !== null}
+                    title={canResume ? undefined : tr("ቢበዛ 5 ዕቅዶች በአንድ ጊዜ", "At most 5 plans at a time")}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-blue-600 hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {busy === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                    {tr("ቀጥል", "Resume")}
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      {error && <p className="px-5 pb-3 text-xs text-rose-600">{error}</p>}
     </div>
   )
 }

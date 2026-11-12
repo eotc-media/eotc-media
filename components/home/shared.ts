@@ -62,3 +62,35 @@ export function useLocalNow(server: { today: string; hour: number }): { today: s
   const [today, hour] = snap.split("|")
   return { today, hour: Number(hour) }
 }
+
+// Which plan the homepage card shows, when the reader follows several. Kept in
+// localStorage so it survives a refresh, and set when a plan is started or
+// resumed so the reader lands on it.
+const SELECTED_PLAN_KEY = "eotc.readingPlanSelected"
+const SELECTED_PLAN_EVENT = "eotc-reading-plan-selected"
+
+export function selectPlan(id: number) {
+  try { localStorage.setItem(SELECTED_PLAN_KEY, String(id)) } catch {}
+  window.dispatchEvent(new Event(SELECTED_PLAN_EVENT))
+}
+
+function subscribeSelectedPlan(onChange: () => void) {
+  window.addEventListener(SELECTED_PLAN_EVENT, onChange)
+  window.addEventListener("storage", onChange)
+  return () => {
+    window.removeEventListener(SELECTED_PLAN_EVENT, onChange)
+    window.removeEventListener("storage", onChange)
+  }
+}
+function readSelectedPlan(): number | null {
+  try { return Number(localStorage.getItem(SELECTED_PLAN_KEY)) || null } catch { return null }
+}
+
+export function useSelectedPlanId(): number | null {
+  return useSyncExternalStore(subscribeSelectedPlan, readSelectedPlan, () => null)
+}
+
+/** Links to a plan's own pages. */
+export const planDayHref = (planId: number, day: number, passage?: number) =>
+  `/reading-plan/day/${day}?plan=${planId}${passage !== undefined ? `#passage-${passage}` : ""}`
+export const planScheduleHref = (planId: number) => `/reading-plan?plan=${planId}`

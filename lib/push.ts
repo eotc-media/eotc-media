@@ -37,18 +37,21 @@ export async function sendPlanReminders(now = new Date()): Promise<{ checked: nu
   let removed = 0
   for (const sub of due) {
     const today = localToday(sub.timeZone)
-    const day = await prisma.readingPlanDay.findFirst({
+    // Today's unread reading in each of the reader's plans: one reminder for all.
+    const days = await prisma.readingPlanDay.findMany({
       where: { date: parseDate(today), completedAt: null, plan: { userId: sub.userId, status: "active" } },
-      select: { dayNumber: true, readings: true },
+      select: { planId: true, dayNumber: true, readings: true },
+      orderBy: { planId: "asc" },
     })
-    if (!day) continue // read already, a day off, or no plan
+    if (days.length === 0) continue // all read, a day off, or no plan
 
-    const readings = day.readings as unknown as AnyReading[]
+    const readings = days.flatMap(d => d.readings as unknown as AnyReading[])
     const am = sub.locale === "am"
     const payload = JSON.stringify({
       title: am ? "የዛሬው ንባብ ይጠብቅዎታል" : "Today's reading is waiting",
       body: `${await readingSummary(readings, am)}${am ? " · ቀኑ ከማለቁ በፊት ያንብቡ።" : " · There's still time today."}`,
-      url: `/reading-plan/day/${day.dayNumber}`,
+      // One plan: straight to its day. Several: the homepage, where they all are.
+      url: days.length === 1 ? `/reading-plan/day/${days[0].dayNumber}?plan=${days[0].planId}` : "/",
       tag: "plan-reminder",
     })
 

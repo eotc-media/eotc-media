@@ -12,13 +12,18 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default async function PlanDayPage({ params }: { params: Promise<{ day: string }> }) {
-  const { day } = await params
+export default async function PlanDayPage({ params, searchParams }: {
+  params: Promise<{ day: string }>
+  searchParams: Promise<{ plan?: string }>
+}) {
+  const [{ day }, { plan }] = await Promise.all([params, searchParams])
   const session = await auth()
-  if (!session?.user?.id) redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/reading-plan/day/${day}`)}`)
+  if (!session?.user?.id) {
+    redirect(`/auth/login?callbackUrl=${encodeURIComponent(`/reading-plan/day/${day}${plan ? `?plan=${plan}` : ""}`)}`)
+  }
   const userId = parseInt(session.user.id)
 
-  const planId = await currentPlanId(userId)
+  const planId = await currentPlanId(userId, Number(plan) || undefined)
   if (!planId) redirect("/")
   const dayNumber = Number(day)
   if (!Number.isInteger(dayNumber) || dayNumber < 1) notFound()
@@ -30,7 +35,7 @@ export default async function PlanDayPage({ params }: { params: Promise<{ day: s
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <main className="pt-16">
-        <PlanDayReader key={dayNumber} data={data} />
+        <PlanDayReader key={`${planId}-${dayNumber}`} data={data} />
       </main>
     </div>
   )

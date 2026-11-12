@@ -14,7 +14,7 @@ import {
   type AnyPlanConfig, type BookMeta, type ChapterRow, type GenerateResult, type PlanConfig, type PresetKey,
   type WorkMeta, type WorkPlanConfig,
 } from "@/lib/reading-plan"
-import { useTr, shortDate, longDate, readingText, WEEKDAY_SHORT_AM, WEEKDAY_SHORT_EN, type BookNames } from "./shared"
+import { useTr, shortDate, longDate, readingText, selectPlan, WEEKDAY_SHORT_AM, WEEKDAY_SHORT_EN, type BookNames } from "./shared"
 
 export const DRAFT_KEY = "eotc.readingPlanDraft"
 
@@ -55,7 +55,7 @@ const NO_BOOKS: BookMeta[] = []
 const NO_CHAPTERS: ChapterRow[] = []
 
 export default function PlanBuilder({
-  open, onClose, today, signedIn, initialPreset, initialConfig, initialSource, replacing = false,
+  open, onClose, today, signedIn, initialPreset, initialConfig, initialSource, adding = false,
 }: {
   open: boolean
   onClose: () => void
@@ -65,8 +65,8 @@ export default function PlanBuilder({
   initialConfig?: AnyPlanConfig | null
   /** Open on the Church Fathers shelf rather than the Bible. */
   initialSource?: PlanSource
-  /** A plan is already running: starting this one archives it. */
-  replacing?: boolean
+  /** The reader already follows a plan: this one runs alongside it. */
+  adding?: boolean
 }) {
   const { am, tr } = useTr()
   const router = useRouter()
@@ -203,6 +203,8 @@ export default function PlanBuilder({
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error ?? tr("ዕቅዱን ማስቀመጥ አልተቻለም።", "Could not save the plan.")); return }
       try { localStorage.removeItem(DRAFT_KEY) } catch {}
+      // Show the new plan on the card, not whichever was showing before.
+      if (typeof data.id === "number") selectPlan(data.id)
       onClose()
       router.refresh()
     } finally {
@@ -566,11 +568,11 @@ export default function PlanBuilder({
         {/* Footer */}
         {step === 2 && (
           <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-            <p className={`text-xs ${replacing ? "text-amber-700" : "text-slate-500"}`}>
+            <p className="text-xs text-slate-500">
               {!signedIn
                 ? tr("ሂደትዎን ለመቆጠብ ይግቡ — ያዘጋጁት ዕቅድ አይጠፋም።", "Sign in to save your progress — the plan you built is kept.")
-                : replacing
-                  ? tr("ይህ የአሁኑን ዕቅድዎን ይተካል። ያነበቡት ታሪክ ይቀመጣል።", "This replaces your current plan. What you've read so far stays in your history.")
+                : adding
+                  ? tr("ይህ ዕቅድ ከሌሎች ዕቅዶችዎ ጎን ይጨመራል።", "This plan is added alongside your other plans.")
                   : tr("ዕቅዱን በማንኛውም ጊዜ ማቆም ወይም መቀየር ይችላሉ።", "You can stop or change the plan any time.")}
             </p>
             {error && <p className="text-sm text-red-600">{error}</p>}
