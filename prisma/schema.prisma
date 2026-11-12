@@ -1357,3 +1357,44 @@ model PushSubscription {
   @@index([userId])
   @@map("push_subscriptions")
 }
+
+/// A work in the Church Fathers library (public-domain translations), loaded
+/// by migration from scripts/fathers. Read through reading plans.
+model CfWork {
+  id            Int      @id @default(autoincrement())
+  slug          String   @unique
+  collection    String
+  title         String
+  titleAm       String?  @map("title_am")
+  /// For a day's reading: "1 Clement 4–9".
+  short         String
+  shortAm       String?  @map("short_am")
+  author        String
+  authorAm      String?  @map("author_am")
+  description   String
+  descriptionAm String?  @map("description_am")
+  source        String
+  /// Shelf order, which is also the suggested reading order.
+  position      Int
+  words         Int
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  sections CfSection[]
+
+  @@map("cf_works")
+}
+
+/// One chapter of a work: plain-text paragraphs separated by blank lines.
+model CfSection {
+  id       Int    @id @default(autoincrement())
+  workId   Int    @map("work_id")
+  position Int
+  title    String
+  body     String
+  words    Int
+
+  work CfWork @relation(fields: [workId], references: [id], onDelete: Cascade)
+
+  @@unique([workId, position])
+  @@map("cf_sections")
+}

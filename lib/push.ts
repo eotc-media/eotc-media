@@ -1,6 +1,6 @@
 import webpush from "web-push"
 import { prisma } from "@/lib/prisma"
-import { bookLabel, formatReading, parseDate, type Reading } from "@/lib/reading-plan"
+import { bookLabel, formatReading, formatWorkReading, isWorkReading, parseDate, type AnyReading } from "@/lib/reading-plan"
 import { localToday } from "@/lib/reading-plan-server"
 
 // Evening reminders for reading plans. An hourly Vercel cron (vercel.json)
@@ -43,7 +43,7 @@ export async function sendPlanReminders(now = new Date()): Promise<{ checked: nu
     })
     if (!day) continue // read already, a day off, or no plan
 
-    const readings = day.readings as unknown as Reading[]
+    const readings = day.readings as unknown as AnyReading[]
     const am = sub.locale === "am"
     const payload = JSON.stringify({
       title: am ? "የዛሬው ንባብ ይጠብቅዎታል" : "Today's reading is waiting",
@@ -74,14 +74,15 @@ function localHourAt(timeZone: string, at: Date): number {
   return Number(new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", hourCycle: "h23" }).format(at))
 }
 
-async function readingSummary(readings: Reading[], am: boolean): Promise<string> {
+async function readingSummary(readings: AnyReading[], am: boolean): Promise<string> {
   const books = await prisma.blBook.findMany({
-    where: { id: { in: readings.map(r => r.bookId) } },
+    where: { id: { in: readings.flatMap(r => (isWorkReading(r) ? [] : [r.bookId])) } },
     select: { id: true, osisCode: true, englishName: true, amharicName: true },
   })
   const byId = new Map(books.map(b => [b.id, { osis: b.osisCode, englishName: b.englishName, amharicName: b.amharicName }]))
   return readings
     .map(r => {
+      if (isWorkReading(r)) return formatWorkReading(r, am ? "am" : "en")
       const b = byId.get(r.bookId)
       return b ? formatReading(r, bookLabel(b, am ? "am" : "en", r)) : ""
     })

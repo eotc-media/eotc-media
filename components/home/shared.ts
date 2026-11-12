@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
-import { bookLabel, formatReading, type Reading } from "@/lib/reading-plan"
+import { bookLabel, formatReading, formatWorkReading, isWorkReading, type AnyReading, type Reading } from "@/lib/reading-plan"
 
 export type BookNames = Record<number, { osis: string; englishName: string; amharicName: string | null }>
 
@@ -20,7 +20,8 @@ export function readingHref(r: Reading, am: boolean): string {
   return `${base}/${r.bookId}/${r.startChapter}${r.startVerse ? `?verse=${r.startVerse}` : ""}`
 }
 
-export function readingText(r: Reading, names: BookNames, am: boolean): string {
+export function readingText(r: AnyReading, names: BookNames, am: boolean): string {
+  if (isWorkReading(r)) return formatWorkReading(r, am ? "am" : "en")
   const book = names[r.bookId]
   if (!book) return `${r.startChapter}`
   return formatReading(r, bookLabel(book, am ? "am" : "en", r))

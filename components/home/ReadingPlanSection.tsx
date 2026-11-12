@@ -5,11 +5,11 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   ArrowRight, BookOpen, Check, CheckCircle2, Cross, Flame, Loader2, Music2, BookHeart,
-  RotateCcw, Sparkles, CalendarRange, Coffee, PartyPopper, ListChecks,
+  RotateCcw, Sparkles, CalendarRange, Coffee, PartyPopper, ListChecks, Library,
 } from "lucide-react"
-import { PRESETS, minutesFor, planTitle, type PlanConfig, type PresetKey } from "@/lib/reading-plan"
+import { PRESETS, minutesFor, planTitle, type AnyPlanConfig, type PresetKey } from "@/lib/reading-plan"
 import type { ActivePlanView } from "@/lib/reading-plan-server"
-import PlanBuilder, { DRAFT_KEY } from "./PlanBuilder"
+import PlanBuilder, { DRAFT_KEY, type PlanSource } from "./PlanBuilder"
 import MiniCalendar, { type DayMark } from "./MiniCalendar"
 import ReminderToggle from "./ReminderToggle"
 import { useTr, readingText, shortDate, useLocalNow } from "./shared"
@@ -23,7 +23,7 @@ export default function ReadingPlanSection({
   resume: boolean
 }) {
   const { today } = useLocalNow({ today: serverToday, hour: 0 })
-  const [builder, setBuilder] = useState<{ preset?: PresetKey; draft?: PlanConfig | null } | null>(null)
+  const [builder, setBuilder] = useState<{ preset?: PresetKey; source?: PlanSource; draft?: AnyPlanConfig | null } | null>(null)
   const [draftDismissed, setDraftDismissed] = useState(false)
 
   // Back from signing in with a plan built beforehand: pick up exactly there.
@@ -33,7 +33,7 @@ export default function ReadingPlanSection({
   const draftRaw = useSyncExternalStore(noSubscribe, readDraft, () => null)
   const draft = useMemo(() => {
     if (!resume || !signedIn || draftDismissed || !draftRaw) return null
-    try { return JSON.parse(draftRaw) as PlanConfig } catch { return null }
+    try { return JSON.parse(draftRaw) as AnyPlanConfig } catch { return null }
   }, [resume, signedIn, draftDismissed, draftRaw])
   const open = builder ?? (draft ? { draft } : null)
 
@@ -51,7 +51,7 @@ export default function ReadingPlanSection({
           {plan ? (
             <ActivePlan plan={plan} today={today} onNewPlan={() => setBuilder({})} />
           ) : (
-            <Picker onPick={preset => setBuilder({ preset })} />
+            <Picker onPick={preset => setBuilder({ preset })} onFathers={() => setBuilder({ source: "fathers" })} />
           )}
         </div>
         <div className="space-y-6">
@@ -67,6 +67,7 @@ export default function ReadingPlanSection({
           signedIn={signedIn}
           initialPreset={open.preset}
           initialConfig={open.draft}
+          initialSource={"source" in open ? open.source : undefined}
           replacing={!!plan && plan.completedDays < plan.totalDays}
         />
       )}
@@ -88,7 +89,7 @@ const QUICK: { key: Exclude<PresetKey, "custom">; Icon: typeof BookOpen }[] = [
   { key: "psalms-proverbs", Icon: Music2 },
 ]
 
-function Picker({ onPick }: { onPick: (p: PresetKey) => void }) {
+function Picker({ onPick, onFathers }: { onPick: (p: PresetKey) => void; onFathers: () => void }) {
   const { am, tr } = useTr()
   return (
     <section className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-900/[0.04]">
@@ -125,12 +126,20 @@ function Picker({ onPick }: { onPick: (p: PresetKey) => void }) {
               </button>
             ))}
           </div>
-          <button
-            onClick={() => onPick("custom")}
-            className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
-          >
-            <ListChecks className="h-4 w-4" /> {tr("የራስዎን ዕቅድ ያውጡ", "Build your own")} <ArrowRight className="h-4 w-4" />
-          </button>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+            <button
+              onClick={() => onPick("custom")}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+            >
+              <ListChecks className="h-4 w-4" /> {tr("የራስዎን ዕቅድ ያውጡ", "Build your own")} <ArrowRight className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onFathers}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+            >
+              <Library className="h-4 w-4" /> {tr("የቤተ ክርስቲያን አበውን ያንብቡ", "Read the Church Fathers")} <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* An example day, so the idea is visible before anything is chosen. */}

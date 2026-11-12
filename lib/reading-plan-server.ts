@@ -1,8 +1,9 @@
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import {
-  addDays, generatePlan, parseDate, planTitle, PRESETS,
-  type BookMeta, type ChapterRow, type PlanConfig, type PresetKey, type Reading,
+  addDays, generatePlan, generateWorkPlan, isWorkConfig, isWorkReading, parseDate, planTitle, PRESETS,
+  type AnyPlanConfig, type AnyReading, type BookMeta, type ChapterRow, type PresetKey, type Reading,
+  type WorkMeta, type WorkPlanConfig, type WorkReading,
 } from "@/lib/reading-plan"
 
 // ── Bible structure ───────────────────────────────────────────────────────────
@@ -35,6 +36,28 @@ export const getBibleStructure = unstable_cache(
   ["reading-plan-bible-structure"],
   { revalidate: 86400 },
 )
+
+// ── Church Fathers library ────────────────────────────────────────────────────
+
+/** The shelf: every work with its chapters' word counts, in suggested order.
+ *  Changes only when a migration adds works, so it is cached for a day. */
+export const getWorkShelf = unstable_cache(
+  async (): Promise<WorkMeta[]> => {
+    const works = await prisma.cfWork.findMany({
+      orderBy: { position: "asc" },
+      include: { sections: { select: { position: true, words: true }, orderBy: { position: "asc" } } },
+    })
+    return works.map(w => ({
+      id: w.id, slug: w.slug, title: w.title, titleAm: w.titleAm, short: w.short, shortAm: w.shortAm,
+      author: w.author, authorAm: w.authorAm, description: w.description, descriptionAm: w.descriptionAm,
+      words: w.words, sections: w.sections.map(s => [s.position, s.words] as [number, number]),
+    }))
+  },
+  ["reading-plan-work-shelf"],
+  { revalidate: 86400 },
+)
+
+const bibleIds = (readings: AnyReading[]) => readings.filter((r): r is Reading => !isWorkReading(r)).map(r => r.bookId)
 
 // ── The reader's own date ─────────────────────────────────────────────────────
 
@@ -71,17 +94,7 @@ const PRESET_KEYS = new Set<PresetKey>([...Object.keys(PRESETS), "custom"] as Pr
 // About three years. Bounds the rows one request can create.
 const MAX_SPAN_DAYS = 1100
 
-export function parseConfig(raw: unknown, books: BookMeta[]): PlanConfig | string {
-  if (!raw || typeof raw !== "object") return "Invalid plan."
-  const r = raw as Record<string, unknown>
-
-  const preset = r.preset as PresetKey
-  if (!PRESET_KEYS.has(preset)) return "Unknown plan type."
-
-  const known = new Set(books.map(b => b.osis))
-  const bookList = Array.isArray(r.books) ? r.books.filter((b): b is string => typeof b === "string" && known.has(b)) : []
-  if (preset === "custom" && bookList.length === 0) return "Choose at least one book."
-
+function parseDates(r: Record<string, unknown>): { startDate: string; endDate: string; restWeekdays: number[] } | string {
   const startDate = typeof r.startDate === "string" && ISO_DATE.test(r.startDate) ? r.startDate : null
   const endDate = typeof r.endDate === "string" && ISO_DATE.test(r.endDate) ? r.endDate : null
   if (!startDate || !endDate) return "Invalid dates."
@@ -93,15 +106,40 @@ export function parseConfig(raw: unknown, books: BookMeta[]): PlanConfig | strin
     ? [...new Set(r.restWeekdays.filter((d): d is number => Number.isInteger(d) && (d as number) >= 0 && (d as number) <= 6))]
     : []
   if (rest.length >= 7) return "Leave at least one reading day in the week."
+  return { startDate, endDate, restWeekdays: rest.sort() }
+}
+
+/** A Bible plan, or a plan through one work of the Fathers (`work` set). */
+export function parseConfig(raw: unknown, books: BookMeta[], works: WorkMeta[]): AnyPlanConfig | string {
+  if (!raw || typeof raw !== "object") return "Invalid plan."
+  const r = raw as Record<string, unknown>
+
+  if (r.work !== undefined) {
+    const slug = (r.work as { slug?: unknown } | null)?.slug
+    const work = works.find(w => w.slug === slug)
+    if (!work) return "Unknown book."
+    const dates = parseDates(r)
+    if (typeof dates === "string") return dates
+    // Titles come from the library, never from what the browser sent.
+    return { work: { slug: work.slug, title: work.title, titleAm: work.titleAm }, ...dates }
+  }
+
+  const preset = r.preset as PresetKey
+  if (!PRESET_KEYS.has(preset)) return "Unknown plan type."
+
+  const known = new Set(books.map(b => b.osis))
+  const bookList = Array.isArray(r.books) ? r.books.filter((b): b is string => typeof b === "string" && known.has(b)) : []
+  if (preset === "custom" && bookList.length === 0) return "Choose at least one book."
+
+  const dates = parseDates(r)
+  if (typeof dates === "string") return dates
 
   return {
     preset,
     books: preset === "custom" ? bookList.slice(0, 100) : [],
     sideBySide: r.sideBySide === true,
     withPsalms: r.withPsalms === true,
-    startDate,
-    endDate,
-    restWeekdays: rest.sort(),
+    ...dates,
   }
 }
 
@@ -109,9 +147,8 @@ export function parseConfig(raw: unknown, books: BookMeta[]): PlanConfig | strin
 
 /** Generate and save a plan. Any plan the reader already has running is
  *  archived — one plan at a time, kept in their history. */
-export async function createPlan(userId: number, config: PlanConfig) {
-  const { books, chapters } = await getBibleStructure()
-  const { days, summary } = generatePlan(config, books, chapters)
+export async function createPlan(userId: number, config: AnyPlanConfig) {
+  const { days, summary } = await generateFor(config)
   if (days.length === 0) throw new Error("This selection has nothing to read.")
 
   return prisma.$transaction(async tx => {
@@ -120,7 +157,7 @@ export async function createPlan(userId: number, config: PlanConfig) {
       data: {
         userId,
         title: planTitle(config, summary.readingDays, "en"),
-        source: "bible",
+        source: isWorkConfig(config) ? "fathers" : "bible",
         config: config as object,
         startDate: dbDate(days[0].date),
         endDate: dbDate(days[days.length - 1].date),
@@ -139,18 +176,28 @@ export async function createPlan(userId: number, config: PlanConfig) {
   })
 }
 
+async function generateFor(config: AnyPlanConfig) {
+  if (isWorkConfig(config)) {
+    const work = (await getWorkShelf()).find(w => w.slug === config.work.slug)
+    if (!work) throw new Error("Unknown book.")
+    return generateWorkPlan(config as WorkPlanConfig, work)
+  }
+  const { books, chapters } = await getBibleStructure()
+  return generatePlan(config, books, chapters)
+}
+
 // ── Reading ───────────────────────────────────────────────────────────────────
 
 export interface PlanDayView {
   dayNumber: number
   date: string
-  readings: Reading[]
+  readings: AnyReading[]
   completed: boolean
 }
 
 export interface ActivePlanView {
   id: number
-  config: PlanConfig
+  config: AnyPlanConfig
   startDate: string
   endDate: string
   totalDays: number
@@ -199,11 +246,11 @@ export async function getActivePlan(userId: number, today: string): Promise<Acti
   const views: PlanDayView[] = window.map(d => ({
     dayNumber: d.dayNumber,
     date: isoOf(d.date),
-    readings: d.readings as unknown as Reading[],
+    readings: d.readings as unknown as AnyReading[],
     completed: d.completedAt !== null,
   }))
 
-  const ids = [...new Set(views.flatMap(v => v.readings.map(r => r.bookId)))]
+  const ids = [...new Set(views.flatMap(v => bibleIds(v.readings)))]
   const names = ids.length
     ? await prisma.blBook.findMany({
         where: { id: { in: ids } },
@@ -213,7 +260,7 @@ export async function getActivePlan(userId: number, today: string): Promise<Acti
 
   return {
     id: plan.id,
-    config: plan.config as unknown as PlanConfig,
+    config: plan.config as unknown as AnyPlanConfig,
     startDate: isoOf(plan.startDate),
     endDate: isoOf(plan.endDate),
     totalDays: plan.totalDays,
@@ -255,7 +302,7 @@ export async function setDayCompleted(userId: number, planId: number, dayNumber:
 export async function catchUp(userId: number, planId: number, today: string) {
   const plan = await ownPlan(userId, planId)
   if (!plan) return false
-  const config = plan.config as unknown as PlanConfig
+  const config = plan.config as unknown as AnyPlanConfig
   const rest = new Set(config.restWeekdays ?? [])
 
   const unread = await prisma.readingPlanDay.findMany({
@@ -299,17 +346,17 @@ export async function getPlanSchedule(userId: number, planId: number) {
     select: { dayNumber: true, date: true, readings: true, completedAt: true },
     orderBy: { dayNumber: "asc" },
   })
-  const ids = [...new Set(days.flatMap(d => (d.readings as unknown as Reading[]).map(r => r.bookId)))]
+  const ids = [...new Set(days.flatMap(d => bibleIds(d.readings as unknown as AnyReading[])))]
   const names = await prisma.blBook.findMany({
     where: { id: { in: ids } },
     select: { id: true, osisCode: true, englishName: true, amharicName: true },
   })
   return {
-    plan: { id: plan.id, config: plan.config as unknown as PlanConfig, totalDays: plan.totalDays, status: plan.status },
+    plan: { id: plan.id, config: plan.config as unknown as AnyPlanConfig, totalDays: plan.totalDays, status: plan.status },
     days: days.map(d => ({
       dayNumber: d.dayNumber,
       date: isoOf(d.date),
-      readings: d.readings as unknown as Reading[],
+      readings: d.readings as unknown as AnyReading[],
       completed: d.completedAt !== null,
     })),
     bookNames: Object.fromEntries(names.map(n => [n.id, { osis: n.osisCode, englishName: n.englishName, amharicName: n.amharicName }])),
@@ -327,16 +374,20 @@ export async function currentPlanId(userId: number): Promise<number | null> {
 }
 
 export interface PassageVerse { chapter: number; verse: number; am: string; en: string }
+export interface WorkPassageSection { position: number; title: string; paragraphs: string[] }
+export type DayPassage =
+  | { kind: "bible"; reading: Reading; verses: PassageVerse[] }
+  | { kind: "work"; reading: WorkReading; title: string; titleAm: string | null; author: string; authorAm: string | null; sections: WorkPassageSection[] }
 export interface PlanDayPage {
   planId: number
-  title: { config: PlanConfig; totalDays: number }
+  title: { config: AnyPlanConfig; totalDays: number }
   dayNumber: number
   date: string
   completed: boolean
   note: string
   hasPrev: boolean
   hasNext: boolean
-  passages: { reading: Reading; verses: PassageVerse[] }[]
+  passages: DayPassage[]
   bookNames: Record<number, { osis: string; englishName: string; amharicName: string | null }>
 }
 
@@ -351,7 +402,7 @@ export async function getPlanDay(userId: number, planId: number, dayNumber: numb
   const day = await prisma.readingPlanDay.findUnique({ where: { planId_dayNumber: { planId, dayNumber } } })
   if (!day) return null
 
-  const readings = day.readings as unknown as Reading[]
+  const readings = day.readings as unknown as AnyReading[]
   const translations = await prisma.blTranslation.findMany({
     where: { code: { in: ["am-1954", "en-kjv"] } },
     select: { id: true, code: true },
@@ -359,7 +410,26 @@ export async function getPlanDay(userId: number, planId: number, dayNumber: numb
   const amId = translations.find(t => t.code === "am-1954")?.id
   const enId = translations.find(t => t.code === "en-kjv")?.id
 
-  const passages = await Promise.all(readings.map(async reading => {
+  const passages = await Promise.all(readings.map(async (reading): Promise<DayPassage> => {
+    if (isWorkReading(reading)) {
+      const work = await prisma.cfWork.findUnique({
+        where: { id: reading.workId },
+        select: {
+          title: true, titleAm: true, author: true, authorAm: true,
+          sections: {
+            where: { position: { gte: reading.fromSection, lte: reading.toSection } },
+            orderBy: { position: "asc" },
+            select: { position: true, title: true, body: true },
+          },
+        },
+      })
+      return {
+        kind: "work", reading,
+        title: work?.title ?? reading.short, titleAm: work?.titleAm ?? null,
+        author: work?.author ?? "", authorAm: work?.authorAm ?? null,
+        sections: (work?.sections ?? []).map(s => ({ position: s.position, title: s.title, paragraphs: s.body.split("\n\n") })),
+      }
+    }
     const { bookId, startChapter: sc, endChapter: ec } = reading
     // A reading without verse bounds covers whole chapters.
     const fromVerse = reading.startVerse ? [{ OR: [{ chapter: { gt: sc } }, { verse: { gte: reading.startVerse } }] }] : []
@@ -370,6 +440,7 @@ export async function getPlanDay(userId: number, planId: number, dayNumber: numb
       select: { chapter: true, verse: true, texts: { select: { translationId: true, text: true } } },
     })
     return {
+      kind: "bible",
       reading,
       verses: rows.map(v => ({
         chapter: v.chapter,
@@ -381,13 +452,13 @@ export async function getPlanDay(userId: number, planId: number, dayNumber: numb
   }))
 
   const names = await prisma.blBook.findMany({
-    where: { id: { in: readings.map(r => r.bookId) } },
+    where: { id: { in: bibleIds(readings) } },
     select: { id: true, osisCode: true, englishName: true, amharicName: true },
   })
 
   return {
     planId,
-    title: { config: plan.config as unknown as PlanConfig, totalDays: plan.totalDays },
+    title: { config: plan.config as unknown as AnyPlanConfig, totalDays: plan.totalDays },
     dayNumber,
     date: isoOf(day.date),
     completed: day.completedAt !== null,

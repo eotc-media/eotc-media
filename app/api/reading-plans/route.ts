@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
-import { createPlan, getBibleStructure, parseConfig } from "@/lib/reading-plan-server"
+import { createPlan, getBibleStructure, getWorkShelf, parseConfig } from "@/lib/reading-plan-server"
 
 // Start a plan. The browser sends only the choices it made; the plan itself is
 // generated here, so a saved plan is always what the engine produces and never
@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Sign in to start a plan." }, { status: 401 })
 
   const body = await req.json().catch(() => null)
-  const { books } = await getBibleStructure()
-  const config = parseConfig(body?.config, books)
+  const [{ books }, works] = await Promise.all([getBibleStructure(), getWorkShelf()])
+  const config = parseConfig(body?.config, books, works)
   if (typeof config === "string") return NextResponse.json({ error: config }, { status: 400 })
 
   try {

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AlignJustify, ArrowLeft, BookOpen, Check, List, Loader2, NotebookPen } from "lucide-react"
 import { planTitle } from "@/lib/reading-plan"
-import type { PlanDayPage } from "@/lib/reading-plan-server"
+import type { DayPassage, PassageVerse, PlanDayPage } from "@/lib/reading-plan-server"
 import { buildVerseGroups } from "@/lib/verse-groups"
 import { useTr, readingHref, readingText, longDate } from "./shared"
 
@@ -40,6 +40,7 @@ export default function PlanDayReader({ data }: { data: PlanDayPage }) {
   const [done, setDone] = useState(data.completed)
   const [busy, setBusy] = useState(false)
   const view = useSyncExternalStore(subscribeViewMode, readViewMode, () => "line" as ViewMode)
+  const hasBible = data.passages.some(p => p.kind === "bible")
 
   async function toggleDone() {
     const next = !done
@@ -71,7 +72,7 @@ export default function PlanDayReader({ data }: { data: PlanDayPage }) {
           </h1>
           <p className="mt-1 text-sm text-slate-500">{longDate(data.date)}</p>
         </div>
-        <div className="flex rounded-xl bg-slate-100 p-1" role="group" aria-label={tr("አቀራረብ", "View")}>
+        {hasBible && <div className="flex rounded-xl bg-slate-100 p-1" role="group" aria-label={tr("አቀራረብ", "View")}>
           {([["line", List, tr("በጥቅስ", "By verse")], ["paragraph", AlignJustify, tr("በአንቀጽ", "Paragraph")]] as const).map(([mode, Icon, label]) => (
             <button
               key={mode}
@@ -84,7 +85,7 @@ export default function PlanDayReader({ data }: { data: PlanDayPage }) {
               <Icon className="h-3.5 w-3.5" /> {label}
             </button>
           ))}
-        </div>
+        </div>}
       </header>
 
       {data.passages.length > 1 && (
@@ -102,13 +103,19 @@ export default function PlanDayReader({ data }: { data: PlanDayPage }) {
           <div className="space-y-6">
             {data.passages.map((p, i) => (
               <article key={i} id={`passage-${i}`} className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-                <div className="flex items-baseline justify-between gap-4">
-                  <h2 className="text-lg font-semibold text-slate-900">{readingText(p.reading, data.bookNames, am)}</h2>
-                  <Link href={readingHref(p.reading, am)} className="inline-flex flex-shrink-0 items-center gap-1 text-xs font-medium text-slate-400 hover:text-blue-600">
-                    <BookOpen className="h-3.5 w-3.5" /> {tr("በመጽሐፍ ቅዱስ ይክፈቱ", "Open in Bible")}
-                  </Link>
-                </div>
-                <Passage verses={p.verses} am={am} view={view} chapterLabel={c => tr(`ምዕራፍ ${c}`, `Chapter ${c}`)} />
+                {p.kind === "bible" ? (
+                  <>
+                    <div className="flex items-baseline justify-between gap-4">
+                      <h2 className="text-lg font-semibold text-slate-900">{readingText(p.reading, data.bookNames, am)}</h2>
+                      <Link href={readingHref(p.reading, am)} className="inline-flex flex-shrink-0 items-center gap-1 text-xs font-medium text-slate-400 hover:text-blue-600">
+                        <BookOpen className="h-3.5 w-3.5" /> {tr("በመጽሐፍ ቅዱስ ይክፈቱ", "Open in Bible")}
+                      </Link>
+                    </div>
+                    <Passage verses={p.verses} am={am} view={view} chapterLabel={c => tr(`ምዕራፍ ${c}`, `Chapter ${c}`)} />
+                  </>
+                ) : (
+                  <WorkPassage passage={p} am={am} />
+                )}
               </article>
             ))}
           </div>
@@ -134,7 +141,7 @@ export default function PlanDayReader({ data }: { data: PlanDayPage }) {
 }
 
 function Passage({ verses, am, view, chapterLabel }: {
-  verses: PlanDayPage["passages"][number]["verses"]
+  verses: PassageVerse[]
   am: boolean
   view: ViewMode
   chapterLabel: (chapter: number) => string
@@ -180,6 +187,30 @@ function Passage({ verses, am, view, chapterLabel }: {
         </Fragment>
       ))}
     </div>
+  )
+}
+
+/** A day's chapters from a work of the Fathers. The text is the English
+ *  translation in either language; only the titles around it are translated. */
+function WorkPassage({ passage, am }: { passage: Extract<DayPassage, { kind: "work" }>; am: boolean }) {
+  return (
+    <>
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        {am ? (passage.authorAm ?? passage.author) : passage.author}
+      </p>
+      <h2 className="mt-1 text-lg font-semibold text-slate-900">{am ? (passage.titleAm ?? passage.title) : passage.title}</h2>
+      {am && <p className="mt-2 text-xs text-slate-400">ጽሑፉ በእንግሊዝኛ ትርጉም ብቻ ይገኛል።</p>}
+      <div className="mt-5 space-y-7">
+        {passage.sections.map(sec => (
+          <section key={sec.position}>
+            <h3 className="text-sm font-semibold text-slate-700">{sec.title}</h3>
+            <div className="mt-2 space-y-4 text-[17px] leading-8 text-slate-800">
+              {sec.paragraphs.map((para, k) => <p key={k}>{para}</p>)}
+            </div>
+          </section>
+        ))}
+      </div>
+    </>
   )
 }
 

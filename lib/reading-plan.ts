@@ -46,6 +46,33 @@ export interface PlanConfig {
   restWeekdays: number[]
 }
 
+/** A plan through one work of the Church Fathers. */
+export interface WorkPlanConfig {
+  work: { slug: string; title: string; titleAm: string | null }
+  startDate: string
+  endDate: string
+  restWeekdays: number[]
+}
+
+export type AnyPlanConfig = PlanConfig | WorkPlanConfig
+export const isWorkConfig = (c: AnyPlanConfig): c is WorkPlanConfig => "work" in c
+
+/** A work as the builder needs it: sections as [position, words]. */
+export interface WorkMeta {
+  id: number
+  slug: string
+  title: string
+  titleAm: string | null
+  short: string
+  shortAm: string | null
+  author: string
+  authorAm: string | null
+  description: string
+  descriptionAm: string | null
+  words: number
+  sections: [number, number][]
+}
+
 // ── Outputs ───────────────────────────────────────────────────────────────────
 
 /** A contiguous passage within one book. Verse bounds are present only when
@@ -61,10 +88,23 @@ export interface Reading {
   verses?: number
 }
 
+/** A run of chapters from a work of the Church Fathers (positions are 1-based). */
+export interface WorkReading {
+  workId: number
+  short: string
+  shortAm: string | null
+  fromSection: number
+  toSection: number
+  words: number
+}
+
+export type AnyReading = Reading | WorkReading
+export const isWorkReading = (r: AnyReading): r is WorkReading => "workId" in r
+
 export interface PlanDay {
   dayNumber: number
   date: string
-  readings: Reading[]
+  readings: AnyReading[]
   verses: number
 }
 
@@ -149,6 +189,8 @@ export const PRESETS: Record<
 // Average reading pace. About nine verses a minute is a comfortable,
 // attentive pace for Scripture — slower than skimming, not a study session.
 export const VERSES_PER_MINUTE = 9
+/** Unhurried reading of older English prose. */
+export const WORDS_PER_MINUTE = 180
 
 // ── Dates ─────────────────────────────────────────────────────────────────────
 
@@ -289,29 +331,39 @@ export function partition(units: Unit[], days: number): Unit[][] {
     work = [...work.slice(0, idx), ...splitUnit(work[idx], 2), ...work.slice(idx + 1)]
   }
 
-  const n = work.length
-  const parts = Math.min(days, n)
-  const prefix = [0]
-  for (const u of work) prefix.push(prefix[prefix.length - 1] + weight(u))
+  return cutByWeight(work.map(weight), days).map(([a, b]) => work.slice(a, b))
+}
 
-  // Cut where the running total is nearest each ideal boundary, leaving at
-  // least one unit for every later day.
-  const groups: Unit[][] = []
+/**
+ * Split a sequence of weights into at most `parts` contiguous runs of roughly
+ * equal total, cutting where the running total is nearest each ideal boundary
+ * and leaving at least one item for every later run. Returns [start, end)
+ * index pairs.
+ */
+export function cutByWeight(weights: number[], parts: number): [number, number][] {
+  const n = weights.length
+  const k = Math.min(parts, n)
+  if (k <= 0) return []
+  const total = weights.reduce((s, w) => s + w, 0)
+  const prefix = [0]
+  for (const w of weights) prefix.push(prefix[prefix.length - 1] + w)
+
+  const runs: [number, number][] = []
   let prev = 0
-  for (let j = 1; j < parts; j++) {
-    const ideal = (j * total) / parts
+  for (let j = 1; j < k; j++) {
+    const ideal = (j * total) / k
     const lo = prev + 1
-    const hi = n - (parts - j)
+    const hi = n - (k - j)
     let best = lo
     for (let c = lo; c <= hi; c++) {
       if (Math.abs(prefix[c] - ideal) < Math.abs(prefix[best] - ideal)) best = c
       else if (prefix[c] > ideal) break
     }
-    groups.push(work.slice(prev, best))
+    runs.push([prev, best])
     prev = best
   }
-  groups.push(work.slice(prev))
-  return groups
+  runs.push([prev, n])
+  return runs
 }
 
 /** Collapse a day's units into one reading per book. */
@@ -440,9 +492,52 @@ export function generatePlan(config: PlanConfig, books: BookMeta[], chapters: Ch
 }
 
 /** About how long a day's readings take. */
-export function minutesFor(readings: Reading[]): number {
-  const verses = readings.reduce((n, r) => n + (r.verses ?? 0), 0)
-  return Math.max(1, Math.round(verses / VERSES_PER_MINUTE))
+export function minutesFor(readings: AnyReading[]): number {
+  const minutes = readings.reduce(
+    (n, r) => n + (isWorkReading(r) ? r.words / WORDS_PER_MINUTE : (r.verses ?? 0) / VERSES_PER_MINUTE),
+    0,
+  )
+  return Math.max(1, Math.round(minutes))
+}
+
+/**
+ * A plan through one work: its chapters, kept whole, spread over the reading
+ * days so each day is about the same length. A work with fewer chapters than
+ * days simply ends early — a chapter is never split.
+ */
+export function generateWorkPlan(config: WorkPlanConfig, work: WorkMeta): GenerateResult {
+  const dates = readingDates(config.startDate, config.endDate, config.restWeekdays)
+  const runs = cutByWeight(work.sections.map(([, w]) => w), dates.length)
+  const days: PlanDay[] = runs.map(([a, b], i) => {
+    const words = work.sections.slice(a, b).reduce((s, [, w]) => s + w, 0)
+    return {
+      dayNumber: i + 1,
+      date: dates[i],
+      readings: [{
+        workId: work.id, short: work.short, shortAm: work.shortAm,
+        fromSection: work.sections[a][0], toSection: work.sections[b - 1][0], words,
+      }],
+      verses: 0,
+    }
+  })
+  const wordsPerDay = days.length ? work.words / days.length : 0
+  return {
+    days,
+    summary: {
+      readingDays: days.length,
+      totalVerses: 0,
+      totalChapters: work.sections.length,
+      versesPerDay: 0,
+      minutesPerDay: Math.max(1, Math.round(wordsPerDay / WORDS_PER_MINUTE)),
+      trackCount: 1,
+    },
+  }
+}
+
+/** Reading days a work needs at about `minutes` a day (never more than it has chapters). */
+export function daysForWorkMinutes(work: WorkMeta, minutes: number): number {
+  const days = Math.ceil(work.words / (Math.max(1, minutes) * WORDS_PER_MINUTE))
+  return Math.max(1, Math.min(work.sections.length, days))
 }
 
 /** Reading days needed to keep to about `minutes` a day. */
@@ -481,10 +576,17 @@ export function formatReading(r: Reading, bookName: string): string {
     : `${bookName} ${r.startChapter}–${r.endChapter}`
 }
 
+/** "1 Clement 4–9", "ዲዳኬ 3". Positions are the work's own chapter order. */
+export function formatWorkReading(r: WorkReading, lang: "am" | "en"): string {
+  const name = lang === "am" ? (r.shortAm ?? r.short) : r.short
+  return r.fromSection === r.toSection ? `${name} ${r.fromSection}` : `${name} ${r.fromSection}–${r.toSection}`
+}
+
 /** Plan title from its config, in either language. */
-export function planTitle(config: PlanConfig, readingDays: number, lang: "am" | "en"): string {
-  const name =
-    config.preset === "custom"
+export function planTitle(config: AnyPlanConfig, readingDays: number, lang: "am" | "en"): string {
+  const name = isWorkConfig(config)
+    ? lang === "am" ? (config.work.titleAm ?? config.work.title) : config.work.title
+    : config.preset === "custom"
       ? lang === "am" ? "የራስዎ ምርጫ" : "Your selection"
       : PRESETS[config.preset][lang]
   const span =

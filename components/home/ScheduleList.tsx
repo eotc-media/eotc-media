@@ -5,16 +5,16 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Check, Loader2 } from "lucide-react"
 import { ETHIOPIAN_MONTHS_AM, ETHIOPIAN_MONTHS_EN, gregorianToEthiopian } from "@/lib/ethiopian-calendar"
-import { planTitle, type PlanConfig, type Reading } from "@/lib/reading-plan"
+import { planTitle, type AnyPlanConfig, type AnyReading } from "@/lib/reading-plan"
 import { useTr, readingText, shortDate, type BookNames } from "./shared"
 
-interface Day { dayNumber: number; date: string; readings: Reading[]; completed: boolean }
+interface Day { dayNumber: number; date: string; readings: AnyReading[]; completed: boolean }
 
 export default function ScheduleList({
   planId, config, totalDays, days, bookNames, today,
 }: {
   planId: number
-  config: PlanConfig
+  config: AnyPlanConfig
   totalDays: number
   days: Day[]
   bookNames: BookNames

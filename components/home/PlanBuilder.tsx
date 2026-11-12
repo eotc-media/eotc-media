@@ -5,12 +5,14 @@ import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import {
   X, ChevronLeft, Check, Loader2, BookOpen, ScrollText, Cross, BookHeart, Music2,
-  ListChecks, Clock, CalendarDays, Sparkles,
+  ListChecks, Clock, CalendarDays, Sparkles, Library,
 } from "lucide-react"
 import { BIBLE_SECTIONS } from "@/lib/bible-sections"
 import {
-  PRESETS, addDays, daysForMinutes, endDateFor, generatePlan, isNewTestament, resolveTracks,
-  versesFor, type BookMeta, type ChapterRow, type PlanConfig, type PresetKey,
+  PRESETS, WORDS_PER_MINUTE, addDays, daysForMinutes, daysForWorkMinutes, endDateFor, generatePlan,
+  generateWorkPlan, isNewTestament, isWorkConfig, resolveTracks, versesFor,
+  type AnyPlanConfig, type BookMeta, type ChapterRow, type GenerateResult, type PlanConfig, type PresetKey,
+  type WorkMeta, type WorkPlanConfig,
 } from "@/lib/reading-plan"
 import { useTr, shortDate, longDate, readingText, WEEKDAY_SHORT_AM, WEEKDAY_SHORT_EN, type BookNames } from "./shared"
 
@@ -35,6 +37,15 @@ const DURATIONS = [
   { days: 730, am: "2 ዓመት", en: "2 years" },
 ]
 const MINUTES = [5, 10, 15, 20, 30, 45]
+// The Fathers' works are short — the longest is a few weeks at a modest pace.
+const WORK_DURATIONS = [
+  { days: 7, am: "1 ሳምንት", en: "1 week" },
+  { days: 14, am: "2 ሳምንት", en: "2 weeks" },
+  { days: 30, am: "1 ወር", en: "1 month" },
+  { days: 60, am: "2 ወር", en: "2 months" },
+]
+
+export type PlanSource = "bible" | "fathers"
 
 interface Structure { books: BookMeta[]; chapters: ChapterRow[] }
 
@@ -44,50 +55,67 @@ const NO_BOOKS: BookMeta[] = []
 const NO_CHAPTERS: ChapterRow[] = []
 
 export default function PlanBuilder({
-  open, onClose, today, signedIn, initialPreset, initialConfig, replacing = false,
+  open, onClose, today, signedIn, initialPreset, initialConfig, initialSource, replacing = false,
 }: {
   open: boolean
   onClose: () => void
   today: string
   signedIn: boolean
   initialPreset?: PresetKey
-  initialConfig?: PlanConfig | null
+  initialConfig?: AnyPlanConfig | null
+  /** Open on the Church Fathers shelf rather than the Bible. */
+  initialSource?: PlanSource
   /** A plan is already running: starting this one archives it. */
   replacing?: boolean
 }) {
   const { am, tr } = useTr()
   const router = useRouter()
 
+  const bibleDraft = initialConfig && !isWorkConfig(initialConfig) ? initialConfig : null
+  const workDraft = initialConfig && isWorkConfig(initialConfig) ? initialConfig : null
+
   const [structure, setStructure] = useState<Structure | null>(null)
+  const [shelf, setShelf] = useState<WorkMeta[] | null>(null)
   const [loadError, setLoadError] = useState(false)
+  const [source, setSource] = useState<PlanSource>(workDraft ? "fathers" : initialSource ?? "bible")
+  const [workSlug, setWorkSlug] = useState<string | null>(workDraft?.work.slug ?? null)
   // Opened from a preset on the homepage, the choice is already made — go
   // straight to pace. Only "choose books" still needs the first step.
   const [step, setStep] = useState<1 | 2>(
     initialConfig || (initialPreset && initialPreset !== "custom") ? 2 : 1,
   )
-  const [preset, setPreset] = useState<PresetKey>(initialConfig?.preset ?? initialPreset ?? "whole-bible")
-  const [custom, setCustom] = useState<Set<string>>(new Set(initialConfig?.books ?? []))
-  const [paceMode, setPaceMode] = useState<"date" | "minutes">("date")
+  const [preset, setPreset] = useState<PresetKey>(bibleDraft?.preset ?? initialPreset ?? "whole-bible")
+  const [custom, setCustom] = useState<Set<string>>(new Set(bibleDraft?.books ?? []))
+  // A book of the Fathers is easiest to pace by time; the Bible by an end date.
+  const [paceMode, setPaceMode] = useState<"date" | "minutes">(source === "fathers" ? "minutes" : "date")
   const [startDate, setStartDate] = useState(initialConfig?.startDate ?? today)
   const [endDate, setEndDate] = useState(
     initialConfig?.endDate ?? addDays(today, PRESETS[initialPreset && initialPreset !== "custom" ? initialPreset : "whole-bible"].days - 1),
   )
   const [minutes, setMinutes] = useState(10)
   const [rest, setRest] = useState<number[]>(initialConfig?.restWeekdays ?? [])
-  const [sideBySide, setSideBySide] = useState(initialConfig?.sideBySide ?? true)
-  const [withPsalms, setWithPsalms] = useState(initialConfig?.withPsalms ?? false)
+  const [sideBySide, setSideBySide] = useState(bibleDraft?.sideBySide ?? true)
+  const [withPsalms, setWithPsalms] = useState(bibleDraft?.withPsalms ?? false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
   // The builder's data is ~15 KB of chapter counts — fetched only when someone
   // actually opens it, never as part of the homepage.
   useEffect(() => {
-    if (!open || structure) return
+    if (!open || source !== "bible" || structure) return
     fetch("/api/reading-plans/structure")
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then(setStructure)
       .catch(() => setLoadError(true))
-  }, [open, structure])
+  }, [open, source, structure])
+
+  useEffect(() => {
+    if (!open || source !== "fathers" || shelf) return
+    fetch("/api/reading-plans/works")
+      .then(r => (r.ok ? r.json() : Promise.reject()))
+      .then(setShelf)
+      .catch(() => setLoadError(true))
+  }, [open, source, shelf])
 
   useEffect(() => {
     if (!open) return
@@ -100,6 +128,17 @@ export default function PlanBuilder({
       document.body.style.overflow = overflow
     }
   }, [open, onClose])
+
+  function chooseSource(s: PlanSource) {
+    setSource(s)
+    setPaceMode(s === "fathers" ? "minutes" : "date")
+  }
+
+  function chooseWork(slug: string) {
+    setWorkSlug(slug)
+    setEndDate(addDays(startDate, 13))
+    setStep(2)
+  }
 
   function choosePreset(p: PresetKey) {
     setPreset(p)
@@ -120,10 +159,19 @@ export default function PlanBuilder({
     return { ...base, endDate: endDateFor(startDate, days, rest) }
   }, [paceMode, minutes, structure, preset, custom, sideBySide, withPsalms, startDate, endDate, rest])
 
-  const result = useMemo(
-    () => (structure ? generatePlan(config, books, chapters) : null),
-    [config, structure, books, chapters],
-  )
+  const work = shelf?.find(w => w.slug === workSlug) ?? null
+  const workConfig: WorkPlanConfig | null = useMemo(() => {
+    if (!work) return null
+    const base: WorkPlanConfig = {
+      work: { slug: work.slug, title: work.title, titleAm: work.titleAm }, startDate, endDate, restWeekdays: rest,
+    }
+    return paceMode === "date" ? base : { ...base, endDate: endDateFor(startDate, daysForWorkMinutes(work, minutes), rest) }
+  }, [work, paceMode, minutes, startDate, endDate, rest])
+
+  const result: GenerateResult | null = useMemo(() => {
+    if (source === "fathers") return work && workConfig ? generateWorkPlan(workConfig, work) : null
+    return structure ? generatePlan(config, books, chapters) : null
+  }, [source, work, workConfig, config, structure, books, chapters])
 
   // Which options are meaningful for what is selected.
   const selectedOsis = useMemo(
@@ -135,11 +183,9 @@ export default function PlanBuilder({
   const showSideBySide = preset !== "psalms-proverbs" && spansBoth
 
   async function start() {
-    const finalConfig = {
-      ...config,
-      sideBySide: showSideBySide && sideBySide,
-      withPsalms: canAddPsalms && withPsalms,
-    }
+    const finalConfig: AnyPlanConfig = source === "fathers" && workConfig
+      ? workConfig
+      : { ...config, sideBySide: showSideBySide && sideBySide, withPsalms: canAddPsalms && withPsalms }
     if (!signedIn) {
       // Keep what they built through the sign-in round trip.
       try { localStorage.setItem(DRAFT_KEY, JSON.stringify(finalConfig)) } catch {}
@@ -193,7 +239,9 @@ export default function PlanBuilder({
               {tr(`ደረጃ ${step} ከ 2`, `Step ${step} of 2`)}
             </p>
             <h2 className="truncate text-lg font-semibold text-slate-900 sm:text-xl">
-              {step === 1 ? tr("ምን ማንበብ ይፈልጋሉ?", "What would you like to read?") : presetName(preset)}
+              {step === 1
+                ? tr("ምን ማንበብ ይፈልጋሉ?", "What would you like to read?")
+                : source === "fathers" && work ? (am ? (work.titleAm ?? work.title) : work.title) : presetName(preset)}
             </h2>
           </div>
           <button
@@ -208,13 +256,34 @@ export default function PlanBuilder({
         <div className="flex-1 overflow-y-auto">
           {loadError && (
             <p className="m-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-              {tr("መረጃውን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።", "Could not load the Bible. Please try again.")}
+              {tr("መረጃውን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።", "Could not load the books. Please try again.")}
             </p>
           )}
 
           {/* ── Step 1: what ─────────────────────────────────────────────── */}
           {step === 1 && (
             <div className="px-5 py-6 sm:px-7">
+              <div className="mb-5 inline-flex rounded-full bg-slate-100 p-1">
+                {([
+                  ["bible", BookOpen, tr("መጽሐፍ ቅዱስ", "The Bible")],
+                  ["fathers", Library, tr("የቤተ ክርስቲያን አበው", "Church Fathers")],
+                ] as const).map(([s, Icon, label]) => (
+                  <button
+                    key={s}
+                    onClick={() => chooseSource(s)}
+                    aria-pressed={source === s}
+                    className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
+                      source === s ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" /> {label}
+                  </button>
+                ))}
+              </div>
+
+              {source === "fathers" ? (
+                <WorkShelf shelf={shelf} loadError={loadError} selected={workSlug} onChoose={chooseWork} />
+              ) : (<>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {PRESET_ORDER.map(p => {
                   const Icon = PRESET_ICONS[p]
@@ -313,6 +382,7 @@ export default function PlanBuilder({
                   </div>
                 </div>
               )}
+              </>)}
             </div>
           )}
 
@@ -342,7 +412,7 @@ export default function PlanBuilder({
                   {paceMode === "date" ? (
                     <div className="mt-4">
                       <div className="flex flex-wrap gap-2">
-                        {DURATIONS.map(d => {
+                        {(source === "fathers" ? WORK_DURATIONS : DURATIONS).map(d => {
                           const end = addDays(startDate, d.days - 1)
                           const on = endDate === end
                           return (
@@ -428,7 +498,7 @@ export default function PlanBuilder({
                 </div>
 
                 {/* Options */}
-                {(showSideBySide || canAddPsalms) && (
+                {source === "bible" && (showSideBySide || canAddPsalms) && (
                   <div className="space-y-2">
                     {showSideBySide && (
                       <Toggle
@@ -546,6 +616,70 @@ function Stat({ value, label }: { value: string; label: string }) {
     <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center">
       <p className="text-xl font-semibold text-slate-900 tabular-nums">{value}</p>
       <p className="mt-0.5 text-[11px] text-slate-500">{label}</p>
+    </div>
+  )
+}
+
+/** The Church Fathers works, in suggested order, with how long each takes. */
+function WorkShelf({ shelf, loadError, selected, onChoose }: {
+  shelf: WorkMeta[] | null
+  loadError: boolean
+  selected: string | null
+  onChoose: (slug: string) => void
+}) {
+  const { am, tr } = useTr()
+  if (!shelf) {
+    return loadError ? null : (
+      <div className="flex items-center gap-2 py-10 text-sm text-slate-500">
+        <Loader2 className="h-4 w-4 animate-spin" /> {tr("በመጫን ላይ…", "Loading…")}
+      </div>
+    )
+  }
+  const length = (w: WorkMeta) => {
+    const minutes = Math.max(5, Math.round(w.words / WORDS_PER_MINUTE / 5) * 5)
+    if (minutes < 60) return tr(`በአጠቃላይ ~${minutes} ደቂቃ`, `about ${minutes} min in all`)
+    const hours = Math.round((minutes / 60) * 2) / 2
+    return tr(`በአጠቃላይ ~${hours} ሰዓት`, `about ${hours} ${hours === 1 ? "hour" : "hours"} in all`)
+  }
+  return (
+    <div>
+      <p className="mb-4 max-w-2xl text-sm text-slate-600">
+        {tr(
+          "ሐዋርያውያን አበው — ከሐዋርያት ቀጥሎ የነበሩት የመጀመሪያው ትውልድ መምህራን። አጫጭርና ለመጀመር ምቹ ናቸው፤ በተጠቆመው ቅደም ተከተል ተዘርዝረዋል።",
+          "The Apostolic Fathers: the generation that followed the Apostles. Short and a good place to begin, listed in a suggested order.",
+        )}
+      </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {shelf.map((w, i) => {
+          const on = selected === w.slug
+          return (
+            <button
+              key={w.slug}
+              onClick={() => onChoose(w.slug)}
+              className={`flex flex-col items-start rounded-2xl border p-4 text-left transition-all cursor-pointer ${
+                on ? "border-blue-500 bg-blue-50/60 ring-1 ring-blue-500" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+              }`}
+            >
+              <span className="flex w-full items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  {am ? (w.authorAm ?? w.author) : w.author}
+                </span>
+                {i === 0 && (
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                    {tr("ከዚህ ይጀምሩ", "Start here")}
+                  </span>
+                )}
+              </span>
+              <span className="mt-1 font-semibold text-slate-900">{am ? (w.titleAm ?? w.title) : w.title}</span>
+              <span className="mt-1 text-sm leading-relaxed text-slate-600">{am ? (w.descriptionAm ?? w.description) : w.description}</span>
+              <span className="mt-2 text-xs font-medium text-slate-400">
+                {length(w)} · {tr(`${w.sections.length} ምዕራፎች`, `${w.sections.length} chapters`)}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      {am && <p className="mt-4 text-xs text-slate-400">መጻሕፍቱ በእንግሊዝኛ ትርጉም (1885) ይገኛሉ።</p>}
     </div>
   )
 }
