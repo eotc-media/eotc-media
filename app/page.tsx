@@ -1,12 +1,13 @@
 import type { Metadata } from "next"
 import { cookies } from "next/headers"
+import { after } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { getHymns } from "@/lib/api/hymns"
 import { getSermons } from "@/lib/api/sermons"
 import { getActivePlans, getStoppedPlans, localHour, localToday } from "@/lib/reading-plan-server"
 import { SITE_DESCRIPTION } from "@/lib/seo"
-import { nameInBothScripts } from "@/lib/name-script"
+import { fillNameScripts, greetingNames } from "@/lib/name-script"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import TodayHero from "@/components/home/TodayHero"
@@ -58,13 +59,17 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ r
   const hour = localHour(tz)
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
 
-  const [plans, listen] = await Promise.all([
+  const [plans, listen, me] = await Promise.all([
     userId ? Promise.all([getActivePlans(userId, today), getStoppedPlans(userId)]) : Promise.resolve(null),
     listenItems(userId),
+    userId ? prisma.user.findUnique({ where: { id: userId }, select: { name: true, nameAm: true, nameEn: true } }) : null,
   ])
 
-  const firstName = session?.user?.name?.trim().split(/\s+/)[0] || null
-  const greetName = firstName ? await nameInBothScripts(firstName) : null
+  // The greeting reads the stored spellings. An account that has not got both
+  // yet has the missing one spelled once, after this page is sent, so the
+  // next visit greets in the right alphabet.
+  const greetName = me ? greetingNames(me) : null
+  if (userId && me && (!me.nameAm || !me.nameEn)) after(() => fillNameScripts(userId))
 
   return (
     <div className="min-h-screen bg-slate-50">

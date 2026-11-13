@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
+import { fillNameScripts } from "@/lib/name-script"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
@@ -46,6 +47,9 @@ export async function POST(request: Request) {
         password: hashedPassword,
       },
     })
+
+    // The greeting's other-alphabet spelling, worked out once after replying.
+    after(() => fillNameScripts(user.id))
 
     // Assign default "user" role
     const userRole = await prisma.role.findFirst({

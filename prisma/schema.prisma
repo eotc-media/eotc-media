@@ -17,6 +17,11 @@ datasource db {
 model User {
   id            Int       @id @default(autoincrement())
   name          String
+  /// The name in each alphabet, for greeting the person in the language they
+  /// read in. One is the name as they wrote it; the other is spelled by Gemini
+  /// once (lib/name-script.ts) and can be corrected on the profile page.
+  nameAm        String?   @map("name_am")
+  nameEn        String?   @map("name_en")
   image         String?
   email         String    @unique
   emailVerified DateTime? @map("email_verified_at")

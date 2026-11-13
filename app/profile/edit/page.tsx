@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/auth"
+import { prisma } from "@/lib/prisma"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import EditProfileForm from "@/app/profile/edit/EditProfileForm"
@@ -13,8 +14,14 @@ export default async function EditProfilePage() {
     redirect('/auth/login')
   }
 
+  const spellings = await prisma.user.findUnique({
+    where: { id: parseInt(session.user.id) },
+    select: { nameAm: true, nameEn: true },
+  })
   const user = {
     name: session.user.name || '',
+    nameAm: spellings?.nameAm ?? '',
+    nameEn: spellings?.nameEn ?? '',
     email: session.user.email || '',
     image: session.user.image || null,
     roles: session.user.roles || []

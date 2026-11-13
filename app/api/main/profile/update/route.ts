@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { putObject, deleteObject } from '@/lib/storage'
+import { fillNameScripts, isEthiopicName } from '@/lib/name-script'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +14,9 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData()
     const name = formData.get('name') as string
+    // Present only when the member changed them on the form.
+    const nameAmField = formData.get('nameAm')
+    const nameEnField = formData.get('nameEn')
     const image = formData.get('image') as File | null
 
     // Validation
@@ -72,14 +76,32 @@ export async function POST(request: NextRequest) {
       await putObject(`profiles/${imageName}`, buffer, image.type || 'image/jpeg')
     }
 
+    // The name in each alphabet. Spellings the member typed are kept as given
+    // (empty clears one). A changed main name without new spellings replaces
+    // its own side and drops the other, which is then spelled afresh.
+    const spelling = (v: FormDataEntryValue | null) =>
+      v === null ? undefined : String(v).replace(/\s+/g, ' ').trim().slice(0, 100) || null
+    const names: { nameAm?: string | null; nameEn?: string | null } = {
+      nameAm: spelling(nameAmField),
+      nameEn: spelling(nameEnField),
+    }
+    const newName = name.trim()
+    if (newName !== user.name.trim()) {
+      const ethiopic = isEthiopicName(newName)
+      if (names.nameAm === undefined) names.nameAm = ethiopic ? newName : null
+      if (names.nameEn === undefined) names.nameEn = ethiopic ? null : newName
+    }
+
     // Update user
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
-        name,
-        image: imageName
+        name: newName,
+        image: imageName,
+        ...names,
       }
     })
+    after(() => fillNameScripts(userId))
 
     console.log('User updated successfully:', {
       id: updatedUser.id,

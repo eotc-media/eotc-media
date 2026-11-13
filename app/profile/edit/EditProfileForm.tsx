@@ -13,6 +13,8 @@ import getCroppedImg from "@/lib/cropImage"
 interface EditProfileFormProps {
   user: {
     name: string
+    nameAm: string
+    nameEn: string
     email: string
     image: string | null
   }
@@ -24,6 +26,8 @@ export default function EditProfileForm({ user }: EditProfileFormProps) {
   
   const [formData, setFormData] = useState({
     name: user.name,
+    nameAm: user.nameAm,
+    nameEn: user.nameEn,
   })
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -107,6 +111,10 @@ export default function EditProfileForm({ user }: EditProfileFormProps) {
     try {
       const formDataToSend = new FormData()
       formDataToSend.append('name', formData.name)
+      // Sent only when changed here, so editing the main name lets the other
+      // spelling be worked out again rather than keeping an old one.
+      if (formData.nameAm !== user.nameAm) formDataToSend.append('nameAm', formData.nameAm)
+      if (formData.nameEn !== user.nameEn) formDataToSend.append('nameEn', formData.nameEn)
       if (imageFile) {
         formDataToSend.append('image', imageFile)
       }
@@ -207,6 +215,31 @@ export default function EditProfileForm({ user }: EditProfileFormProps) {
                 />
               </div>
               {errors.name && <InputError message={errors.name} />}
+            </li>
+            <li className="px-4 border-b border-gray-300 bg-white">
+              <div className="flex items-center py-2">
+                <span className="whitespace-nowrap">Name in Amharic <span className="text-xs text-gray-400">(ስም በአማርኛ)</span></span>
+                <input
+                  type="text"
+                  className="ms-4 flex-1 border-0 px-0 py-0 text-end focus:outline-none focus:ring-0"
+                  value={formData.nameAm}
+                  onChange={(e) => setFormData({ ...formData, nameAm: e.target.value })}
+                  placeholder="Optional"
+                />
+              </div>
+            </li>
+            <li className="px-4 border-b border-gray-300 bg-white">
+              <div className="flex items-center py-2">
+                <span className="whitespace-nowrap">Name in English</span>
+                <input
+                  type="text"
+                  className="ms-4 flex-1 border-0 px-0 py-0 text-end focus:outline-none focus:ring-0"
+                  value={formData.nameEn}
+                  onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                  placeholder="Optional"
+                />
+              </div>
+              <p className="pb-2 text-xs text-gray-400">Used to greet you in each language. Leave one empty and we&apos;ll spell it for you.</p>
             </li>
             <li className="px-4 py-3 bg-white">
               <span>Email</span>
