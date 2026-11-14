@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import { auth } from "@/auth"
 import { getBook, getRelatedBooks } from "@/lib/api/books"
+import { bookOnline } from "@/lib/books-reader"
 import { absoluteUrl, jsonLd } from "@/lib/seo"
 import Navbar from "@/components/Navbar"
 import BookSidebar from "@/components/books/BookSidebar"
@@ -47,7 +48,7 @@ export default async function BookPage({ params }: PageProps) {
   const book = await getBook(slug, userId)
   if (!book) notFound()
 
-  const relatedBooks = await getRelatedBooks(book)
+  const [relatedBooks, online] = await Promise.all([getRelatedBooks(book), bookOnline(slug, userId)])
 
   return (
     <div className="min-h-screen bg-white">
@@ -84,7 +85,7 @@ export default async function BookPage({ params }: PageProps) {
         <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
           <BookSidebar userId={userId} />
           <main className="min-w-0 px-4 sm:px-6 lg:px-8 py-6 max-w-4xl">
-            <BookDetailClient book={book} userId={userId} />
+            <BookDetailClient book={book} userId={userId} online={online} />
 
             {relatedBooks.length > 0 && (
               <section className="mt-10">

@@ -1,15 +1,14 @@
 "use client"
 
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react"
+import { Fragment, useState, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AlignJustify, ArrowLeft, BookOpen, Check, List, Loader2, NotebookPen } from "lucide-react"
+import { AlignJustify, ArrowLeft, BookOpen, Check, List, Loader2 } from "lucide-react"
 import { planTitle } from "@/lib/reading-plan"
 import type { DayPassage, PassageVerse, PlanDayPage } from "@/lib/reading-plan-server"
 import { buildVerseGroups } from "@/lib/verse-groups"
 import { useTr, readingHref, readingText, longDate } from "./shared"
-
-type SaveState = "idle" | "saving" | "saved" | "error"
+import NoteEditor from "./NoteEditor"
 
 // Same setting, and same storage key, as the Bible reader's "By verse /
 // Paragraph" switch: choosing a layout in one place applies in both.
@@ -133,7 +132,7 @@ export default function PlanDayReader({ data }: { data: PlanDayPage }) {
         </div>
 
         <aside className="lg:sticky lg:top-24">
-          <NoteEditor planId={data.planId} dayNumber={data.dayNumber} initial={data.note} />
+          <NoteEditor url={`/api/reading-plans/${data.planId}/days/${data.dayNumber}/note`} initial={data.note} />
         </aside>
       </div>
     </div>
@@ -228,74 +227,5 @@ function WorkPassage({ passage, am }: { passage: Extract<DayPassage, { kind: "wo
         ))}
       </div>
     </>
-  )
-}
-
-function persistNote(planId: number, dayNumber: number, note: string): Promise<boolean> {
-  return fetch(`/api/reading-plans/${planId}/days/${dayNumber}/note`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ note }),
-    keepalive: true, // lets a save started while leaving the page finish
-  }).then(r => r.ok, () => false)
-}
-
-/** Saves on its own a moment after typing stops, on leaving the box, and on leaving the page. */
-function NoteEditor({ planId, dayNumber, initial }: { planId: number; dayNumber: number; initial: string }) {
-  const { tr } = useTr()
-  const [text, setText] = useState(initial)
-  const [state, setState] = useState<SaveState>("idle")
-  const saved = useRef(initial)
-  const latest = useRef(initial)
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-
-  async function save() {
-    clearTimeout(timer.current)
-    const value = latest.current
-    if (value === saved.current) return
-    setState("saving")
-    if (await persistNote(planId, dayNumber, value)) {
-      saved.current = value
-      setState("saved")
-    } else {
-      setState("error")
-    }
-  }
-
-  function onChange(value: string) {
-    setText(value)
-    latest.current = value
-    clearTimeout(timer.current)
-    timer.current = setTimeout(save, 800)
-  }
-
-  useEffect(() => () => {
-    clearTimeout(timer.current)
-    if (latest.current !== saved.current) persistNote(planId, dayNumber, latest.current)
-  }, [planId, dayNumber])
-
-  return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <NotebookPen className="h-4 w-4 text-slate-400" /> {tr("ማስታወሻ", "Notes")}
-        </h2>
-        <span className="text-xs text-slate-400" aria-live="polite">
-          {state === "saving" && tr("በማስቀመጥ ላይ…", "Saving…")}
-          {state === "saved" && tr("ተቀምጧል", "Saved")}
-          {state === "error" && <span className="text-rose-600">{tr("አልተቀመጠም፤ እንደገና ይሞክሩ", "Not saved — try again")}</span>}
-        </span>
-      </div>
-      <textarea
-        value={text}
-        onChange={e => onChange(e.target.value)}
-        onBlur={save}
-        maxLength={5000}
-        rows={8}
-        placeholder={tr("ከዛሬው ንባብ ያገኙትን ሐሳብ፣ ጸሎት ወይም ጥያቄ ይጻፉ…", "What stood out to you today — a thought, a prayer, a question…")}
-        className="mt-3 block w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-[15px] leading-7 text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
-      />
-      <p className="mt-2 text-xs text-slate-400">{tr("ማስታወሻዎ ለእርስዎ ብቻ ይታያል።", "Only you can see your notes.")}</p>
-    </section>
   )
 }

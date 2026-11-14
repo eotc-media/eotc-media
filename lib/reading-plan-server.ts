@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
+import { readApprovedAmharic, readWorkText } from "@/lib/library"
 import {
   addDays, generatePlan, generateWorkPlan, isWorkConfig, isWorkReading, parseDate, planTitle, PRESETS,
   type AnyPlanConfig, type AnyReading, type BookMeta, type ChapterRow, type PresetKey, type Reading,
@@ -48,7 +49,7 @@ export const getWorkShelf = unstable_cache(
       include: { sections: { select: { position: true, words: true }, orderBy: { position: "asc" } } },
     })
     return works.map(w => ({
-      id: w.id, slug: w.slug, title: w.title, titleAm: w.titleAm, short: w.short, shortAm: w.shortAm,
+      id: w.id, slug: w.slug, collection: w.collection, title: w.title, titleAm: w.titleAm, short: w.short, shortAm: w.shortAm,
       author: w.author, authorAm: w.authorAm, description: w.description, descriptionAm: w.descriptionAm,
       words: w.words, sections: w.sections.map(s => [s.position, s.words] as [number, number]),
     }))
@@ -120,7 +121,15 @@ export function parseConfig(raw: unknown, books: BookMeta[], works: WorkMeta[]):
     if (!work) return "Unknown book."
     const dates = parseDates(r)
     if (typeof dates === "string") return dates
-    // Titles come from the library, never from what the browser sent.
+    const range = r.range as { from?: unknown; to?: unknown } | undefined
+    if (range !== undefined) {
+      const positions = new Set(work.sections.map(([p]) => p))
+      const from = Number(range?.from), to = Number(range?.to)
+      if (!positions.has(from) || !positions.has(to) || from > to) return "Invalid part of the book."
+      // Named after the book in Books that is exactly this part (see
+      // namePartPlan); the work's title until then.
+      return { work: { slug: work.slug, title: work.title, titleAm: work.titleAm }, range: { from, to }, ...dates }
+    }
     return { work: { slug: work.slug, title: work.title, titleAm: work.titleAm }, ...dates }
   }
 
@@ -141,6 +150,21 @@ export function parseConfig(raw: unknown, books: BookMeta[], works: WorkMeta[]):
     withPsalms: r.withPsalms === true,
     ...dates,
   }
+}
+
+/**
+ * A plan over part of a work is offered only from a book in Books that is that
+ * part (one letter of Ignatius), and takes that book's name. Titles never come
+ * from what the browser sent. Returns an error message for any other part.
+ */
+export async function namePartPlan(config: AnyPlanConfig): Promise<AnyPlanConfig | string> {
+  if (!isWorkConfig(config) || !config.range) return config
+  const book = await prisma.cbBook.findFirst({
+    where: { cfWork: { slug: config.work.slug }, cfFromSection: config.range.from, cfToSection: config.range.to },
+    select: { name: true },
+  })
+  if (!book) return "Invalid part of the book."
+  return { ...config, work: { ...config.work, title: book.name.replace(/\s+/g, " ").trim(), titleAm: null } }
 }
 
 // ── Creating ──────────────────────────────────────────────────────────────────
@@ -468,14 +492,17 @@ export async function getPlanDay(userId: number, planId: number, dayNumber: numb
       const work = await prisma.cfWork.findUnique({
         where: { id: reading.workId },
         select: {
-          title: true, titleAm: true, author: true, authorAm: true,
+          slug: true, title: true, titleAm: true, author: true, authorAm: true,
           sections: {
             where: { position: { gte: reading.fromSection, lte: reading.toSection } },
             orderBy: { position: "asc" },
-            select: { position: true, title: true, titleAm: true, body: true, bodyAm: true, bodyAmApproved: true },
+            select: { position: true, title: true },
           },
         },
       })
+      const [text, amharic] = work
+        ? await Promise.all([readWorkText(work.slug), readApprovedAmharic(work.slug)])
+        : [new Map<number, string[]>(), new Map<number, { title: string | null; paragraphs: string[] }>()]
       return {
         kind: "work", reading,
         title: work?.title ?? reading.short, titleAm: work?.titleAm ?? null,
@@ -483,9 +510,9 @@ export async function getPlanDay(userId: number, planId: number, dayNumber: numb
         sections: (work?.sections ?? []).map(s => ({
           position: s.position,
           title: s.title,
-          paragraphs: s.body.split("\n\n"),
-          titleAm: s.bodyAmApproved ? s.titleAm : null,
-          paragraphsAm: s.bodyAmApproved && s.bodyAm ? s.bodyAm.split("\n\n") : null,
+          paragraphs: text.get(s.position) ?? [],
+          titleAm: amharic.get(s.position)?.title ?? null,
+          paragraphsAm: amharic.get(s.position)?.paragraphs ?? null,
         })),
       }
     }

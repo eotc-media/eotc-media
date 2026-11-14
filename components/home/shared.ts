@@ -47,10 +47,14 @@ export function longDate(iso: string): string {
 }
 
 const noSubscribe = () => () => {}
-function clientNow(): string {
+/** Today on the reader's own clock, as YYYY-MM-DD. Browser only. */
+export function localDateToday(): string {
   const d = new Date()
   const p = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}|${d.getHours()}`
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+function clientNow(): string {
+  return `${localDateToday()}|${new Date().getHours()}`
 }
 
 /** The reader's own date and hour once the page is running in their browser;

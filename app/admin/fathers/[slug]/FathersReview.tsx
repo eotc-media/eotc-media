@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { Check, Loader2, RotateCcw, Upload } from "lucide-react"
 
 interface Section {
-  id: number
   position: number
   title: string
   titleAm: string | null
@@ -82,12 +81,12 @@ export default function FathersReview({ slug, sections }: { slug: string; sectio
         </p>
       </div>
 
-      {sections.map(s => <SectionReview key={s.id} section={s} />)}
+      {sections.map(s => <SectionReview key={s.position} slug={slug} section={s} />)}
     </div>
   )
 }
 
-function SectionReview({ section }: { section: Section }) {
+function SectionReview({ slug, section }: { slug: string; section: Section }) {
   const router = useRouter()
   const [text, setText] = useState(section.bodyAm ?? "")
   const [title, setTitle] = useState(section.titleAm ?? "")
@@ -98,7 +97,7 @@ function SectionReview({ section }: { section: Section }) {
   async function save(approved?: boolean) {
     setSaving(true)
     setError("")
-    const res = await fetch(`/api/admin/fathers/sections/${section.id}`, {
+    const res = await fetch(`/api/admin/fathers/${slug}/chapters/${section.position}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...(edited ? { bodyAm: text, titleAm: title } : {}), ...(approved !== undefined ? { approved } : {}) }),

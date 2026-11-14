@@ -15,7 +15,7 @@ translators' own [bracketed] insertions are kept. Each work becomes an ordered
 list of sections (its chapters), each a list of plain-text paragraphs.
 
 To add a work, add an entry to WORKS below and re-run, then regenerate the
-migration with scripts/fathers/to_sql.py.
+library file with scripts/fathers/to_bundle.py.
 """
 
 import json
@@ -56,6 +56,21 @@ WORKS = [
     {"slug": "barnabas", "vol": "anf01", "ids": ["vi.ii"], "mode": "chapters"},
     {"slug": "hermas", "vol": "anf02", "ids": ["ii.ii", "ii.iii", "ii.iv"], "mode": "subchapters"},
     {"slug": "papias", "vol": "anf01", "ids": ["vii.ii"], "mode": "chapters"},
+    # St Justin Martyr
+    {"slug": "justin-first-apology", "vol": "anf01", "ids": ["viii.ii"], "mode": "chapters"},
+    {"slug": "justin-second-apology", "vol": "anf01", "ids": ["viii.iii"], "mode": "chapters"},
+    {"slug": "justin-dialogue-trypho", "vol": "anf01", "ids": ["viii.iv"], "mode": "chapters"},
+    {"slug": "justin-discourse-greeks", "vol": "anf01", "ids": ["viii.v"], "mode": "chapters"},
+    {"slug": "justin-hortatory-address", "vol": "anf01", "ids": ["viii.vi"], "mode": "chapters"},
+    {"slug": "justin-sole-government", "vol": "anf01", "ids": ["viii.vii"], "mode": "chapters"},
+    {"slug": "justin-resurrection", "vol": "anf01", "ids": ["viii.viii"], "mode": "chapters"},
+    {"slug": "martyrdom-of-justin", "vol": "anf01", "ids": ["viii.xi"], "mode": "chapters"},
+    # St Irenaeus of Lyons, Against Heresies
+    {"slug": "irenaeus-against-heresies-1", "vol": "anf01", "ids": ["ix.ii"], "mode": "chapters"},
+    {"slug": "irenaeus-against-heresies-2", "vol": "anf01", "ids": ["ix.iii"], "mode": "chapters"},
+    {"slug": "irenaeus-against-heresies-3", "vol": "anf01", "ids": ["ix.iv"], "mode": "chapters"},
+    {"slug": "irenaeus-against-heresies-4", "vol": "anf01", "ids": ["ix.vi"], "mode": "chapters"},
+    {"slug": "irenaeus-against-heresies-5", "vol": "anf01", "ids": ["ix.vii"], "mode": "chapters"},
 ]
 
 

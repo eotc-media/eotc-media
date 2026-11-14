@@ -2,16 +2,23 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Download, ThumbsUp, Flag, MessageSquare, X } from "lucide-react"
+import { Download, ThumbsUp, Flag, MessageSquare, X, BookOpenText, CalendarCheck } from "lucide-react"
+import PlanBuilder from "@/components/home/PlanBuilder"
+import type { bookOnline } from "@/lib/books-reader"
+import { localDateToday } from "@/components/home/shared"
 import { CbBook, CbBookComment } from "@/types/models/book"
 import { bookImageUrl, bookFileUrl } from "@/lib/book-assets"
 
 interface BookDetailClientProps {
   book: CbBook & { comments?: CbBookComment[]; hasLiked?: boolean; likesCount?: number; commentsCount?: number }
   userId?: number
+  /** Present when the book can be read online (a Church Fathers text). */
+  online?: Awaited<ReturnType<typeof bookOnline>>
 }
 
-export default function BookDetailClient({ book, userId }: BookDetailClientProps) {
+export default function BookDetailClient({ book, userId, online }: BookDetailClientProps) {
+  // The plan builder, opened on this book; today is the reader's own date.
+  const [planFrom, setPlanFrom] = useState<string | null>(null)
   const [liked, setLiked] = useState(book.hasLiked ?? false)
   const [likesCount, setLikesCount] = useState(book.likesCount ?? 0)
   const [comments, setComments] = useState<CbBookComment[]>(book.comments ?? [])
@@ -113,6 +120,28 @@ export default function BookDetailClient({ book, userId }: BookDetailClientProps
 
             {book.description && (
               <p className="text-sm text-slate-600 leading-relaxed pt-1">{book.description}</p>
+            )}
+
+            {online && (
+              <div className="pt-2 flex flex-wrap gap-2">
+                <Link
+                  href={`/books/${encodeURIComponent(book.slug)}/read${online.continueAt ? `?ch=${online.continueAt}` : ""}`}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <BookOpenText className="w-4 h-4" />
+                  {online.continueAt ? `Continue · Chapter ${online.continueAt}` : "Read online"}
+                </Link>
+                <button
+                  onClick={() => setPlanFrom(localDateToday())}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-200 text-blue-700 text-sm font-semibold rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
+                >
+                  <CalendarCheck className="w-4 h-4" />
+                  Read with a plan
+                </button>
+                <span className="self-center text-xs text-slate-400">
+                  {online.chapters} chapters · about {Math.max(5, Math.round(online.words / 180 / 5) * 5)} min in all
+                </span>
+              </div>
             )}
 
             <div className="pt-2 flex flex-wrap gap-2">
@@ -235,6 +264,15 @@ export default function BookDetailClient({ book, userId }: BookDetailClientProps
           )}
         </div>
       </div>
+      {online && planFrom && (
+        <PlanBuilder
+          open
+          onClose={() => setPlanFrom(null)}
+          today={planFrom}
+          signedIn={!!userId}
+          initialWork={online.plan}
+        />
+      )}
     </div>
   )
 }

@@ -46,9 +46,12 @@ export interface PlanConfig {
   restWeekdays: number[]
 }
 
-/** A plan through one work of the Church Fathers. */
+/** A plan through one work of the Church Fathers, or a run of its chapters
+ *  (one letter of Ignatius, as a book in Books). */
 export interface WorkPlanConfig {
   work: { slug: string; title: string; titleAm: string | null }
+  /** Chapter positions, inclusive. Absent: the whole work. */
+  range?: { from: number; to: number }
   startDate: string
   endDate: string
   restWeekdays: number[]
@@ -61,6 +64,7 @@ export const isWorkConfig = (c: AnyPlanConfig): c is WorkPlanConfig => "work" in
 export interface WorkMeta {
   id: number
   slug: string
+  collection: string
   title: string
   titleAm: string | null
   short: string
@@ -505,7 +509,8 @@ export function minutesFor(readings: AnyReading[]): number {
  * days so each day is about the same length. A work with fewer chapters than
  * days simply ends early — a chapter is never split.
  */
-export function generateWorkPlan(config: WorkPlanConfig, work: WorkMeta): GenerateResult {
+export function generateWorkPlan(config: WorkPlanConfig, whole: WorkMeta): GenerateResult {
+  const work = workPart(whole, config.range)
   const dates = readingDates(config.startDate, config.endDate, config.restWeekdays)
   const runs = cutByWeight(work.sections.map(([, w]) => w), dates.length)
   const days: PlanDay[] = runs.map(([a, b], i) => {
@@ -532,6 +537,13 @@ export function generateWorkPlan(config: WorkPlanConfig, work: WorkMeta): Genera
       trackCount: 1,
     },
   }
+}
+
+/** The chapters of a work a plan covers. */
+export function workPart(work: WorkMeta, range?: { from: number; to: number }): WorkMeta {
+  if (!range) return work
+  const sections = work.sections.filter(([pos]) => pos >= range.from && pos <= range.to)
+  return { ...work, sections, words: sections.reduce((s, [, w]) => s + w, 0) }
 }
 
 /** Reading days a work needs at about `minutes` a day (never more than it has chapters). */

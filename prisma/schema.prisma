@@ -55,6 +55,8 @@ model User {
   sessions           Session[]
   readingPlans       ReadingPlan[]
   pushSubscriptions  PushSubscription[]
+  cfProgress         CfReadingProgress[]
+  cfNotes            CfSectionNote[]
 
   @@map("users")
 }
@@ -410,11 +412,17 @@ model CbBook {
   description      String?  @db.Text
   image            String?
   file             String
+  /// The book's online text in the Church Fathers library, when it has one:
+  /// a whole work, or a run of its chapters (one letter of Ignatius).
+  cfWorkId         Int?     @map("cf_work_id")
+  cfFromSection    Int?     @map("cf_from_section")
+  cfToSection      Int?     @map("cf_to_section")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   approvalStatus CbApprovalStatus @relation(fields: [approvalStatusId], references: [id])
+  cfWork         CfWork?          @relation(fields: [cfWorkId], references: [id], onDelete: SetNull)
 
   languages        CbBookLanguage[]
   categories       CbBookCategory[]
@@ -1385,26 +1393,57 @@ model CfWork {
   createdAt     DateTime @default(now()) @map("created_at")
 
   sections CfSection[]
+  books    CbBook[]
+  progress CfReadingProgress[]
 
   @@map("cf_works")
 }
 
-/// One chapter of a work: plain-text paragraphs separated by blank lines.
+/// One chapter of a work: its place, title and length. The text itself is a
+/// file in R2 (lib/library.ts), so the database stays an index.
 model CfSection {
   id       Int    @id @default(autoincrement())
   workId   Int    @map("work_id")
   position Int
   title    String
-  body     String
   words    Int
-  /// Amharic translation (AI, from scripts/fathers/translate.mjs), paragraphs
-  /// matching body's. Shown to readers only once an admin approves it.
-  titleAm        String?  @map("title_am")
-  bodyAm         String?  @map("body_am")
-  bodyAmApproved Boolean  @default(false) @map("body_am_approved")
+  /// Leftover from when the text lived here; unused, emptied once every work's
+  /// text is confirmed in R2, then dropped.
+  body     String?
 
-  work CfWork @relation(fields: [workId], references: [id], onDelete: Cascade)
+  work  CfWork          @relation(fields: [workId], references: [id], onDelete: Cascade)
+  notes CfSectionNote[]
 
   @@unique([workId, position])
   @@map("cf_sections")
+}
+
+/// Where a member stopped reading a work online, to "continue where you left off".
+model CfReadingProgress {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  workId    Int      @map("work_id")
+  position  Int
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  work CfWork @relation(fields: [workId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workId])
+  @@map("cf_reading_progress")
+}
+
+/// A member's private note on one chapter, written while reading online.
+model CfSectionNote {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  sectionId Int      @map("section_id")
+  note      String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section CfSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sectionId])
+  @@map("cf_section_notes")
 }
