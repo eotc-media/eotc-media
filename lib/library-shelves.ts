@@ -23,6 +23,8 @@ export interface Shelf {
   /** Its "See all" page; none for a shelf that is only a row (more by an author). */
   href?: string
   books: ShelfBook[]
+  /** Books on the whole shelf (the front page shows only the first few). */
+  count?: number
 }
 
 export interface LibraryHome {
@@ -127,7 +129,7 @@ export async function getLibraryHome(userId?: number): Promise<LibraryHome> {
     total: books.length,
     online: online.length,
     resume,
-    shelves: shelves.map(s => ({ ...s, books: s.books.slice(0, SHELF_SIZE) })),
+    shelves: shelves.map(s => ({ ...s, count: s.books.length, books: s.books.slice(0, SHELF_SIZE) })),
   }
 }
 

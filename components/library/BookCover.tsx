@@ -8,7 +8,7 @@ export default function BookCover({ name, image, className = "", priority = fals
   priority?: boolean
 }) {
   return (
-    <div className={`relative aspect-[2/3] overflow-hidden rounded-[3px] bg-stone-200 shadow-[0_1px_2px_rgba(0,0,0,0.12),0_10px_24px_-10px_rgba(60,40,20,0.45)] ${className}`}>
+    <div className={`relative aspect-[2/3] overflow-hidden rounded-[3px] bg-slate-200 shadow-[0_1px_2px_rgba(0,0,0,0.12),0_10px_24px_-10px_rgba(60,40,20,0.45)] ${className}`}>
       {image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -18,7 +18,7 @@ export default function BookCover({ name, image, className = "", priority = fals
           className="h-full w-full object-cover"
         />
       ) : (
-        <div className="flex h-full items-center justify-center bg-gradient-to-br from-stone-600 to-stone-800 p-3 text-center font-serif text-sm text-stone-100">
+        <div className="flex h-full items-center justify-center bg-gradient-to-br from-slate-600 to-slate-800 p-3 text-center text-sm text-slate-100">
           {name}
         </div>
       )}

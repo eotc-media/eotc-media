@@ -24,17 +24,17 @@ export default function LibraryBookPage({ book, signedIn, home, liveHref }: {
   const readHref = `/books/${encodeURIComponent(book.slug)}/read${book.continueAt ? `?ch=${book.continueAt}` : ""}`
 
   return (
-    <div className="min-h-screen bg-[#f7f3ec]">
+    <div className="min-h-screen bg-slate-50">
       {/* Hero, lit by the cover's own colours */}
       <section className="relative isolate overflow-hidden">
         {book.image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={bookImageUrl(book.image)} alt="" aria-hidden className="absolute inset-0 -z-10 h-full w-full scale-125 object-cover opacity-40 blur-3xl saturate-150" />
         )}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#f7f3ec]/40 via-[#f7f3ec]/70 to-[#f7f3ec]" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-50/40 via-slate-50/75 to-slate-50" />
 
         <div className="mx-auto max-w-6xl px-4 pb-10 pt-8 sm:px-6 lg:px-10">
-          <Link href={home} className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 hover:text-stone-900">
+          <Link href={home} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" /> {tr("ወደ ቤተ መጻሕፍት", "Library")}
           </Link>
 
@@ -45,35 +45,35 @@ export default function LibraryBookPage({ book, signedIn, home, liveHref }: {
 
             <div className="min-w-0 self-center">
               {book.categories.length > 0 && (
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-800/80">{book.categories.join(" · ")}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{book.categories.join(" · ")}</p>
               )}
-              <h1 className="mt-3 font-serif text-3xl font-semibold leading-tight text-stone-900 sm:text-4xl">{book.name}</h1>
-              <p className="mt-2 text-lg text-stone-600">{book.author}</p>
+              <h1 className="mt-3 text-2xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-3xl">{book.name}</h1>
+              <p className="mt-1.5 text-base text-slate-600">{book.author}</p>
 
-              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-500">
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
                 {book.languages.length > 0 && <span>{book.languages.join(", ")}</span>}
                 {book.contents && <span>{tr(`${book.contents.length} ምዕራፎች · ~${book.minutes} ደቂቃ`, `${book.contents.length} chapters · about ${book.minutes} min`)}</span>}
-                <Link href={liveHref} className="inline-flex items-center gap-1 hover:text-stone-800"><Heart className="h-3.5 w-3.5" /> {book.likes}</Link>
-                {book.comments > 0 && <Link href={`${liveHref}#comments`} className="inline-flex items-center gap-1 hover:text-stone-800"><MessageSquare className="h-3.5 w-3.5" /> {book.comments}</Link>}
+                <Link href={liveHref} className="inline-flex items-center gap-1 hover:text-slate-800"><Heart className="h-3.5 w-3.5" /> {book.likes}</Link>
+                {book.comments > 0 && <Link href={`${liveHref}#comments`} className="inline-flex items-center gap-1 hover:text-slate-800"><MessageSquare className="h-3.5 w-3.5" /> {book.comments}</Link>}
               </div>
 
               <div className="mt-7 flex flex-wrap items-center gap-3">
                 {book.contents ? (
                   <>
-                    <Link href={readHref} className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-stone-800">
+                    <Link href={readHref} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
                       <BookOpenText className="h-4 w-4" />
                       {book.continueAt ? tr(`ቀጥል · ምዕራፍ ${book.continueAt}`, `Continue · Chapter ${book.continueAt}`) : tr("ማንበብ ይጀምሩ", "Start reading")}
                     </Link>
-                    <button onClick={() => setPlanFrom(localDateToday())} className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-stone-800 ring-1 ring-stone-200 hover:bg-stone-50 cursor-pointer">
+                    <button onClick={() => setPlanFrom(localDateToday())} className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-50 cursor-pointer">
                       <CalendarCheck className="h-4 w-4" /> {tr("በዕቅድ ያንብቡ", "Read with a plan")}
                     </button>
                   </>
                 ) : (
-                  <a href={bookFileUrl(book.file)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-stone-800">
+                  <a href={bookFileUrl(book.file)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
                     <BookOpenText className="h-4 w-4" /> {tr("ያንብቡ", "Read")}
                   </a>
                 )}
-                <a href={bookFileUrl(book.file)} download className="inline-flex items-center gap-1.5 px-2 py-3 text-sm font-medium text-stone-500 hover:text-stone-800">
+                <a href={bookFileUrl(book.file)} download className="inline-flex items-center gap-1.5 px-2 py-3 text-sm font-medium text-slate-500 hover:text-slate-800">
                   <Download className="h-4 w-4" /> PDF
                 </a>
               </div>
@@ -86,18 +86,18 @@ export default function LibraryBookPage({ book, signedIn, home, liveHref }: {
         <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
           {book.description && (
             <section>
-              <h2 className="font-serif text-xl font-semibold text-stone-900">{tr("ስለ መጽሐፉ", "About this book")}</h2>
-              <p className="mt-3 max-w-2xl whitespace-pre-line text-[15px] leading-7 text-stone-700">{book.description}</p>
+              <h2 className="text-xl font-semibold text-slate-900">{tr("ስለ መጽሐፉ", "About this book")}</h2>
+              <p className="mt-3 max-w-2xl whitespace-pre-line text-[15px] leading-7 text-slate-700">{book.description}</p>
             </section>
           )}
           {book.contents && (
             <section className={book.description ? "" : "lg:col-span-2"}>
-              <h2 className="font-serif text-xl font-semibold text-stone-900">{tr("ማውጫ", "Contents")}</h2>
-              <ol className="mt-3 max-h-96 divide-y divide-stone-200/70 overflow-y-auto rounded-2xl bg-white ring-1 ring-stone-200">
+              <h2 className="text-xl font-semibold text-slate-900">{tr("ማውጫ", "Contents")}</h2>
+              <ol className="mt-3 max-h-96 divide-y divide-slate-200/70 overflow-y-auto rounded-2xl bg-white ring-1 ring-slate-200">
                 {book.contents.map(c => (
                   <li key={c.index}>
-                    <Link href={`/books/${encodeURIComponent(book.slug)}/read?ch=${c.index}`} className="flex gap-3 px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 hover:text-blue-800">
-                      <span className="w-6 flex-shrink-0 text-right text-xs font-semibold text-stone-400 tabular-nums">{c.index}</span>
+                    <Link href={`/books/${encodeURIComponent(book.slug)}/read?ch=${c.index}`} className="flex gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-800">
+                      <span className="w-6 flex-shrink-0 text-right text-xs font-semibold text-slate-400 tabular-nums">{c.index}</span>
                       <span className="min-w-0">{c.title}</span>
                     </Link>
                   </li>
