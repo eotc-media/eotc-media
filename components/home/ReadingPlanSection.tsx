@@ -5,13 +5,14 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   ArrowRight, BookOpen, Check, CheckCircle2, Cross, Flame, Loader2, Music2, BookHeart,
-  RotateCcw, Sparkles, CalendarRange, Coffee, PartyPopper, ListChecks, Library, Plus, ChevronLeft, ChevronRight, ChevronDown,
+  RotateCcw, Sparkles, CalendarRange, CalendarCog, Coffee, PartyPopper, ListChecks, Library, Plus, ChevronLeft, ChevronRight, ChevronDown,
 } from "lucide-react"
 import { PRESETS, minutesFor, planTitle, type AnyPlanConfig, type PresetKey } from "@/lib/reading-plan"
 import type { ActivePlanView, StoppedPlanView } from "@/lib/reading-plan-server"
 import PlanBuilder, { DRAFT_KEY, type PlanSource } from "./PlanBuilder"
 import MiniCalendar, { type DayMark } from "./MiniCalendar"
 import ReminderToggle from "./ReminderToggle"
+import RestDaysDialog from "./RestDaysDialog"
 import {
   useTr, readingText, shortDate, useLocalNow, useSelectedPlanId, selectPlan, planDayHref, planScheduleHref,
 } from "./shared"
@@ -210,6 +211,7 @@ function ActivePlan({ plan, today, position, onAddPlan }: {
   const router = useRouter()
   const [pending, setPending] = useState<number | null>(null)
   const [catching, setCatching] = useState(false)
+  const [editingRest, setEditingRest] = useState(false)
   // Optimistic: the tick shows at once, and the server's refresh confirms it.
   const [local, setLocal] = useState<Record<number, boolean>>({})
 
@@ -393,12 +395,22 @@ function ActivePlan({ plan, today, position, onAddPlan }: {
         <Link href={planScheduleHref(plan.id)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
           {tr("ሙሉ መርሐ ግብር", "Full schedule")} <ArrowRight className="h-4 w-4" />
         </Link>
-        {onAddPlan && (
-          <button onClick={onAddPlan} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 cursor-pointer">
-            <Plus className="h-4 w-4" /> {tr("ሌላ ዕቅድ ያክሉ", "Add a plan")}
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          {!finished && (
+            <button onClick={() => setEditingRest(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 cursor-pointer">
+              <CalendarCog className="h-4 w-4" /> {tr("የዕረፍት ቀናት", "Days off")}
+            </button>
+          )}
+          {onAddPlan && (
+            <button onClick={onAddPlan} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 cursor-pointer">
+              <Plus className="h-4 w-4" /> {tr("ሌላ ዕቅድ ያክሉ", "Add a plan")}
+            </button>
+          )}
+        </div>
       </div>
+      {editingRest && (
+        <RestDaysDialog planId={plan.id} initial={plan.config.restWeekdays ?? []} today={today} onClose={() => setEditingRest(false)} />
+      )}
     </section>
   )
 }

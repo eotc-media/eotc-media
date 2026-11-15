@@ -365,6 +365,52 @@ export async function catchUp(userId: number, planId: number, today: string) {
   return true
 }
 
+/**
+ * Change a plan's days off. Days already read keep their dates; the unread
+ * days keep their order and readings and are laid out again from today (or
+ * from the first unread day, if that is later) on the new weekly pattern.
+ * With `dryRun`, nothing is saved: the new finish date is only worked out.
+ */
+export async function changeRestDays(
+  userId: number, planId: number, restWeekdays: number[], today: string, dryRun = false,
+): Promise<{ endDate: string } | null> {
+  const plan = await ownPlan(userId, planId)
+  if (!plan || plan.status === "archived") return null
+  const rest = new Set(restWeekdays)
+
+  const days = await prisma.readingPlanDay.findMany({
+    where: { planId },
+    select: { id: true, date: true, completedAt: true },
+    orderBy: { dayNumber: "asc" },
+  })
+  const unread = days.filter(d => d.completedAt === null)
+  // A date that already holds a day the reader has read is not given a second one.
+  const taken = new Set(days.filter(d => d.completedAt !== null).map(d => isoOf(d.date)))
+  const lastRead = [...taken].sort().pop()
+
+  const dates: string[] = []
+  if (unread.length) {
+    const firstUnread = isoOf(unread[0].date)
+    for (let d = firstUnread > today ? firstUnread : today; dates.length < unread.length; d = addDays(d, 1)) {
+      if (!rest.has(parseDate(d).getUTCDay()) && !taken.has(d)) dates.push(d)
+    }
+  }
+  const newEnd = [dates[dates.length - 1], lastRead].filter((d): d is string => !!d).sort().pop() ?? isoOf(plan.endDate)
+  if (dryRun) return { endDate: newEnd }
+
+  const config = { ...(plan.config as object), restWeekdays: [...rest].sort(), endDate: newEnd }
+  const ids = unread.map(u => u.id)
+  await prisma.$transaction([
+    ...(ids.length ? [prisma.$executeRaw`
+      UPDATE reading_plan_days AS d SET date = v.date
+      FROM unnest(${ids}::int[], ${dates}::date[]) AS v(id, date)
+      WHERE d.id = v.id
+    `] : []),
+    prisma.readingPlan.update({ where: { id: planId }, data: { config, endDate: dbDate(newEnd) } }),
+  ])
+  return { endDate: newEnd }
+}
+
 /** Stop a plan. Nothing is deleted: its days and notes stay, and it can be resumed. */
 export async function archivePlan(userId: number, planId: number) {
   const plan = await ownPlan(userId, planId)
