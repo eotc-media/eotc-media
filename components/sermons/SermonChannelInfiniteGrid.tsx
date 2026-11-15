@@ -85,7 +85,7 @@ export default function SermonChannelInfiniteGrid({
             key={channel.id}
             href={`/sermons/channels/${channel.slug}`}
             prefetch={false}
-            className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/40 transition-colors text-center"
+            className="group flex flex-col items-center gap-2 rounded-2xl bg-white p-5 text-center ring-1 ring-slate-200 transition-shadow hover:shadow-md"
           >
             <div className="relative w-14 h-14 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
               <span className="text-lg font-bold text-blue-600">

@@ -1,19 +1,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { prisma } from "@/lib/prisma"
 import { GEMINI_MODEL } from "@/lib/gemini"
+import { TOPIC_GROUPS } from "@/lib/sermon-topic-groups"
+
+export { TOPIC_GROUPS }
 
 // Sermon topics: one list, named in Amharic and English, in a few groups.
 // A sermon has up to three. Gemini suggests them from what a sermon says about
 // itself (title, description, preacher, channel); an admin approves them, and
 // only approved topics show on the site.
 
-export const TOPIC_GROUPS = [
-  { key: "feasts", am: "በዓላትና አጽዋማት", en: "Feasts & seasons" },
-  { key: "life", am: "ክርስቲያናዊ ሕይወት", en: "Christian life" },
-  { key: "guidance", am: "መንፈሳዊ ምክር", en: "Guidance" },
-  { key: "saints", am: "ቅዱሳንና አበው", en: "Saints & fathers" },
-  { key: "doctrine", am: "ትምህርተ ሃይማኖት", en: "Faith & doctrine" },
-] as const
 
 export type TopicGroupKey = (typeof TOPIC_GROUPS)[number]["key"]
 

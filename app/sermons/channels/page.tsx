@@ -25,13 +25,13 @@ export default async function SermonChannelsPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
+        <div >
           <SermonSidebar userId={userId} />
-          <main className="px-4 sm:px-6 lg:px-8 py-6">
-            <h1 className="text-base font-semibold text-slate-900 mb-5">Channels</h1>
+          <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10 py-6">
+            <h1 className="mb-1 text-2xl font-semibold tracking-tight text-slate-900">Channels</h1>
             <SermonChannelInfiniteGrid
               initialChannels={channels}
               initialTotal={total}

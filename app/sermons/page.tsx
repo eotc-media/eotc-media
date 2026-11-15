@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { auth } from "@/auth"
-import { getSermons, getSermonsFilterData } from "@/lib/api/sermons"
+import { getSermons, getSermonsFilterData, getTopicsInUse } from "@/lib/api/sermons"
 import { prisma } from "@/lib/prisma"
 import Navbar from "@/components/Navbar"
 import SermonSidebar from "@/components/sermons/SermonSidebar"
-import SermonSearchFilters from "@/components/sermons/SermonSearchFilters"
+import SermonsHeader from "@/components/sermons/SermonsHeader"
 import SermonInfiniteGrid from "@/components/sermons/SermonInfiniteGrid"
 import SermonCard from "@/components/sermons/SermonCard"
 import { Star } from "lucide-react"
@@ -36,11 +36,12 @@ interface PageProps {
     subCategory?: string
     search?: string
     sort?: string
+    topic?: string
   }>
 }
 
 export default async function SermonsPage({ searchParams }: PageProps) {
-  const { language, category, subCategory, search, sort } = await searchParams
+  const { language, category, subCategory, search, sort, topic } = await searchParams
 
   const languageId = language ? parseInt(language) || undefined : undefined
   const categoryId = category ? parseInt(category) || undefined : undefined
@@ -49,11 +50,14 @@ export default async function SermonsPage({ searchParams }: PageProps) {
   const session = await auth()
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
 
-  const [{ sermons, total }, { categories, subCategories, languages, categoriesByLanguage }, featuredRecords] =
+  const filtered = !!(language || category || subCategory || search || topic)
+  const [{ sermons, total }, { languages }, featuredRecords, topics, all] =
     await Promise.all([
-      getSermons({ languageId, categoryId, subCategoryId, search, sort, userId }),
+      getSermons({ languageId, categoryId, subCategoryId, search, sort, userId, topic }),
       getSermonsFilterData(),
-      prisma.featuredItem.findMany({ where: { moduleType: "sermon" }, orderBy: { orderBy: "asc" } }),
+      filtered ? Promise.resolve([]) : prisma.featuredItem.findMany({ where: { moduleType: "sermon" }, orderBy: { orderBy: "asc" } }),
+      getTopicsInUse(),
+      prisma.smSermon.count({ where: { approvalStatus: { name: "Accepted" } } }),
     ])
 
   const { sermons: featuredSermonsRaw } = featuredRecords.length > 0
@@ -66,41 +70,36 @@ export default async function SermonsPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
-          <SermonSidebar userId={userId} />
-          <main className="min-w-0 px-4 sm:px-6 lg:px-8 py-6">
-            {featuredSermons.length > 0 && (
-              <section className="mb-8">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                  <span className="text-xs font-semibold text-neutral-500 uppercase tracking-widest">Featured</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-7">
-                  {featuredSermons.map(s => <SermonCard key={s.id} sermon={s} userId={userId} />)}
-                </div>
-                <div className="mt-6 border-t border-neutral-100" />
-              </section>
-            )}
-            <div className="mb-5">
-              <SermonSearchFilters
-                categories={categories}
-                subCategories={subCategories}
-                languages={languages}
-                categoriesByLanguage={categoriesByLanguage}
-              />
-            </div>
-            <SermonInfiniteGrid
-              initialSermons={sermons}
-              initialTotal={total}
-              initialTotalPages={totalPages}
-              filters={{ language, category, subCategory, search, sort }}
-              userId={userId}
-            />
-          </main>
-        </div>
+        <SermonSidebar userId={userId} />
+        <SermonsHeader
+          total={all}
+          topics={topics}
+          languages={languages}
+          current={{ search, topic, language, sort }}
+        />
+        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10">
+          {featuredSermons.length > 0 && (
+            <section className="mb-10">
+              <div className="mb-4 flex items-center gap-1.5">
+                <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Featured</h2>
+              </div>
+              <div className="grid grid-cols-1 gap-x-5 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {featuredSermons.map(s => <SermonCard key={s.id} sermon={s} userId={userId} />)}
+              </div>
+            </section>
+          )}
+          <SermonInfiniteGrid
+            initialSermons={sermons}
+            initialTotal={total}
+            initialTotalPages={totalPages}
+            filters={{ language, category, subCategory, search, sort, topic }}
+            userId={userId}
+          />
+        </main>
       </div>
     </div>
   )

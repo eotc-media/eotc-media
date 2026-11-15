@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search') ?? undefined
   const sort = searchParams.get('sort') ?? undefined
   const view = searchParams.get('view') ?? undefined
+  const topic = searchParams.get('topic') ?? undefined
 
   const categoryId = category ? parseInt(category) || undefined : undefined
   const subCategoryId = subCategory ? parseInt(subCategory) || undefined : undefined
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const { sermons, total } = await getSermons({
     page, categoryId, subCategoryId, languageId, preacherId, channelId,
-    userId, search, view, sort,
+    userId, search, view, sort, topic,
   })
 
   const totalPages = Math.ceil(total / PAGE_SIZE)

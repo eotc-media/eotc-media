@@ -28,6 +28,7 @@ interface SermonInfiniteGridProps {
     preacher?: string
     channel?: string
     sort?: string
+    topic?: string
   }
   userId?: number
   basePath?: string
@@ -77,6 +78,7 @@ export default function SermonInfiniteGrid({
       if (filters.preacher) params.set("preacher", filters.preacher)
       if (filters.channel) params.set("channel", filters.channel)
       if (filters.sort) params.set("sort", filters.sort)
+      if (filters.topic) params.set("topic", filters.topic)
 
       const res = await fetch(`/api/sermons?${params.toString()}`)
       if (!res.ok) return
@@ -121,6 +123,7 @@ export default function SermonInfiniteGrid({
     if (filters.channel) params.set("channel", filters.channel)
     if (filters.search) params.set("search", filters.search)
     if (filters.sort) params.set("sort", filters.sort)
+    if (filters.topic) params.set("topic", filters.topic)
     const q = params.toString()
     return `/sermons/play-all${q ? `?${q}` : ""}`
   }

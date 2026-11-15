@@ -32,5 +32,8 @@ export async function POST(
     skipDuplicates: true,
   })
 
+  // The topics given with the sermon are approved with it.
+  await prisma.smSermonTopic.updateMany({ where: { sermonId, approvedAt: null }, data: { approvedAt: new Date() } })
+
   return NextResponse.json({ ok: true })
 }

@@ -1,53 +1,54 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Loader2, CheckCircle } from "lucide-react"
+import { CheckCircle2, Loader2, Youtube } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import SermonSidebar from "@/components/sermons/SermonSidebar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { MultiSelect } from "@/components/ui/multi-select"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { useTr } from "@/components/home/shared"
 
 interface Language { id: number; name: string }
-interface Category { id: number; name: string; languageId?: number | null }
-interface SubCategory { id: number; name: string; categoryId: number }
+interface Topic { id: number; slug: string; groupKey: string; nameAm: string; nameEn: string }
+interface Group { key: string; am: string; en: string }
 
+const MAX_TOPICS = 3
+
+/** The video id in a YouTube link (or the id itself), or "" if none. */
 function parseVideoId(input: string): string {
   const s = input.trim()
+  if (!s) return ""
   try {
     const url = new URL(s)
     if (url.hostname === "youtu.be") return url.pathname.slice(1).split("?")[0]
-    if (url.hostname.includes("youtube.com")) return url.searchParams.get("v") ?? s
-  } catch { /* not a URL — treat as raw ID */ }
-  return s
+    if (url.hostname.includes("youtube.com")) {
+      const v = url.searchParams.get("v")
+      if (v) return v
+      const m = url.pathname.match(/\/(?:shorts|live|embed)\/([\w-]{11})/)
+      return m?.[1] ?? ""
+    }
+    return ""
+  } catch {
+    return /^[\w-]{11}$/.test(s) ? s : ""
+  }
 }
 
 export default function SubmitSermonPage() {
   const router = useRouter()
   const { data: session } = useSession()
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
+  const { am, tr } = useTr()
 
   const [videoInput, setVideoInput] = useState("")
   const [preacher, setPreacher] = useState("")
   const [description, setDescription] = useState("")
-  const [selectedLanguageIds, setSelectedLanguageIds] = useState<number[]>([])
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([])
-  const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState<number[]>([])
+  const [languageIds, setLanguageIds] = useState<number[]>([])
+  const [topicIds, setTopicIds] = useState<number[]>([])
 
   const [languages, setLanguages] = useState<Language[]>([])
-  const [allCategories, setAllCategories] = useState<Category[]>([])
-  const [allSubCategories, setAllSubCategories] = useState<SubCategory[]>([])
+  const [topics, setTopics] = useState<Topic[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
@@ -55,44 +56,23 @@ export default function SubmitSermonPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/sermons/admin/languages").then(r => r.json()),
-      fetch("/api/sermons/admin/categories").then(r => r.json()),
-      fetch("/api/sermons/admin/sub-categories").then(r => r.json()),
-    ]).then(([langs, cats, subs]) => {
+      fetch("/api/sermons/admin/languages").then(r => r.json()).catch(() => []),
+      fetch("/api/sermons/topics").then(r => r.json()).catch(() => ({})),
+    ]).then(([langs, t]) => {
       setLanguages(Array.isArray(langs) ? langs : [])
-      setAllCategories(Array.isArray(cats) ? cats : [])
-      setAllSubCategories(Array.isArray(subs) ? subs : [])
+      setTopics(Array.isArray(t?.topics) ? t.topics : [])
+      setGroups(Array.isArray(t?.groups) ? t.groups : [])
     })
   }, [])
 
-  const hasLanguageData = allCategories.some(c => c.languageId != null)
-  const visibleCategories = (selectedLanguageIds.length > 0 && hasLanguageData)
-    ? allCategories.filter(c => selectedLanguageIds.includes(c.languageId ?? -1))
-    : allCategories
-
-  const visibleSubCategories = selectedCategoryIds.length > 0
-    ? allSubCategories.filter(sc => selectedCategoryIds.includes(sc.categoryId))
-    : []
-
-  function handleLanguageChange(ids: number[]) {
-    setSelectedLanguageIds(ids)
-    setSelectedCategoryIds([])
-    setSelectedSubCategoryIds([])
-  }
-
-  function handleCategoryChange(ids: number[]) {
-    setSelectedCategoryIds(ids)
-    setSelectedSubCategoryIds([])
-  }
+  const videoId = parseVideoId(videoInput)
+  const toggle = (list: number[], id: number, max = Infinity) =>
+    list.includes(id) ? list.filter(x => x !== id) : list.length < max ? [...list, id] : list
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const videoId = parseVideoId(videoInput)
-    if (!videoId) { setError("YouTube URL or Video ID is required."); return }
-    if (selectedLanguageIds.length === 0) { setError("Please select at least one language."); return }
-    if (selectedCategoryIds.length === 0) { setError("Please select at least one category."); return }
-    if (selectedSubCategoryIds.length === 0) { setError("Please select at least one sub-category."); return }
-
+    if (!videoId) { setError(tr("የዩቲዩብ ሊንኩን ያስገቡ።", "Paste the YouTube link of the sermon.")); return }
+    if (languageIds.length === 0) { setError(tr("የስብከቱን ቋንቋ ይምረጡ።", "Choose the sermon's language.")); return }
     setSaving(true)
     setError("")
     try {
@@ -103,148 +83,144 @@ export default function SubmitSermonPage() {
           videoUrl: videoInput.trim(),
           preacher: preacher.trim() || null,
           description: description.trim() || null,
-          languageIds: selectedLanguageIds,
-          categoryIds: selectedCategoryIds,
-          subCategoryIds: selectedSubCategoryIds,
+          languageIds,
+          topicIds,
         }),
       })
       if (res.status === 401) { router.push("/auth/login"); return }
-      if (!res.ok) { const d = await res.json(); setError(d.error ?? "Failed to submit"); return }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? tr("ማስገባት አልተቻለም።", "Couldn't submit the sermon.")); return }
       setSubmitted(true)
     } finally {
       setSaving(false)
     }
   }
 
-  const parsedId = parseVideoId(videoInput)
-  const showParsedId = videoInput.trim() && parsedId !== videoInput.trim()
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center pt-16">
-          <div className="max-w-sm px-4 text-center">
-            <CheckCircle className="mx-auto mb-4 h-16 w-16 text-success" />
-            <h1 className="mb-2 text-2xl font-bold">Sermon submitted!</h1>
-            <p className="mb-6 text-muted-foreground">Your sermon has been submitted and is pending review. Thank you!</p>
-            <Button onClick={() => router.push("/sermons/my-sermons")}>View my sermons</Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const card = "rounded-2xl bg-white p-5 ring-1 ring-slate-200 sm:p-6"
+  const label = "text-sm font-semibold text-slate-900"
+  const hint = "mt-0.5 text-xs text-slate-500"
+  const input = "w-full rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 ring-1 ring-slate-200 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div className="mx-auto max-w-full lg:grid lg:grid-cols-[220px_1fr]">
-          <SermonSidebar userId={userId} />
-
-          <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">
-            <div className="max-w-2xl">
-              <div className="mb-6">
-                <h1 className="text-xl font-semibold">Add new sermon</h1>
-                <p className="mt-0.5 text-sm text-muted-foreground">Submit a YouTube sermon for review</p>
+        <SermonSidebar userId={userId} />
+        <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+          {submitted ? (
+            <div className="flex flex-col items-center rounded-2xl bg-white px-6 py-16 text-center ring-1 ring-slate-200">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><CheckCircle2 className="h-7 w-7" /></span>
+              <h1 className="mt-4 text-xl font-semibold text-slate-900">{tr("ስብከቱ ገብቷል", "Sermon submitted")}</h1>
+              <p className="mt-1 max-w-sm text-sm text-slate-500">
+                {tr("ከተገመገመ በኋላ በድረ ገጹ ላይ ይወጣል። እናመሰግናለን!", "It will appear on the site once it has been reviewed. Thank you!")}
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                <Link href="/sermons/my-sermons" className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">{tr("ያስገባኋቸው ስብከቶች", "My sermons")}</Link>
+                <button
+                  onClick={() => { setSubmitted(false); setVideoInput(""); setPreacher(""); setDescription(""); setTopicIds([]) }}
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 cursor-pointer"
+                >
+                  {tr("ሌላ ያስገቡ", "Add another")}
+                </button>
               </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{tr("ስብከት ያስገቡ", "Add a sermon")}</h1>
+              <p className="mt-1 text-sm text-slate-500">{tr("በዩቲዩብ ያገኙትን ስብከት ያጋሩ፤ ከተገመገመ በኋላ ይወጣል።", "Share a sermon from YouTube. It appears once it has been reviewed.")}</p>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 {/* Video */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold">Video</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="video-url">
-                          YouTube URL <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="video-url"
-                          value={videoInput}
-                          onChange={e => setVideoInput(e.target.value)}
-                          placeholder="https://www.youtube.com/watch?v=…"
-                        />
-                        {showParsedId && (
-                          <p className="text-xs text-primary">
-                            Parsed ID: <span className="font-mono">{parsedId}</span>
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="preacher">Preacher</Label>
-                        <Input
-                          id="preacher"
-                          value={preacher}
-                          onChange={e => setPreacher(e.target.value)}
-                          placeholder="Preacher name (optional)"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Classification */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold">Classification</CardTitle>
-                    <CardDescription className="text-xs">Select language first to filter categories</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      <MultiSelect label="Language" required value={selectedLanguageIds}
-                        onChange={handleLanguageChange} options={languages} placeholder="Select language…" />
-                      <MultiSelect label="Category" required value={selectedCategoryIds}
-                        onChange={handleCategoryChange} options={visibleCategories}
-                        placeholder={selectedLanguageIds.length > 0 && hasLanguageData ? "Select category…" : hasLanguageData ? "Select language first" : "Select category…"}
-                        disabled={selectedLanguageIds.length === 0 && hasLanguageData} />
-                      <MultiSelect label="Sub-category" required value={selectedSubCategoryIds}
-                        onChange={setSelectedSubCategoryIds} options={visibleSubCategories}
-                        placeholder={selectedCategoryIds.length > 0 ? "Select sub-category…" : "Select category first"}
-                        disabled={selectedCategoryIds.length === 0} />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Description */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-semibold">Description</CardTitle>
-                    <CardDescription className="text-xs">Optional notes or context</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Textarea
-                      value={description}
-                      onChange={e => setDescription(e.target.value)}
-                      rows={4}
-                      placeholder="Brief description of the sermon…"
-                      className="resize-y"
+                <section className={card}>
+                  <label htmlFor="video-url" className={label}>{tr("የዩቲዩብ ሊንክ", "YouTube link")}</label>
+                  <div className="relative mt-2">
+                    <Youtube className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      id="video-url"
+                      value={videoInput}
+                      onChange={e => setVideoInput(e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=…"
+                      className={`${input} pl-9`}
+                      autoComplete="off"
                     />
-                  </CardContent>
-                </Card>
+                  </div>
+                  {videoInput.trim() && !videoId && <p className="mt-2 text-xs text-rose-600">{tr("ይህ የዩቲዩብ ሊንክ አይመስልም።", "This doesn't look like a YouTube link.")}</p>}
+                  {videoId && (
+                    <div className="mt-3 flex items-center gap-3 rounded-xl bg-slate-50 p-2 ring-1 ring-slate-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`} alt="" className="aspect-video w-28 rounded-lg bg-slate-200 object-cover" />
+                      <p className="text-xs text-slate-500">{tr("ርዕሱና ቻናሉ ከዩቲዩብ ይወሰዳሉ።", "The title and channel are taken from YouTube.")}</p>
+                    </div>
+                  )}
 
-                {error && (
-                  <p className="rounded-md border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
-                    {error}
-                  </p>
+                  <label htmlFor="preacher" className={`${label} mt-5 block`}>{tr("ሰባኪ", "Preacher")} <span className="font-normal text-slate-400">· {tr("አማራጭ", "optional")}</span></label>
+                  <input id="preacher" value={preacher} onChange={e => setPreacher(e.target.value)} placeholder={tr("የሰባኪው ስም", "The preacher's name")} className={`${input} mt-2`} />
+                </section>
+
+                {/* Language */}
+                <section className={card}>
+                  <p className={label}>{tr("ቋንቋ", "Language")}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {languages.map(l => {
+                      const on = languageIds.includes(l.id)
+                      return (
+                        <button type="button" key={l.id} onClick={() => setLanguageIds(toggle(languageIds, l.id))} aria-pressed={on}
+                          className={`rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 cursor-pointer ${on ? "bg-blue-600 text-white ring-blue-600" : "bg-white text-slate-700 ring-slate-200 hover:ring-slate-300"}`}>
+                          {l.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
+
+                {/* Topics */}
+                {topics.length > 0 && (
+                  <section className={card}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className={label}>{tr("ርዕሰ ጉዳይ", "Topics")} <span className="font-normal text-slate-400">· {tr("አማራጭ", "optional")}</span></p>
+                      <span className="text-xs text-slate-400 tabular-nums">{topicIds.length} / {MAX_TOPICS}</span>
+                    </div>
+                    <p className={hint}>{tr("ስብከቱ ስለ ምን እንደሆነ እስከ ሦስት ይምረጡ። እርግጠኛ ካልሆኑ ይተዉት፤ እኛ እንመድበዋለን።", "Choose up to three. If you're not sure, leave it and we'll add them.")}</p>
+                    <div className="mt-4 space-y-4">
+                      {groups.map(g => (
+                        <div key={g.key}>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{am ? g.am : g.en}</p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {topics.filter(t => t.groupKey === g.key).map(t => {
+                              const on = topicIds.includes(t.id)
+                              const full = !on && topicIds.length >= MAX_TOPICS
+                              return (
+                                <button type="button" key={t.id} disabled={full} onClick={() => setTopicIds(toggle(topicIds, t.id, MAX_TOPICS))} aria-pressed={on}
+                                  className={`rounded-full px-3 py-1 text-[13px] font-medium ring-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${on ? "bg-blue-600 text-white ring-blue-600" : "bg-white text-slate-700 ring-slate-200 hover:ring-slate-300"}`}>
+                                  {am ? t.nameAm : t.nameEn}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 )}
 
-                <div className="flex items-center justify-end gap-3 pb-4">
-                  <Button type="button" variant="outline" onClick={() => router.push("/sermons/my-sermons")}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={saving}>
-                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {saving ? "Submitting…" : "Submit sermon"}
-                  </Button>
+                {/* Description */}
+                <section className={card}>
+                  <label htmlFor="description" className={label}>{tr("መግለጫ", "Description")} <span className="font-normal text-slate-400">· {tr("አማራጭ", "optional")}</span></label>
+                  <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={4}
+                    placeholder={tr("ስለ ስብከቱ አጭር መግለጫ…", "A few words about the sermon…")} className={`${input} mt-2 resize-none`} />
+                </section>
+
+                {error && <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Link href="/sermons/my-sermons" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-white">{tr("ይቅር", "Cancel")}</Link>
+                  <button disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60 cursor-pointer">
+                    {saving && <Loader2 className="h-4 w-4 animate-spin" />} {tr("አስገባ", "Submit sermon")}
+                  </button>
                 </div>
               </form>
-            </div>
-          </main>
-        </div>
+            </>
+          )}
+        </main>
       </div>
     </div>
   )

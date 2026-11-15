@@ -26,12 +26,12 @@ export default async function MySermonPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
+        <div >
           <SermonSidebar userId={userId} />
-          <main className="min-w-0 px-4 sm:px-6 lg:px-8 py-6">
+          <main className="mx-auto w-full max-w-7xl min-w-0 px-4 sm:px-6 lg:px-10 py-6">
             <SermonMyList
               sermons={sermons}
               total={total}

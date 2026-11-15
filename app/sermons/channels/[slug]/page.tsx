@@ -69,13 +69,13 @@ export default async function SermonChannelPage({ params, searchParams }: PagePr
   const avatarSrc = channel.thumbnailHigh || channel.thumbnailMedium || channel.thumbnailDefault
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
+        <div >
           <SermonSidebar userId={userId} />
 
-          <main className="pb-8">
+          <main className="mx-auto w-full max-w-7xl pb-8">
             {/* Cover image banner */}
             <div className="relative w-full h-32 sm:h-44 bg-gradient-to-r from-blue-100 to-slate-100">
               {coverBase && (

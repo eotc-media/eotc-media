@@ -69,14 +69,14 @@ export default async function PreacherSermonsPage({ params, searchParams }: Page
   const basePath = `/sermons/preacher/${slug}`
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
+        <div >
 
           <SermonSidebar userId={userId} />
 
-          <main className="px-4 sm:px-6 lg:px-8 py-6">
+          <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10 py-6">
             {/* Preacher header */}
             <div className="mb-5">
               <h1 className="text-base font-semibold text-slate-900">

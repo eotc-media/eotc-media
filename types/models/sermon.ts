@@ -64,4 +64,8 @@ export interface SmSermon {
   channel?: SmChannel
   approvalStatus?: SmApprovalStatus
   isFavorited?: boolean
+  /** Approved topics (detail page and my-sermons only). */
+  topics?: SmTopicRef[]
 }
+
+export interface SmTopicRef { id: number; slug: string; nameAm: string; nameEn: string }

@@ -2,6 +2,7 @@ import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { sortLanguages } from '@/lib/language-order'
+import { TOPIC_GROUPS } from '@/lib/sermon-topic-groups'
 import { SmSermon, SmCategory, SmSubCategory, SmLanguage, SmPreacher } from '@/types/models/sermon'
 
 const PAGE_SIZE = 24
@@ -32,6 +33,7 @@ function mapSermon(raw: {
   preachers?: { preacher: { id: number; name: string; slug: string } }[]
   channel?: { id: number; name: string; slug: string | null; handle: string; description?: string | null; thumbnailDefault?: string | null; thumbnailMedium?: string | null; thumbnailHigh?: string | null; coverImage?: string | null; publishedAt?: Date | null } | null
   approvalStatus?: { id: number; name: string } | null
+  topics?: { topic: { id: number; slug: string; nameAm: string; nameEn: string } }[]
 }): SmSermon {
   return {
     id: raw.id,
@@ -67,8 +69,16 @@ function mapSermon(raw: {
       publishedAt: raw.channel.publishedAt,
     } : undefined,
     approvalStatus: raw.approvalStatus ?? undefined,
+    ...(raw.topics ? { topics: raw.topics.map(t => t.topic) } : {}),
   }
 }
+
+/** Only approved topics are shown and filtered by. */
+const APPROVED_TOPICS = {
+  where: { approvedAt: { not: null } },
+  select: { topic: { select: { id: true, slug: true, nameAm: true, nameEn: true } } },
+  orderBy: { id: "asc" },
+} as const
 
 // Column sets for the list queries. `include` fetches every scalar, and
 // sm_sermons carries two TEXT columns (description, description_suggestion)
@@ -107,6 +117,7 @@ const SERMON_DETAIL_SELECT = {
   categories:     { select: { category:    { select: { id: true, name: true } } } },
   subCategories:  { select: { subCategory: { select: { id: true, name: true, categoryId: true } } } },
   languages:      { select: { language:    { select: { id: true, name: true } } } },
+  topics:         APPROVED_TOPICS,
 } as const
 
 // Filter data is identical for every user and changes only via admin edits, so
@@ -165,6 +176,7 @@ export async function getSermons({
   view,
   sort,
   itemIds,
+  topic,
   withDetail = false,
 }: {
   page?: number
@@ -179,6 +191,8 @@ export async function getSermons({
   view?: string
   sort?: string
   itemIds?: number[]
+  /** A topic's slug: sermons with that topic approved. */
+  topic?: string
   /** Play-all's queue panel lists each sermon's categories and languages.
    *  Grids do not, so this stays off everywhere else. */
   withDetail?: boolean
@@ -203,10 +217,15 @@ export async function getSermons({
   if (languageId) where.languages = { some: { languageId } }
   if (preacherId) where.preachers = { some: { preacherId } }
   if (channelId) where.channelId = channelId
+  if (topic) where.topics = { some: { approvedAt: { not: null }, topic: { slug: topic } } }
   if (search && search.trim().length > 0) {
+    const q = search.trim()
+    // Title, preacher (as typed or linked) and channel: "Gebrekidan" finds his sermons.
     where.OR = [
-      { title: { contains: search, mode: 'insensitive' } },
-      { preacher: { contains: search, mode: 'insensitive' } },
+      { title: { contains: q, mode: 'insensitive' } },
+      { preacher: { contains: q, mode: 'insensitive' } },
+      { preachers: { some: { preacher: { name: { contains: q, mode: 'insensitive' } } } } },
+      { channel: { name: { contains: q, mode: 'insensitive' } } },
     ]
   }
 
@@ -260,6 +279,7 @@ export const getSermon = cache(async (
       languages: { include: { language: true } },
       preachers: { include: { preacher: true } },
       channel: true,
+      topics: APPROVED_TOPICS,
     },
   })
   if (!raw && safeSlug !== slug) {
@@ -270,6 +290,7 @@ export const getSermon = cache(async (
         languages: { include: { language: true } },
         preachers: { include: { preacher: true } },
         channel: true,
+        topics: APPROVED_TOPICS,
       },
     })
   }
@@ -286,13 +307,17 @@ export const getSermon = cache(async (
 export async function getRelatedSermons(
   sermonId: number,
   categoryIds: number[],
-  limit = 12
+  limit = 12,
+  topicIds: number[] = [],
 ): Promise<SmSermon[]> {
   const where: Record<string, unknown> = {
     NOT: { id: sermonId },
     approvalStatus: { name: 'Accepted' },
   }
-  if (categoryIds.length > 0) {
+  // Sermons on the same topics; before topics are approved, the same category.
+  if (topicIds.length > 0) {
+    where.topics = { some: { approvedAt: { not: null }, topicId: { in: topicIds } } }
+  } else if (categoryIds.length > 0) {
     where.categories = { some: { categoryId: { in: categoryIds } } }
   }
   // Recommendation strip — thumbnail, title, preacher. Selecting the TEXT
@@ -330,3 +355,27 @@ export async function getRelatedSermons(
   })
   return raws.map(mapSermon)
 }
+
+export interface TopicInUse { id: number; slug: string; groupKey: string; nameAm: string; nameEn: string; count: number }
+
+/** Topics that approved sermons have, with how many, in the list's order. */
+export const getTopicsInUse = unstable_cache(
+  async (): Promise<TopicInUse[]> => {
+    const [topics, counts] = await Promise.all([
+      prisma.smTopic.findMany({ orderBy: { position: 'asc' }, select: { id: true, slug: true, groupKey: true, nameAm: true, nameEn: true } }),
+      prisma.smSermonTopic.groupBy({
+        by: ['topicId'],
+        where: { approvedAt: { not: null }, sermon: { approvalStatus: { name: 'Accepted' } } },
+        _count: { _all: true },
+      }),
+    ])
+    const n = new Map(counts.map(c => [c.topicId, c._count._all]))
+    const order: string[] = TOPIC_GROUPS.map(g => g.key)
+    return topics
+      .filter(t => n.has(t.id))
+      .sort((a, b) => order.indexOf(a.groupKey) - order.indexOf(b.groupKey))
+      .map(t => ({ ...t, count: n.get(t.id)! }))
+  },
+  ['sermon-topics-in-use'],
+  { revalidate: 300 },
+)

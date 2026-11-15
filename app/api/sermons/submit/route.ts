@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { extractVideoId, fetchYoutubeVideo, fetchYoutubeChannel } from '@/lib/youtube'
+import { MAX_TOPICS } from '@/lib/sermon-topics'
 
 function generateSlug(title: string): string {
   return title.trim().replace(/\s+/g, '-').replace(/[^\wሀ-፿-]/g, '').slice(0, 120) + '-' + Date.now().toString(36)
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { videoUrl, preacher, description, categoryIds, subCategoryIds, languageIds, preacherIds } = body
+  const { videoUrl, preacher, description, categoryIds, subCategoryIds, languageIds, preacherIds, topicIds } = body
 
   if (!videoUrl?.trim()) {
     return NextResponse.json({ error: 'Video URL/ID is required' }, { status: 400 })
@@ -99,6 +100,17 @@ export async function POST(req: NextRequest) {
   if (preacherIds?.length) {
     await prisma.smPreacherSermon.createMany({
       data: preacherIds.map((pid: number) => ({ preacherId: pid, sermonId: sermon.id })),
+    })
+  }
+
+  // Topics the member chose count once an admin approves the sermon; without
+  // any, the sermon waits on the admin Topics page for a suggestion.
+  const topics: number[] = Array.isArray(topicIds) ? [...new Set<number>(topicIds.filter((x: unknown) => Number.isInteger(x)))].slice(0, MAX_TOPICS) : []
+  if (topics.length) {
+    const known = await prisma.smTopic.findMany({ where: { id: { in: topics } }, select: { id: true } })
+    await prisma.smSermonTopic.createMany({
+      data: known.map(t => ({ sermonId: sermon.id, topicId: t.id, source: 'user' })),
+      skipDuplicates: true,
     })
   }
 

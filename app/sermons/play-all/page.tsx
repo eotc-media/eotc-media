@@ -17,11 +17,12 @@ interface PageProps {
     channel?: string
     search?: string
     sort?: string
+    topic?: string
   }>
 }
 
 export default async function SermonPlayAllPage({ searchParams }: PageProps) {
-  const { view, language, category, subCategory, preacher, channel, search, sort } = await searchParams
+  const { view, language, category, subCategory, preacher, channel, search, sort, topic } = await searchParams
 
   const session = await auth()
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
@@ -43,6 +44,7 @@ export default async function SermonPlayAllPage({ searchParams }: PageProps) {
     channelId,
     search,
     sort,
+    topic,
     userId,
     withDetail: true,
   })
