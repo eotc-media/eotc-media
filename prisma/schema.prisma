@@ -889,6 +889,7 @@ model SmSermon {
   subCategories SmSermonSubCategory[]
   preachers     SmPreacherSermon[]
   favorites     SmFavorite[]
+  topics        SmSermonTopic[]
 
   @@map("sm_sermons")
 }
@@ -943,6 +944,40 @@ model SmPreacherSermon {
   sermon   SmSermon   @relation(fields: [sermonId], references: [id], onDelete: Cascade)
 
   @@map("sm_preacher_sermon")
+}
+
+/// One topic sermons are found by, named in both languages; topics sit in a
+/// few groups (feasts, life, guidance, saints, doctrine) named in code.
+model SmTopic {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
+  groupKey  String   @map("group_key")
+  nameAm    String   @map("name_am")
+  nameEn    String   @map("name_en")
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  sermons SmSermonTopic[]
+
+  @@map("sm_topics")
+}
+
+/// A sermon's topic: a suggestion until an admin approves it.
+model SmSermonTopic {
+  id         Int       @id @default(autoincrement())
+  sermonId   Int       @map("sermon_id")
+  topicId    Int       @map("topic_id")
+  /// "ai" (suggested by Gemini) or "admin"
+  source     String    @default("admin")
+  approvedAt DateTime? @map("approved_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  sermon SmSermon @relation(fields: [sermonId], references: [id], onDelete: Cascade)
+  topic  SmTopic  @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  @@unique([sermonId, topicId])
+  @@index([topicId])
+  @@map("sm_sermon_topics")
 }
 
 model SmFavorite {

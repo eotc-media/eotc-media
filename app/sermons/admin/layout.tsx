@@ -10,6 +10,7 @@ const nav: AdminNavItem[] = [
   { title: "Dashboard", href: BASE, icon: "dashboard", exact: true },
   { title: "New sermons", href: `${BASE}/sermons?status=pending`, icon: "messageSquare", status: "pending" },
   { title: "All sermons", href: `${BASE}/sermons`, icon: "messageSquare", status: "none" },
+  { title: "Topics", href: `${BASE}/topics`, icon: "tag" },
   { title: "Languages", href: `${BASE}/languages`, icon: "globe" },
   { title: "Categories", href: `${BASE}/categories`, icon: "tag" },
   { title: "Sub categories", href: `${BASE}/sub-categories`, icon: "layers" },
