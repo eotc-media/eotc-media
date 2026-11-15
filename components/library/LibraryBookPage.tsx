@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, BookOpenText, CalendarCheck, Download, Heart, MessageSquare } from "lucide-react"
 import BookDiscussion from "./BookDiscussion"
+import { useSavedPdfPage } from "@/components/books/pdf-progress"
 import type { LibraryBook } from "@/lib/library-shelves"
 import { bookFileUrl } from "@/lib/book-assets"
 import PlanBuilder from "@/components/home/PlanBuilder"
@@ -29,6 +30,7 @@ export default function LibraryBookPage({ book, signedIn }: { book: LibraryBook;
     }
   }
   const readHref = `/books/${encodeURIComponent(book.slug)}/read${book.continueAt ? `?ch=${book.continueAt}` : ""}`
+  const pdfPage = useSavedPdfPage(book.slug)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -73,9 +75,9 @@ export default function LibraryBookPage({ book, signedIn }: { book: LibraryBook;
                     </button>
                   </>
                 ) : (
-                  <a href={bookFileUrl(book.file)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                    <BookOpenText className="h-4 w-4" /> {tr("ያንብቡ", "Read")}
-                  </a>
+                  <Link href={`/books/${encodeURIComponent(book.slug)}/read`} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                    <BookOpenText className="h-4 w-4" /> {pdfPage ? tr(`ቀጥል · ገጽ ${pdfPage}`, `Continue · Page ${pdfPage}`) : tr("ያንብቡ", "Read")}
+                  </Link>
                 )}
                 <a href={bookFileUrl(book.file)} download className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-800">
                   <Download className="h-4 w-4" /> PDF
