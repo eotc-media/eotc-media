@@ -855,6 +855,7 @@ model SmChannel {
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
   sermons SmSermon[]
+  videos  SmChannelVideo[]
 
   @@map("sm_channels")
 }
@@ -890,6 +891,7 @@ model SmSermon {
   preachers     SmPreacherSermon[]
   favorites     SmFavorite[]
   topics        SmSermonTopic[]
+  foundBy       SmChannelVideo[]
 
   @@map("sm_sermons")
 }
@@ -978,6 +980,27 @@ model SmSermonTopic {
   @@unique([sermonId, topicId])
   @@index([topicId])
   @@map("sm_sermon_topics")
+}
+
+/// A video the daily channel check looked at, and Gemini's verdict on it.
+model SmChannelVideo {
+  id              Int       @id @default(autoincrement())
+  channelId       Int       @map("channel_id")
+  videoId         String    @unique @map("video_id")
+  title           String
+  publishedAt     DateTime? @map("published_at")
+  durationSeconds Int?      @map("duration_seconds")
+  /// "sermon" or "not_sermon"
+  verdict         String
+  reason          String?
+  sermonId        Int?      @map("sermon_id")
+  checkedAt       DateTime  @default(now()) @map("checked_at")
+
+  channel SmChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sermon  SmSermon? @relation(fields: [sermonId], references: [id], onDelete: SetNull)
+
+  @@index([checkedAt])
+  @@map("sm_channel_videos")
 }
 
 model SmFavorite {

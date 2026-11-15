@@ -136,3 +136,68 @@ export async function fetchYoutubeChannel(channelId: string): Promise<YoutubeCha
     keywords: brands?.channel?.keywords ?? null,
   }
 }
+
+/** The newest uploads of a channel (its "uploads" playlist), newest first. */
+export async function fetchRecentUploads(ytChannelId: string, max = 10): Promise<{ videoId: string; publishedAt: string }[]> {
+  if (!YOUTUBE_API_KEY) throw new Error('YOUTUBE_API_KEY is not configured')
+  // A channel's uploads playlist is its id with "UC" turned into "UU".
+  const playlist = ytChannelId.replace(/^UC/, 'UU')
+  const url = `https://www.googleapis.com/youtube/v3/playlistItems?playlistId=${playlist}&key=${YOUTUBE_API_KEY}&part=contentDetails&maxResults=${max}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`YouTube API error: ${res.status}`)
+  const data = await res.json()
+  return (data.items ?? [])
+    .map((i: { contentDetails?: { videoId?: string; videoPublishedAt?: string } }) => ({
+      videoId: i.contentDetails?.videoId ?? '',
+      publishedAt: i.contentDetails?.videoPublishedAt ?? '',
+    }))
+    .filter((v: { videoId: string }) => v.videoId)
+}
+
+export interface YoutubeVideoDetails extends YoutubeVideoData {
+  description: string
+  durationSeconds: number
+  /** "none" for an ordinary video; "live" or "upcoming" for a broadcast. */
+  liveBroadcastContent: string
+}
+
+/** Title, description, length and thumbnails of many videos (50 per request). */
+export async function fetchVideoDetails(videoIds: string[]): Promise<Map<string, YoutubeVideoDetails>> {
+  if (!YOUTUBE_API_KEY) throw new Error('YOUTUBE_API_KEY is not configured')
+  const result = new Map<string, YoutubeVideoDetails>()
+  const unique = [...new Set(videoIds.filter(Boolean))]
+  for (let i = 0; i < unique.length; i += 50) {
+    const chunk = unique.slice(i, i + 50)
+    const url = `https://www.googleapis.com/youtube/v3/videos?id=${chunk.join(',')}&key=${YOUTUBE_API_KEY}&part=snippet,contentDetails&maxResults=50`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`YouTube API error: ${res.status}`)
+    const data = await res.json()
+    for (const item of data.items ?? []) {
+      const s = item.snippet
+      const t = s.thumbnails ?? {}
+      result.set(item.id, {
+        videoId: item.id,
+        title: s.title,
+        description: s.description ?? '',
+        channelId: s.channelId,
+        publishedAt: s.publishedAt,
+        liveBroadcastContent: s.liveBroadcastContent ?? 'none',
+        durationSeconds: isoDurationSeconds(item.contentDetails?.duration ?? ''),
+        thumbnailDefault: t.default?.url ?? '',
+        thumbnailMedium: t.medium?.url ?? '',
+        thumbnailHigh: t.high?.url ?? '',
+        thumbnailStandard: t.standard?.url ?? null,
+        thumbnailMaxres: t.maxres?.url ?? null,
+      })
+    }
+  }
+  return result
+}
+
+/** "PT1H2M3S" → 3723. */
+export function isoDurationSeconds(d: string): number {
+  const m = d.match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/)
+  if (!m) return 0
+  const [, days, h, min, s] = m.map(x => Number(x) || 0)
+  return days * 86400 + h * 3600 + min * 60 + s
+}

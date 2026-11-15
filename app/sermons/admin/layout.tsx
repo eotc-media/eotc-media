@@ -11,6 +11,7 @@ const nav: AdminNavItem[] = [
   { title: "New sermons", href: `${BASE}/sermons?status=pending`, icon: "messageSquare", status: "pending" },
   { title: "All sermons", href: `${BASE}/sermons`, icon: "messageSquare", status: "none" },
   { title: "Topics", href: `${BASE}/topics`, icon: "tag" },
+  { title: "Channel check", href: `${BASE}/channel-check`, icon: "search" },
   { title: "Languages", href: `${BASE}/languages`, icon: "globe" },
   { title: "Categories", href: `${BASE}/categories`, icon: "tag" },
   { title: "Sub categories", href: `${BASE}/sub-categories`, icon: "layers" },

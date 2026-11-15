@@ -22,7 +22,7 @@ const ICONS: Record<string, LucideIcon> = {
   messageSquare: MessageSquare, messageCircle: MessageCircle,
   bookMarked: BookMarked, bookOpen: BookOpen,
   user: User, users: Users, helpCircle: HelpCircle, award: Award,
-  bookType: BookType, star: Star, home: Home, mail: Mail,
+  bookType: BookType, star: Star, home: Home, mail: Mail, search: Search,
 }
 
 export interface AdminNavItem {
