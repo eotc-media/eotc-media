@@ -2,7 +2,10 @@ import type { Metadata } from "next"
 import { auth } from "@/auth"
 import { getBooks, getBooksFilterData } from "@/lib/api/books"
 import Navbar from "@/components/Navbar"
-import BookSidebar from "@/components/books/BookSidebar"
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
+import { getLibraryHome } from "@/lib/library-shelves"
+import LibraryHome from "@/components/library/LibraryHome"
 import BookSearchFilters from "@/components/books/BookSearchFilters"
 import BookInfiniteGrid from "@/components/books/BookInfiniteGrid"
 
@@ -23,19 +26,33 @@ export const metadata: Metadata = {
   },
 }
 
+export const dynamic = "force-dynamic"
+
 interface PageProps {
-  searchParams: Promise<{ language?: string; category?: string; subCategory?: string; sort?: string; search?: string }>
+  searchParams: Promise<{ language?: string; category?: string; subCategory?: string; sort?: string; search?: string; all?: string }>
 }
 
+/** The library's shelves; with a search or filters, the full list of books. */
 export default async function BooksPage({ searchParams }: PageProps) {
-  const { language, category, subCategory, sort, search } = await searchParams
+  const { language, category, subCategory, sort, search, all } = await searchParams
+  const session = await auth()
+  const userId = session?.user?.id ? parseInt(session.user.id) : undefined
+
+  if (!(language || category || subCategory || sort || search?.trim() || all)) {
+    const home = await getLibraryHome(userId)
+    return (
+      <>
+        <Navbar />
+        <main className="pt-16">
+          <LibraryHome home={home} bookHref="/books" signedIn={!!userId} />
+        </main>
+      </>
+    )
+  }
 
   const languageId = language ? parseInt(language) || undefined : undefined
   const categoryId = category ? parseInt(category) || undefined : undefined
   const subCategoryId = subCategory ? parseInt(subCategory) || undefined : undefined
-
-  const session = await auth()
-  const userId = session?.user?.id ? parseInt(session.user.id) : undefined
 
   const [{ books, total }, { categories, subCategories, languages, categoriesByLanguage }] = await Promise.all([
     getBooks({ languageId, categoryId, subCategoryId, sort, search }),
@@ -45,13 +62,15 @@ export default async function BooksPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil(total / 24)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
-          <BookSidebar userId={userId} />
-          <main className="min-w-0 px-4 sm:px-6 lg:px-8 py-6">
-            <div className="mb-5">
+        <div className="mx-auto max-w-7xl">
+          <main className="min-w-0 px-4 py-8 sm:px-6 lg:px-10">
+            <Link href="/books" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-900">
+              <ArrowLeft className="h-4 w-4" /> Books
+            </Link>
+            <div className="mb-6 mt-5 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
               <BookSearchFilters
                 categories={categories}
                 subCategories={subCategories}

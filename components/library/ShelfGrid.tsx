@@ -13,7 +13,7 @@ export default function ShelfGrid({ shelf, home }: { shelf: Shelf; home: string 
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10">
         <Link href={home} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900">
-          <ArrowLeft className="h-4 w-4" /> {tr("ወደ ቤተ መጻሕፍት", "Library")}
+          <ArrowLeft className="h-4 w-4" /> {tr("መጻሕፍት", "Books")}
         </Link>
         <h1 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900">{am ? shelf.am : shelf.en}</h1>
         <p className="mt-1 text-sm text-slate-500">

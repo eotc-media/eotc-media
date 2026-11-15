@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, BookOpenText, CalendarCheck, Download, Heart, MessageSquare } from "lucide-react"
+import BookDiscussion from "./BookDiscussion"
 import type { LibraryBook } from "@/lib/library-shelves"
 import { bookFileUrl } from "@/lib/book-assets"
 import PlanBuilder from "@/components/home/PlanBuilder"
@@ -11,16 +12,22 @@ import BookCover from "./BookCover"
 import ShelfRow from "./ShelfRow"
 
 /** A book's page: the cover large, one clear way in, then what is inside. */
-export default function LibraryBookPage({ book, signedIn, home, liveHref }: {
-  book: LibraryBook
-  signedIn: boolean
-  /** Where "back to the library" and other books' links lead. */
-  home: string
-  /** The book's current page, for likes and comments until they move here. */
-  liveHref: string
-}) {
+export default function LibraryBookPage({ book, signedIn }: { book: LibraryBook; signedIn: boolean }) {
   const { tr } = useTr()
   const [planFrom, setPlanFrom] = useState<string | null>(null)
+  const [liked, setLiked] = useState(book.hasLiked)
+  const [likes, setLikes] = useState(book.likes)
+  const home = "/books"
+
+  async function toggleLike() {
+    if (!signedIn) { window.location.href = "/auth/login"; return }
+    const res = await fetch(`/api/books/${encodeURIComponent(book.slug)}/like`, { method: "POST" }).catch(() => null)
+    if (res?.ok) {
+      const { liked: now } = await res.json()
+      setLiked(now)
+      setLikes(n => n + (now ? 1 : -1))
+    }
+  }
   const readHref = `/books/${encodeURIComponent(book.slug)}/read${book.continueAt ? `?ch=${book.continueAt}` : ""}`
 
   return (
@@ -74,8 +81,10 @@ export default function LibraryBookPage({ book, signedIn, home, liveHref }: {
                   <Download className="h-4 w-4" /> PDF
                 </a>
                 <span className="ml-auto flex items-center gap-3 text-sm text-slate-400">
-                  <Link href={liveHref} className="inline-flex items-center gap-1 hover:text-slate-700"><Heart className="h-4 w-4" /> {book.likes}</Link>
-                  {book.comments > 0 && <Link href={`${liveHref}#comments`} className="inline-flex items-center gap-1 hover:text-slate-700"><MessageSquare className="h-4 w-4" /> {book.comments}</Link>}
+                  <button onClick={toggleLike} aria-pressed={liked} aria-label={tr("ወደድኩት", "Like")} className={`inline-flex items-center gap-1 rounded-lg px-1.5 py-1 cursor-pointer ${liked ? "text-rose-600" : "hover:text-slate-700"}`}>
+                    <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} /> {likes}
+                  </button>
+                  {book.comments.length > 0 && <a href="#comments" className="inline-flex items-center gap-1 hover:text-slate-700"><MessageSquare className="h-4 w-4" /> {book.comments.length}</a>}
                 </span>
               </div>
             </div>
@@ -116,6 +125,12 @@ export default function LibraryBookPage({ book, signedIn, home, liveHref }: {
           </div>
         </div>
       )}
+
+      <div id="comments" className="mx-auto max-w-6xl scroll-mt-20 px-4 pt-6 sm:px-6 lg:px-10">
+        <div className={book.description && book.contents ? "lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6" : ""}>
+          <BookDiscussion slug={book.slug} initial={book.comments} signedIn={signedIn} />
+        </div>
+      </div>
 
       {book.moreByAuthor.length > 0 && (
         <div className="mx-auto max-w-6xl py-10">

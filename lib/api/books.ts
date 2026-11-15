@@ -99,7 +99,8 @@ export async function getBooks(params: GetBooksParams = {}) {
   if (languageId) where.languages = { some: { languageId } }
   if (categoryId) where.categories = { some: { categoryId } }
   if (subCategoryId) where.subCategories = { some: { subCategoryId } }
-  if (search) where.name = { contains: search, mode: 'insensitive' }
+  // Title or author, so "Shenouda" finds his books too.
+  if (search) where.OR = [{ name: { contains: search, mode: 'insensitive' } }, { author: { contains: search, mode: 'insensitive' } }]
 
   const orderBy =
     sort === 'oldest' ? { createdAt: 'asc' as const }

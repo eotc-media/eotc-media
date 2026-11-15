@@ -78,7 +78,7 @@ async function buildShelves() {
   if (online.length) {
     shelves.push({
       key: "fathers", am: "የቤተ ክርስቲያን አበው", en: "The Church Fathers",
-      noteAm: "በድረ ገጹ ላይ ያንብቡ", noteEn: "Read them right here", href: "/books/preview/shelf/fathers",
+      noteAm: "በድረ ገጹ ላይ ያንብቡ", noteEn: "Read them right here", href: "/books/shelf/fathers",
       books: online.map(card),
     })
   }
@@ -88,13 +88,13 @@ async function buildShelves() {
     let list = books.filter(b => b.author.toLowerCase().includes(a.match.toLowerCase()))
     list.forEach(b => byAuthor.add(b.id))
     if (a.key === "malaty") list = bibleOrder(list, bibleBooks.map(x => x.englishName))
-    return { key: a.key, am: a.am, en: a.en, noteAm: a.noteAm, noteEn: a.noteEn, href: `/books/preview/shelf/${a.key}`, books: list.map(card) }
+    return { key: a.key, am: a.am, en: a.en, noteAm: a.noteAm, noteEn: a.noteEn, href: `/books/shelf/${a.key}`, books: list.map(card) }
   })
 
   const subjectShelves = SUBJECTS.map(s => {
     const list = books.filter(b => !byAuthor.has(b.id) && b.cfWorkId === null && b.categories.some(c => s.categories.includes(c.category.name)))
     return {
-      key: s.key, am: s.am, en: s.en, href: `/books/preview/shelf/${s.key}`,
+      key: s.key, am: s.am, en: s.en, href: `/books/shelf/${s.key}`,
       // Most liked first: the best place to start on a subject.
       books: list.sort((x, y) => y._count.likes - x._count.likes).map(card),
     }
@@ -161,7 +161,8 @@ export interface LibraryBook {
   languages: string[]
   categories: string[]
   likes: number
-  comments: number
+  hasLiked: boolean
+  comments: { id: number; name: string; comment: string; createdAt: string }[]
   /** For a book with an online text: its chapters, and where to start or continue. */
   contents: { index: number; title: string }[] | null
   continueAt: number | null
@@ -179,7 +180,9 @@ export async function getLibraryBook(slug: string, userId?: number): Promise<Lib
       cfWorkId: true, cfFromSection: true, cfToSection: true, cfWork: { select: { slug: true } },
       languages: { select: { language: { select: { name: true } } } },
       categories: { select: { category: { select: { name: true } } } },
-      _count: { select: { likes: true, comments: true } },
+      _count: { select: { likes: true } },
+      likes: userId ? { where: { userId }, select: { userId: true } } : false,
+      comments: { select: { id: true, comment: true, createdAt: true, user: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
     },
   })
   if (!b) return null
@@ -218,7 +221,9 @@ export async function getLibraryBook(slug: string, userId?: number): Promise<Lib
     slug: b.slug, name, author: b.author, image: b.image, description: b.description, file: b.file,
     languages: b.languages.map(l => l.language.name),
     categories: [...new Set(b.categories.map(c => c.category.name))],
-    likes: b._count.likes, comments: b._count.comments,
+    likes: b._count.likes,
+    hasLiked: !!b.likes?.length,
+    comments: b.comments.map(c => ({ id: c.id, name: c.user?.name ?? "", comment: c.comment, createdAt: c.createdAt.toISOString() })),
     contents, continueAt,
     minutes: contents ? Math.max(5, Math.round(words / 180 / 5) * 5) : null,
     plan: b.cfWork ? { slug: b.cfWork.slug, title: name, ...(b.cfFromSection ? { range: { from: b.cfFromSection, to: b.cfToSection ?? b.cfFromSection } } : {}) } : null,

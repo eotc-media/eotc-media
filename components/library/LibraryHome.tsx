@@ -1,14 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, BookOpenText, Search } from "lucide-react"
+import { ArrowRight, BookOpenText, LibraryBig, Search, User } from "lucide-react"
 import type { LibraryHome as Home } from "@/lib/library-shelves"
 import { useTr } from "@/components/home/shared"
 import BookCover from "./BookCover"
 import ShelfRow from "./ShelfRow"
 
 /** The Books front page, as a library: search, where you left off, then shelves. */
-export default function LibraryHome({ home, bookHref }: { home: Home; bookHref: string }) {
+export default function LibraryHome({ home, bookHref, signedIn }: { home: Home; bookHref: string; signedIn: boolean }) {
   const { am, tr } = useTr()
   const href = (slug: string) => `${bookHref}/${encodeURIComponent(slug)}`
   const fathers = home.shelves.find(s => s.key === "fathers")
@@ -37,6 +37,14 @@ export default function LibraryHome({ home, bookHref }: { home: Home; bookHref: 
                 {tr("ፈልግ", "Search")}
               </button>
             </form>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+              <Link href="/books?all=1" className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:text-blue-800">
+                <LibraryBig className="h-4 w-4" /> {tr("ሁሉንም መጻሕፍት ይመልከቱ", "All books, with filters")}
+              </Link>
+              <Link href={signedIn ? "/books/my-books" : "/auth/login"} className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:text-blue-800">
+                <User className="h-4 w-4" /> {tr("የእኔ መጻሕፍት · መጽሐፍ ያስገቡ", "My books · Submit a book")}
+              </Link>
+            </div>
           </div>
 
           {/* Browse by shelf: the library's map, one tap from each section.
@@ -99,7 +107,7 @@ export default function LibraryHome({ home, bookHref }: { home: Home; bookHref: 
       {fathers && (
         <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-10">
           <Link
-            href={fathers.href ?? "/books/preview"}
+            href={fathers.href ?? "/books"}
             className="group flex items-center gap-4 rounded-2xl bg-white px-5 py-4 ring-1 ring-slate-200 transition-shadow hover:shadow-md sm:px-6"
           >
             <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
