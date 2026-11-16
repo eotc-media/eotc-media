@@ -72,7 +72,7 @@ export default async function PreacherSermonsPage({ params, searchParams }: Page
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div >
+        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
 
           <SermonSidebar userId={userId} />
 

@@ -28,7 +28,7 @@ export default async function SermonChannelsPage() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div >
+        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
           <SermonSidebar userId={userId} />
           <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10 py-6">
             <h1 className="mb-1 text-2xl font-semibold tracking-tight text-slate-900">Channels</h1>

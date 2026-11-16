@@ -73,7 +73,9 @@ export default async function SermonsPage({ searchParams }: PageProps) {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
+        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
         <SermonSidebar userId={userId} />
+        <div className="min-w-0">
         <SermonsHeader
           total={all}
           topics={topics}
@@ -100,6 +102,8 @@ export default async function SermonsPage({ searchParams }: PageProps) {
             userId={userId}
           />
         </main>
+        </div>
+        </div>
       </div>
     </div>
   )

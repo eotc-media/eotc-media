@@ -72,7 +72,7 @@ export default async function SermonChannelPage({ params, searchParams }: PagePr
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div >
+        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
           <SermonSidebar userId={userId} />
 
           <main className="mx-auto w-full max-w-7xl pb-8">

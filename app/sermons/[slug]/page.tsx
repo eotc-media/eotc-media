@@ -6,7 +6,6 @@ import { getSermon, getRelatedSermons } from "@/lib/api/sermons"
 import { absoluteUrl, jsonLd } from "@/lib/seo"
 import Navbar from "@/components/Navbar"
 import SermonPlayer from "@/components/sermons/SermonPlayer"
-import SermonSidebar from "@/components/sermons/SermonSidebar"
 import SermonAbout from "@/components/sermons/SermonAbout"
 import { ArrowLeft } from "lucide-react"
 import ShareButton from "@/components/ShareButton"
@@ -104,7 +103,6 @@ export default async function SermonPage({ params }: PageProps) {
       />
       <Navbar />
       <div className="pt-16">
-        <SermonSidebar userId={userId} />
         <div className="mx-auto max-w-7xl px-4 pb-12 pt-6 sm:px-6 lg:px-10">
           <Link href="/sermons" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" /> Sermons

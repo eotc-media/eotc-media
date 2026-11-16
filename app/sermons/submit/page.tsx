@@ -4,14 +4,14 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { CheckCircle2, Loader2, Youtube } from "lucide-react"
+import { CheckCircle2, Loader2, Plus, Youtube } from "lucide-react"
+import TopicPicker from "@/components/sermons/TopicPicker"
 import Navbar from "@/components/Navbar"
 import SermonSidebar from "@/components/sermons/SermonSidebar"
 import { useTr } from "@/components/home/shared"
 
 interface Language { id: number; name: string }
 interface Topic { id: number; slug: string; groupKey: string; nameAm: string; nameEn: string }
-interface Group { key: string; am: string; en: string }
 
 const MAX_TOPICS = 3
 
@@ -38,7 +38,7 @@ export default function SubmitSermonPage() {
   const router = useRouter()
   const { data: session } = useSession()
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
-  const { am, tr } = useTr()
+  const { tr } = useTr()
 
   const [videoInput, setVideoInput] = useState("")
   const [preacher, setPreacher] = useState("")
@@ -48,7 +48,7 @@ export default function SubmitSermonPage() {
 
   const [languages, setLanguages] = useState<Language[]>([])
   const [topics, setTopics] = useState<Topic[]>([])
-  const [groups, setGroups] = useState<Group[]>([])
+  const [showDescription, setShowDescription] = useState(false)
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
@@ -61,13 +61,10 @@ export default function SubmitSermonPage() {
     ]).then(([langs, t]) => {
       setLanguages(Array.isArray(langs) ? langs : [])
       setTopics(Array.isArray(t?.topics) ? t.topics : [])
-      setGroups(Array.isArray(t?.groups) ? t.groups : [])
     })
   }, [])
 
   const videoId = parseVideoId(videoInput)
-  const toggle = (list: number[], id: number, max = Infinity) =>
-    list.includes(id) ? list.filter(x => x !== id) : list.length < max ? [...list, id] : list
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -95,7 +92,6 @@ export default function SubmitSermonPage() {
     }
   }
 
-  const card = "rounded-2xl bg-white p-5 ring-1 ring-slate-200 sm:p-6"
   const label = "text-sm font-semibold text-slate-900"
   const hint = "mt-0.5 text-xs text-slate-500"
   const input = "w-full rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 ring-1 ring-slate-200 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -103,9 +99,9 @@ export default function SubmitSermonPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
-      <div className="pt-16">
+      <div className="pt-16 lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
         <SermonSidebar userId={userId} />
-        <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+        <main className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6 lg:py-12">
           {submitted ? (
             <div className="flex flex-col items-center rounded-2xl bg-white px-6 py-16 text-center ring-1 ring-slate-200">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><CheckCircle2 className="h-7 w-7" /></span>
@@ -128,91 +124,81 @@ export default function SubmitSermonPage() {
               <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{tr("ስብከት ያስገቡ", "Add a sermon")}</h1>
               <p className="mt-1 text-sm text-slate-500">{tr("በዩቲዩብ ያገኙትን ስብከት ያጋሩ፤ ከተገመገመ በኋላ ይወጣል።", "Share a sermon from YouTube. It appears once it has been reviewed.")}</p>
 
-              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                {/* Video */}
-                <section className={card}>
-                  <label htmlFor="video-url" className={label}>{tr("የዩቲዩብ ሊንክ", "YouTube link")}</label>
-                  <div className="relative mt-2">
-                    <Youtube className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      id="video-url"
-                      value={videoInput}
-                      onChange={e => setVideoInput(e.target.value)}
-                      placeholder="https://www.youtube.com/watch?v=…"
-                      className={`${input} pl-9`}
-                      autoComplete="off"
-                    />
+              <form onSubmit={handleSubmit} className="mt-6 rounded-2xl bg-white p-5 ring-1 ring-slate-200 sm:p-7">
+                <div className="space-y-6">
+                  {/* Video */}
+                  <div>
+                    <label htmlFor="video-url" className={label}>{tr("የዩቲዩብ ሊንክ", "YouTube link")}</label>
+                    <div className="relative mt-2">
+                      <Youtube className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        id="video-url"
+                        value={videoInput}
+                        onChange={e => setVideoInput(e.target.value)}
+                        placeholder="https://www.youtube.com/watch?v=…"
+                        className={`${input} pl-9`}
+                        autoComplete="off"
+                      />
+                    </div>
+                    {videoInput.trim() && !videoId && <p className="mt-2 text-xs text-rose-600">{tr("ይህ የዩቲዩብ ሊንክ አይመስልም።", "This doesn't look like a YouTube link.")}</p>}
+                    {videoId && (
+                      <div className="mt-3 flex items-center gap-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`} alt="" className="aspect-video w-32 rounded-lg bg-slate-100 object-cover ring-1 ring-slate-200" />
+                        <p className="text-xs leading-5 text-slate-500">{tr("ርዕሱና ቻናሉ ከዩቲዩብ ይወሰዳሉ።", "The title and channel will be taken from YouTube.")}</p>
+                      </div>
+                    )}
                   </div>
-                  {videoInput.trim() && !videoId && <p className="mt-2 text-xs text-rose-600">{tr("ይህ የዩቲዩብ ሊንክ አይመስልም።", "This doesn't look like a YouTube link.")}</p>}
-                  {videoId && (
-                    <div className="mt-3 flex items-center gap-3 rounded-xl bg-slate-50 p-2 ring-1 ring-slate-100">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`} alt="" className="aspect-video w-28 rounded-lg bg-slate-200 object-cover" />
-                      <p className="text-xs text-slate-500">{tr("ርዕሱና ቻናሉ ከዩቲዩብ ይወሰዳሉ።", "The title and channel are taken from YouTube.")}</p>
+
+                  {/* Language */}
+                  <div>
+                    <p className={label}>{tr("ቋንቋ", "Language")}</p>
+                    <div className="mt-2 inline-flex rounded-xl bg-slate-100 p-1">
+                      {languages.map(l => {
+                        const on = languageIds.includes(l.id)
+                        return (
+                          <button type="button" key={l.id} onClick={() => setLanguageIds([l.id])} aria-pressed={on}
+                            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer ${on ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                            {l.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Preacher */}
+                  <div>
+                    <label htmlFor="preacher" className={label}>{tr("ሰባኪ", "Preacher")} <span className="font-normal text-slate-400">{tr("(አማራጭ)", "(optional)")}</span></label>
+                    <input id="preacher" value={preacher} onChange={e => setPreacher(e.target.value)} placeholder={tr("የሰባኪው ስም", "The preacher's name")} className={`${input} mt-2`} />
+                  </div>
+
+                  {/* Topics */}
+                  {topics.length > 0 && (
+                    <div>
+                      <p className={label}>{tr("ርዕሰ ጉዳይ", "Topics")} <span className="font-normal text-slate-400">{tr("(አማራጭ)", "(optional)")}</span></p>
+                      <p className={hint}>{tr("እስከ ሦስት። እርግጠኛ ካልሆኑ ይተዉት፤ እኛ እንመድበዋለን።", "Up to three. If you're not sure, leave it and we'll add them.")}</p>
+                      <div className="mt-2"><TopicPicker topics={topics} value={topicIds} onChange={setTopicIds} max={MAX_TOPICS} /></div>
                     </div>
                   )}
 
-                  <label htmlFor="preacher" className={`${label} mt-5 block`}>{tr("ሰባኪ", "Preacher")} <span className="font-normal text-slate-400">· {tr("አማራጭ", "optional")}</span></label>
-                  <input id="preacher" value={preacher} onChange={e => setPreacher(e.target.value)} placeholder={tr("የሰባኪው ስም", "The preacher's name")} className={`${input} mt-2`} />
-                </section>
-
-                {/* Language */}
-                <section className={card}>
-                  <p className={label}>{tr("ቋንቋ", "Language")}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {languages.map(l => {
-                      const on = languageIds.includes(l.id)
-                      return (
-                        <button type="button" key={l.id} onClick={() => setLanguageIds(toggle(languageIds, l.id))} aria-pressed={on}
-                          className={`rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 cursor-pointer ${on ? "bg-blue-600 text-white ring-blue-600" : "bg-white text-slate-700 ring-slate-200 hover:ring-slate-300"}`}>
-                          {l.name}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </section>
-
-                {/* Topics */}
-                {topics.length > 0 && (
-                  <section className={card}>
-                    <div className="flex items-baseline justify-between gap-3">
-                      <p className={label}>{tr("ርዕሰ ጉዳይ", "Topics")} <span className="font-normal text-slate-400">· {tr("አማራጭ", "optional")}</span></p>
-                      <span className="text-xs text-slate-400 tabular-nums">{topicIds.length} / {MAX_TOPICS}</span>
+                  {/* Description, only if wanted */}
+                  {showDescription ? (
+                    <div>
+                      <label htmlFor="description" className={label}>{tr("መግለጫ", "Description")}</label>
+                      <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={4} autoFocus
+                        placeholder={tr("ስለ ስብከቱ አጭር መግለጫ…", "A few words about the sermon…")} className={`${input} mt-2 resize-none`} />
                     </div>
-                    <p className={hint}>{tr("ስብከቱ ስለ ምን እንደሆነ እስከ ሦስት ይምረጡ። እርግጠኛ ካልሆኑ ይተዉት፤ እኛ እንመድበዋለን።", "Choose up to three. If you're not sure, leave it and we'll add them.")}</p>
-                    <div className="mt-4 space-y-4">
-                      {groups.map(g => (
-                        <div key={g.key}>
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{am ? g.am : g.en}</p>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {topics.filter(t => t.groupKey === g.key).map(t => {
-                              const on = topicIds.includes(t.id)
-                              const full = !on && topicIds.length >= MAX_TOPICS
-                              return (
-                                <button type="button" key={t.id} disabled={full} onClick={() => setTopicIds(toggle(topicIds, t.id, MAX_TOPICS))} aria-pressed={on}
-                                  className={`rounded-full px-3 py-1 text-[13px] font-medium ring-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${on ? "bg-blue-600 text-white ring-blue-600" : "bg-white text-slate-700 ring-slate-200 hover:ring-slate-300"}`}>
-                                  {am ? t.nameAm : t.nameEn}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
+                  ) : (
+                    <button type="button" onClick={() => setShowDescription(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 cursor-pointer">
+                      <Plus className="h-4 w-4" /> {tr("መግለጫ ጨምር", "Add a description")}
+                    </button>
+                  )}
+                </div>
 
-                {/* Description */}
-                <section className={card}>
-                  <label htmlFor="description" className={label}>{tr("መግለጫ", "Description")} <span className="font-normal text-slate-400">· {tr("አማራጭ", "optional")}</span></label>
-                  <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={4}
-                    placeholder={tr("ስለ ስብከቱ አጭር መግለጫ…", "A few words about the sermon…")} className={`${input} mt-2 resize-none`} />
-                </section>
+                {error && <p className="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
 
-                {error && <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <Link href="/sermons/my-sermons" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-white">{tr("ይቅር", "Cancel")}</Link>
+                <div className="mt-7 flex justify-end gap-2 border-t border-slate-100 pt-5">
+                  <Link href="/sermons/my-sermons" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">{tr("ይቅር", "Cancel")}</Link>
                   <button disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60 cursor-pointer">
                     {saving && <Loader2 className="h-4 w-4 animate-spin" />} {tr("አስገባ", "Submit sermon")}
                   </button>

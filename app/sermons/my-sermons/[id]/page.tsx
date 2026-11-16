@@ -50,7 +50,7 @@ export default async function MySermonDetailPage({ params }: PageProps) {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
-        <div >
+        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
           <SermonSidebar userId={userId} />
           <main className="mx-auto w-full max-w-7xl min-w-0 px-4 sm:px-6 lg:px-10 py-8">
             <div className="max-w-2xl">
