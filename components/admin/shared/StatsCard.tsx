@@ -23,16 +23,16 @@ export function StatsCard({
   className,
 }: StatsCardProps) {
   return (
-    <Card className={cn("", className)}>
-      <CardContent className="flex items-center gap-4 p-5">
+    <Card className={cn("py-0", className)}>
+      <CardContent className="flex items-center gap-4 p-4">
         {Icon && (
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
             <Icon className="h-5 w-5" />
           </div>
         )}
         <div className="min-w-0 space-y-1">
-          <p className="text-label truncate">{title}</p>
-          <p className="text-metric text-foreground">
+          <p className="truncate text-sm text-muted-foreground">{title}</p>
+          <p className="text-xl font-semibold tabular-nums tracking-tight text-foreground">
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
           {description && (

@@ -125,7 +125,7 @@ export default async function AdminHymnsPage({ searchParams }: PageProps) {
   const pageTitle = isPending ? "New hymns" : "All hymns"
 
   return (
-    <div className="min-w-0 space-y-4 p-4 lg:p-6">
+    <div className="min-w-0 space-y-4">
       <PageHeader title={pageTitle} description={`${total.toLocaleString()} hymns`} />
 
       <form method="GET" action="/hymns/admin/hymns" className="flex items-center gap-2 max-w-sm">

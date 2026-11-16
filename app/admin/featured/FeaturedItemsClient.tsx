@@ -97,7 +97,7 @@ export default function FeaturedItemsClient({ items: initial }: { items: Enriche
   }
 
   return (
-    <div className="max-w-3xl space-y-6 p-4 lg:p-6">
+    <div className="max-w-3xl space-y-6">
       <PageHeader
         title="Featured items"
         description="Featured items appear pinned at the top of the hymns and sermons list pages."

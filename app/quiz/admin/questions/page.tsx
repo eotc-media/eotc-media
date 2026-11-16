@@ -82,7 +82,7 @@ export default function AdminQuestionsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="space-y-6">
       <PageHeader
         title={statusParam ? "Pending questions" : "All questions"}
         description={loading ? undefined : `${total.toLocaleString()} questions`}

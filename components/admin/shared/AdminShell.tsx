@@ -2,18 +2,17 @@
 
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { useSession, signOut } from "next-auth/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { accessiblePanels } from "@/lib/admin-panels"
 import {
   LayoutDashboard, Music, Mic, FileText, Globe, Tag, Layers, CheckSquare,
   MessageSquare, MessageCircle, BookMarked, BookOpen, User, Users, HelpCircle, Award,
-  BookType, Star, Home, Mail, Menu, X, Bell, Search, ChevronLeft, ChevronDown,
-  LogOut, type LucideIcon,
+  BookType, Star, Home, Mail, Menu, X, Search, ChevronRight, ChevronsUpDown,
+  PanelLeft, ArrowUpRight, LogOut, type LucideIcon,
 } from "lucide-react"
 
 const ICONS: Record<string, LucideIcon> = {
@@ -45,6 +44,17 @@ interface AdminShellProps {
   children: React.ReactNode
 }
 
+// Whether the sidebar is collapsed, remembered on this device.
+const SIDEBAR_KEY = "admin_sidebar"
+function readSidebar() {
+  try { return localStorage.getItem(SIDEBAR_KEY) === "collapsed" } catch { return false }
+}
+function subscribeSidebar(onChange: () => void) {
+  window.addEventListener(SIDEBAR_KEY, onChange)
+  window.addEventListener("storage", onChange)
+  return () => { window.removeEventListener(SIDEBAR_KEY, onChange); window.removeEventListener("storage", onChange) }
+}
+
 function initials(name?: string | null) {
   if (!name) return "U"
   return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
@@ -57,7 +67,7 @@ export function AdminShell({
   const searchParams = useSearchParams()
   const { data: session } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
+  const collapsed = useSyncExternalStore(subscribeSidebar, readSidebar, () => false)
   const [panelsOpen, setPanelsOpen] = useState(false)
   const panelsRef = useRef<HTMLDivElement>(null)
 
@@ -87,8 +97,33 @@ export function AdminShell({
     const base = item.href.split("?")[0]
     if (item.exact) return pathname === base
     if (item.status === "pending") return pathname === base && searchParams.get("status") === "pending"
-    if (item.status === "none") return pathname === base && searchParams.get("status") !== "pending"
+    if (item.status === "none") return (pathname === base && searchParams.get("status") !== "pending") || pathname.startsWith(base + "/")
     return pathname === base || pathname.startsWith(base + "/")
+  }
+
+  function toggleCollapsed() {
+    try { localStorage.setItem(SIDEBAR_KEY, collapsed ? "open" : "collapsed") } catch {}
+    window.dispatchEvent(new Event(SIDEBAR_KEY))
+  }
+
+  // The user menu at the foot of the sidebar.
+  const [userOpen, setUserOpen] = useState(false)
+  const userRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!userOpen) return
+    const close = (e: MouseEvent) => { if (!userRef.current?.contains(e.target as Node)) setUserOpen(false) }
+    document.addEventListener("mousedown", close)
+    return () => document.removeEventListener("mousedown", close)
+  }, [userOpen])
+
+  // Breadcrumbs: the panel, the section, and "New"/"Edit" below it.
+  const current = nav.find(isActive)
+  const crumbs: { label: string; href?: string }[] = [{ label: brandTitle, href: nav[0]?.href }]
+  if (current && current !== nav[0]) crumbs.push({ label: current.title, href: current.href })
+  const last = pathname.split("/").filter(Boolean).pop()
+  if (current && pathname !== current.href.split("?")[0]) {
+    if (last === "new") crumbs.push({ label: "New" })
+    else if (last === "edit") crumbs.push({ label: "Edit" })
   }
 
   const navLink = (item: AdminNavItem) => {
@@ -100,93 +135,82 @@ export function AdminShell({
         href={item.href}
         onClick={() => setSidebarOpen(false)}
         title={collapsed ? item.title : undefined}
+        aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+          "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors",
           active
-            ? "bg-sidebar-primary text-sidebar-primary-foreground"
-            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-          collapsed && "justify-center px-2"
+            ? "bg-sidebar-primary font-medium text-sidebar-primary-foreground"
+            : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+          collapsed && "justify-center px-0"
         )}
       >
-        <Icon className="h-5 w-5 flex-shrink-0" />
+        <Icon className="h-4 w-4 flex-shrink-0" />
         {!collapsed && <span className="truncate">{item.title}</span>}
       </Link>
     )
   }
 
+  const brandTile = (
+    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+      <BrandIcon className="h-4 w-4" />
+    </div>
+  )
+
   return (
-    <div className="admin-theme min-h-screen bg-background">
+    <div className="admin-theme min-h-screen bg-background text-foreground">
       {/* Mobile backdrop */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200 ease-in-out lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar transition-[width,transform] duration-200 ease-in-out lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
-          collapsed ? "w-[4.5rem]" : "w-64"
+          collapsed ? "w-[3.5rem]" : "w-64"
         )}
       >
-        {/* Logo, and the panel switcher when this admin runs more than one */}
-        <div className="relative flex h-16 items-center justify-between border-b border-sidebar-border px-4" ref={panelsRef}>
+        {/* The panel, with a switcher when this admin runs more than one */}
+        <div className="relative flex h-14 items-center gap-2 border-b border-sidebar-border px-2.5" ref={panelsRef}>
           {canSwitch ? (
             <button
               onClick={() => setPanelsOpen(v => !v)}
               title={collapsed ? "Switch panel" : undefined}
               aria-haspopup="menu"
               aria-expanded={panelsOpen}
-              className={cn(
-                "flex items-center gap-2 rounded-md py-1 pr-2 text-left transition-colors hover:bg-sidebar-accent cursor-pointer",
-                collapsed ? "mx-auto px-1" : "-ml-1 pl-1 min-w-0 flex-1"
-              )}
+              className={cn("flex min-w-0 flex-1 items-center gap-2.5 rounded-md p-1 text-left transition-colors hover:bg-sidebar-accent cursor-pointer", collapsed && "justify-center")}
             >
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-primary text-primary-foreground">
-                <BrandIcon className="h-5 w-5" />
-              </div>
+              {brandTile}
               {!collapsed && (
                 <>
                   <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-sm font-bold leading-tight text-sidebar-foreground">{brandTitle}</span>
-                    <span className="truncate text-xs text-sidebar-foreground/50">{brandSubtitle}</span>
+                    <span className="truncate text-sm font-semibold leading-tight text-sidebar-foreground">{brandTitle}</span>
+                    <span className="truncate text-xs text-sidebar-foreground/55">{brandSubtitle}</span>
                   </div>
-                  <ChevronDown className={cn(
-                    "ml-auto h-4 w-4 flex-shrink-0 text-sidebar-foreground/50 transition-transform",
-                    panelsOpen && "rotate-180"
-                  )} />
+                  <ChevronsUpDown className="ml-auto h-4 w-4 flex-shrink-0 text-sidebar-foreground/45" />
                 </>
               )}
             </button>
           ) : (
-            <Link href={backHref} className={cn("flex items-center gap-2", collapsed && "mx-auto")}>
-              <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground">
-                <BrandIcon className="h-5 w-5" />
-              </div>
+            <Link href={backHref} className={cn("flex min-w-0 flex-1 items-center gap-2.5 rounded-md p-1", collapsed && "justify-center")}>
+              {brandTile}
               {!collapsed && (
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold leading-tight text-sidebar-foreground">{brandTitle}</span>
-                  <span className="text-xs text-sidebar-foreground/50">{brandSubtitle}</span>
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-sm font-semibold leading-tight text-sidebar-foreground">{brandTitle}</span>
+                  <span className="truncate text-xs text-sidebar-foreground/55">{brandSubtitle}</span>
                 </div>
               )}
             </Link>
           )}
 
-          <button
-            className="text-sidebar-foreground hover:text-sidebar-foreground/70 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X className="h-5 w-5" />
+          <button className="rounded-md p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="Close menu">
+            <X className="h-4 w-4" />
           </button>
 
           {panelsOpen && (
-            <div
-              role="menu"
-              className="absolute left-2 right-2 top-full z-50 mt-1 overflow-hidden rounded-md border border-sidebar-border bg-sidebar py-1 shadow-lg"
-            >
-              <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                Switch panel
-              </p>
+            <div role="menu" className="absolute left-2 right-2 top-full z-50 mt-1 overflow-hidden rounded-lg bg-popover py-1 shadow-lg ring-1 ring-foreground/10">
+              <p className="px-3 py-1.5 text-xs text-muted-foreground">Switch panel</p>
               {otherPanels.map(p => {
                 const Icon = ICONS[p.icon] ?? LayoutDashboard
                 return (
@@ -195,9 +219,9 @@ export function AdminShell({
                     href={p.href}
                     role="menuitem"
                     onClick={() => { setPanelsOpen(false); setSidebarOpen(false) }}
-                    className="flex items-center gap-3 px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    className="flex items-center gap-2.5 px-3 py-2 text-sm text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
                   >
-                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                     <span className="truncate">{p.title}</span>
                   </Link>
                 )
@@ -206,102 +230,85 @@ export function AdminShell({
           )}
         </div>
 
-        {/* Collapse toggle (desktop) */}
-        <div className="hidden justify-end px-2 py-2 lg:flex">
-          <button
-            className="rounded-md p-1 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            onClick={() => setCollapsed(!collapsed)}
-            title={collapsed ? "Expand" : "Collapse"}
-          >
-            <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
-          </button>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
+        {/* Sections */}
+        <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
           {nav.map(navLink)}
         </nav>
 
-        <Separator className="bg-sidebar-border" />
-
-        {/* Back link */}
-        <div className="px-3 py-2">
+        {/* Back to the public pages */}
+        <div className="border-t border-sidebar-border p-2">
           <Link
             href={backHref}
             title={collapsed ? backLabel : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
-              collapsed && "justify-center px-2"
+              "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+              collapsed && "justify-center px-0"
             )}
           >
-            <Home className="h-5 w-5 flex-shrink-0" />
+            <Home className="h-4 w-4 flex-shrink-0" />
             {!collapsed && <span className="truncate">{backLabel}</span>}
           </Link>
         </div>
 
-        <Separator className="bg-sidebar-border" />
-
-        {/* User profile */}
-        <div className="p-3">
-          <div className={cn("flex items-center gap-3 rounded-md px-3 py-2", collapsed && "justify-center px-0")}>
-            <Avatar className="h-8 w-8">
+        {/* Who is signed in, with a menu */}
+        <div className="relative border-t border-sidebar-border p-2" ref={userRef}>
+          <button
+            onClick={() => setUserOpen(o => !o)}
+            className={cn("flex w-full items-center gap-2.5 rounded-md p-1.5 text-left transition-colors hover:bg-sidebar-accent cursor-pointer", collapsed && "justify-center")}
+          >
+            <Avatar className="h-8 w-8 rounded-md">
               <AvatarImage src={user?.image ? `/api/main/profile/pictures/${user.image}` : undefined} alt={userName} />
-              <AvatarFallback className="bg-primary text-xs text-primary-foreground">{initials(user?.name)}</AvatarFallback>
+              <AvatarFallback className="rounded-md bg-sidebar-primary text-xs text-sidebar-primary-foreground">{initials(user?.name)}</AvatarFallback>
             </Avatar>
             {!collapsed && (
               <>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-sidebar-foreground">{userName}</p>
-                  <p className="truncate text-xs text-sidebar-foreground/50">{user?.email}</p>
+                  <p className="truncate text-xs text-sidebar-foreground/55">{user?.email}</p>
                 </div>
-                <ChevronDown className="h-4 w-4 text-sidebar-foreground/50" />
+                <ChevronsUpDown className="h-4 w-4 flex-shrink-0 text-sidebar-foreground/45" />
               </>
             )}
-          </div>
+          </button>
+          {userOpen && (
+            <div className="absolute bottom-full left-2 z-50 mb-1 w-56 overflow-hidden rounded-lg bg-popover py-1 shadow-lg ring-1 ring-foreground/10">
+              <Link href="/" className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-muted"><Home className="h-4 w-4 text-muted-foreground" /> EOTC Media home</Link>
+              <button onClick={() => signOut({ callbackUrl: "/" })} className="flex w-full items-center gap-2.5 px-3 py-2 text-sm hover:bg-muted cursor-pointer">
+                <LogOut className="h-4 w-4 text-muted-foreground" /> Sign out
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
       {/* Main */}
-      <div className={cn("transition-all duration-200", collapsed ? "lg:pl-[4.5rem]" : "lg:pl-64")}>
-        {/* Header */}
-        <header className="sticky top-0 z-30 h-16 border-b bg-card">
-          <div className="flex h-full items-center justify-between px-4 lg:px-6">
-            <div className="flex items-center gap-4">
-              <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-                <Menu className="h-5 w-5" />
-              </button>
-              <div className="hidden md:flex">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input type="search" placeholder="Search…" className="w-72 border-0 bg-muted/50 pl-9 focus-visible:ring-1" />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button className="relative rounded-md p-2 text-foreground hover:bg-accent" title="Notifications">
-                <Bell className="h-5 w-5" />
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
-              </button>
-              <div className="flex items-center gap-3 border-l pl-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.image ? `/api/main/profile/pictures/${user.image}` : undefined} alt={userName} />
-                  <AvatarFallback className="bg-primary text-xs text-primary-foreground">{initials(user?.name)}</AvatarFallback>
-                </Avatar>
-                <span className="hidden text-sm font-medium xl:block">{userName}</span>
-                <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
-                  title="Log out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
+      <div className={cn("flex min-h-screen flex-col transition-[padding] duration-200", collapsed ? "lg:pl-[3.5rem]" : "lg:pl-64")}>
+        <header className="sticky top-0 z-30 flex h-14 flex-shrink-0 items-center gap-2 border-b bg-card px-4">
+          <button className="-ml-1 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+            <Menu className="h-4 w-4" />
+          </button>
+          <button className="-ml-1 hidden rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:block cursor-pointer" onClick={toggleCollapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label="Toggle sidebar">
+            <PanelLeft className="h-4 w-4" />
+          </button>
+          <Separator orientation="vertical" className="mr-1 h-4" />
+          <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
+            {crumbs.map((c, i) => (
+              <span key={i} className={cn("flex min-w-0 items-center gap-1.5", i < crumbs.length - 1 && "hidden md:flex")}>
+                {i > 0 && <ChevronRight className={cn("h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/60", i === crumbs.length - 1 && "hidden md:block")} />}
+                {c.href && i < crumbs.length - 1 ? (
+                  <Link href={c.href} className="max-w-60 truncate text-muted-foreground hover:text-foreground">{c.label}</Link>
+                ) : (
+                  <span className="max-w-60 truncate font-medium text-foreground">{c.label}</span>
+                )}
+              </span>
+            ))}
+          </nav>
+          <Link href={backHref} className="ml-auto hidden items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground sm:inline-flex">
+            {backLabel} <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
         </header>
 
-        <main>{children}</main>
+        <main className="mx-auto w-full max-w-7xl flex-1 p-4 lg:p-6">{children}</main>
       </div>
     </div>
   )

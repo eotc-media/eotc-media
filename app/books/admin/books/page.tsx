@@ -83,7 +83,7 @@ export default async function AdminBooksPage({ searchParams }: PageProps) {
   const linkClass = "px-3 py-1.5 text-sm rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
 
   return (
-    <div className="space-y-4 p-4 lg:p-6">
+    <div className="space-y-4">
       <PageHeader title={pageTitle} description={`${total.toLocaleString()} books`} />
 
       <form method="GET" action="/books/admin/books" className="flex items-center gap-2 max-w-sm">

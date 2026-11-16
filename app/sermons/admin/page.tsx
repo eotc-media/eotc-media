@@ -76,7 +76,7 @@ export default async function SermonAdminDashboard() {
   const pendingCount = totalUploaded - totalAccepted
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="space-y-6">
       <PageHeader
         title="Sermon dashboard"
         description="Overview of sermon submissions and engagement."

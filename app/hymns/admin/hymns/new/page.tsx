@@ -155,7 +155,7 @@ export default function NewHymnPage() {
   const chip = "cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-all"
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="space-y-6">
       <PageHeader title="Add hymn" description="Import a hymn from YouTube and set its taxonomy." />
 
       <Card>

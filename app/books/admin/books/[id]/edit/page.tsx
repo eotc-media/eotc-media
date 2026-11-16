@@ -112,14 +112,14 @@ export default function EditBookPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-6 text-muted-foreground">
+      <div className="flex items-center gap-2 text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />Loading…
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="space-y-6">
       <PageHeader title="Edit book" description="Update book details and taxonomy." />
 
       <Card>

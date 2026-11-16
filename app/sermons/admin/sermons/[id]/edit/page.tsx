@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import { MultiSelect } from "@/components/ui/multi-select"
+import TopicPicker, { type PickerTopic } from "@/components/sermons/TopicPicker"
 
 interface SelectOption { id: number; name: string }
-interface SubCategory { id: number; name: string; categoryId: number }
 
 const selectClass =
   "w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
@@ -38,13 +39,11 @@ export default function EditSermonPage() {
   const [publishedAt, setPublishedAt] = useState("")
   const [approvalStatusId, setApprovalStatusId] = useState("")
   const [channelId, setChannelId] = useState("")
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([])
-  const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState<number[]>([])
+  const [topicIds, setTopicIds] = useState<number[]>([])
   const [selectedLanguageIds, setSelectedLanguageIds] = useState<number[]>([])
   const [selectedPreacherIds, setSelectedPreacherIds] = useState<number[]>([])
 
-  const [categories, setCategories] = useState<SelectOption[]>([])
-  const [subCategories, setSubCategories] = useState<SubCategory[]>([])
+  const [topics, setTopics] = useState<PickerTopic[]>([])
   const [languages, setLanguages] = useState<SelectOption[]>([])
   const [preachers, setPreachers] = useState<SelectOption[]>([])
   const [channels, setChannels] = useState<SelectOption[]>([])
@@ -56,13 +55,12 @@ export default function EditSermonPage() {
   useEffect(() => {
     Promise.all([
       fetch(`/api/sermons/admin/sermons/${id}`).then(r => r.json()),
-      fetch("/api/sermons/admin/categories").then(r => r.json()),
-      fetch("/api/sermons/admin/sub-categories").then(r => r.json()),
+      fetch("/api/sermons/topics").then(r => r.json()),
       fetch("/api/sermons/admin/preachers").then(r => r.json()),
       fetch("/api/sermons/admin/channels").then(r => r.json()),
       fetch("/api/sermons/admin/approval-statuses").then(r => r.json()),
       fetch("/api/sermons/admin/languages").then(r => r.json()),
-    ]).then(([sermon, cats, subs, prs, chans, statuses, langs]) => {
+    ]).then(([sermon, t, prs, chans, statuses, langs]) => {
       setVideoId(sermon.videoId ?? "")
       setThumbnailHigh(sermon.thumbnailHigh ?? "")
       setTitle(sermon.title ?? "")
@@ -71,13 +69,11 @@ export default function EditSermonPage() {
       setPublishedAt(sermon.publishedAt ? sermon.publishedAt.slice(0, 10) : "")
       setApprovalStatusId(String(sermon.approvalStatusId))
       setChannelId(sermon.channelId ? String(sermon.channelId) : "")
-      setSelectedCategoryIds(sermon.categories?.map((c: { category: { id: number } }) => c.category.id) ?? [])
-      setSelectedSubCategoryIds(sermon.subCategories?.map((s: { subCategory: { id: number } }) => s.subCategory.id) ?? [])
+      setTopicIds(sermon.topics?.map((x: { topicId: number }) => x.topicId) ?? [])
       setSelectedLanguageIds(sermon.languages?.map((l: { language: { id: number } }) => l.language.id) ?? [])
       setSelectedPreacherIds(sermon.preachers?.map((p: { preacher: { id: number } }) => p.preacher.id) ?? [])
 
-      setCategories(Array.isArray(cats) ? cats : [])
-      setSubCategories(Array.isArray(subs) ? subs : [])
+      setTopics(Array.isArray(t?.topics) ? t.topics : [])
       setPreachers(Array.isArray(prs) ? prs : [])
       setChannels(Array.isArray(chans) ? chans : [])
       setApprovalStatuses(Array.isArray(statuses) ? statuses : [])
@@ -105,8 +101,7 @@ export default function EditSermonPage() {
           publishedAt: publishedAt || null,
           approvalStatusId,
           channelId: channelId || null,
-          categoryIds: selectedCategoryIds,
-          subCategoryIds: selectedSubCategoryIds,
+          topicIds,
           languageIds: selectedLanguageIds,
           preacherIds: selectedPreacherIds,
         }),
@@ -118,13 +113,10 @@ export default function EditSermonPage() {
     }
   }
 
-  const filteredSubCategories = selectedCategoryIds.length
-    ? subCategories.filter(sc => selectedCategoryIds.includes(sc.categoryId))
-    : subCategories
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-6 text-muted-foreground">
+      <div className="flex items-center gap-2 text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
         Loading…
       </div>
@@ -132,7 +124,7 @@ export default function EditSermonPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="space-y-6">
       <PageHeader title="Edit sermon" description="Update sermon details and taxonomy." />
 
       <Card>
@@ -179,31 +171,11 @@ export default function EditSermonPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Categories</Label>
-              <div className="flex flex-wrap gap-2">
-                {categories.map(cat => (
-                  <button key={cat.id} type="button" onClick={() => toggleId(selectedCategoryIds, setSelectedCategoryIds, cat.id)}
-                    className={cn("cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-all", chipClass(selectedCategoryIds.includes(cat.id)))}>
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
+            <div className="space-y-1.5">
+              <Label>Topics</Label>
+              <TopicPicker topics={topics} value={topicIds} onChange={setTopicIds} />
+              <p className="text-xs text-muted-foreground">Saving approves these topics.</p>
             </div>
-
-            {filteredSubCategories.length > 0 && (
-              <div className="space-y-2">
-                <Label>Sub-categories</Label>
-                <div className="flex flex-wrap gap-2">
-                  {filteredSubCategories.map(sc => (
-                    <button key={sc.id} type="button" onClick={() => toggleId(selectedSubCategoryIds, setSelectedSubCategoryIds, sc.id)}
-                      className={cn("cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-all", chipClass(selectedSubCategoryIds.includes(sc.id)))}>
-                      {sc.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label>Languages</Label>
@@ -218,17 +190,13 @@ export default function EditSermonPage() {
             </div>
 
             {preachers.length > 0 && (
-              <div className="space-y-2">
-                <Label>Linked preacher profiles</Label>
-                <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto">
-                  {preachers.map(p => (
-                    <button key={p.id} type="button" onClick={() => toggleId(selectedPreacherIds, setSelectedPreacherIds, p.id)}
-                      className={cn("cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-all", chipClass(selectedPreacherIds.includes(p.id), "secondary"))}>
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <MultiSelect
+                label="Linked preacher profiles"
+                value={selectedPreacherIds}
+                onChange={setSelectedPreacherIds}
+                options={preachers}
+                placeholder="Choose preachers…"
+              />
             )}
 
             <div className="space-y-1.5">

@@ -180,7 +180,7 @@ export function VerseCorrectionsClient({
   const canScan = translationCode && bookId !== "" && selectedChapter !== "" && !scanning
 
   return (
-    <div className="max-w-4xl space-y-6 p-4 lg:p-6">
+    <div className="max-w-4xl space-y-6">
       <PageHeader title="Verse corrections" description="Scan chapters for text issues and apply fixes." />
 
       {/* Selection bar */}

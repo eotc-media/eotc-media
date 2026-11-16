@@ -112,8 +112,7 @@ export default async function AdminSermonsPage({ searchParams }: PageProps) {
         createdAt: true,
         approvalStatus: { select: { id: true, name: true } },
         languages:     { select: { language:    { select: { id: true, name: true } } }, take: 3 },
-        categories:    { select: { category:    { select: { id: true, name: true } } }, take: 2 },
-        subCategories: { select: { subCategory: { select: { id: true, name: true } } }, take: 2 },
+        topics:        { select: { approvedAt: true, topic: { select: { nameEn: true } } }, orderBy: { id: "asc" } },
       },
     }),
     prisma.smSermon.count({ where }),
@@ -124,7 +123,7 @@ export default async function AdminSermonsPage({ searchParams }: PageProps) {
   const pageTitle = isPending ? "New sermons" : "All sermons"
 
   return (
-    <div className="min-w-0 space-y-4 p-4 lg:p-6">
+    <div className="min-w-0 space-y-4">
       <PageHeader title={pageTitle} description={`${total.toLocaleString()} sermons`} />
 
       <form method="GET" action="/sermons/admin/sermons" className="flex items-center gap-2 max-w-sm">
@@ -150,8 +149,7 @@ export default async function AdminSermonsPage({ searchParams }: PageProps) {
               <TableRow>
                 <TableHead className="px-4">#</TableHead>
                 <TableHead className="px-4">Language</TableHead>
-                <TableHead className="px-4">Category</TableHead>
-                <TableHead className="px-4">Subcategory</TableHead>
+                <TableHead className="px-4">Topics</TableHead>
                 <TableHead className="px-4">Preacher</TableHead>
                 <TableHead className="px-4">Status</TableHead>
                 <TableHead className="px-4" />
@@ -176,8 +174,10 @@ export default async function AdminSermonsPage({ searchParams }: PageProps) {
                 <TableRow key={sermon.id}>
                   <TableCell className="px-4 text-xs text-muted-foreground">{(page - 1) * PAGE_SIZE + i + 1}</TableCell>
                   <TableCell className="px-4 text-xs text-muted-foreground">{sermon.languages.map(l => l.language.name).join(", ") || "—"}</TableCell>
-                  <TableCell className="px-4 text-xs text-muted-foreground">{sermon.categories.map(c => c.category.name).join(", ") || "—"}</TableCell>
-                  <TableCell className="px-4 text-xs text-muted-foreground">{sermon.subCategories.map(s => s.subCategory.name).join(", ") || "—"}</TableCell>
+                  <TableCell className="px-4 text-xs text-muted-foreground">
+                    {sermon.topics.length ? sermon.topics.map(t => t.topic.nameEn).join(", ") : "—"}
+                    {sermon.topics.some(t => !t.approvedAt) && <span className="ml-1.5 rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-medium text-[hsl(32_95%_35%)]">to review</span>}
+                  </TableCell>
                   <TableCell className="px-4 text-xs text-muted-foreground">{sermon.preacher ?? "—"}</TableCell>
                   <TableCell className="px-4">
                     <Badge variant={statusVariant[sermon.approvalStatus.name] ?? "secondary"}>

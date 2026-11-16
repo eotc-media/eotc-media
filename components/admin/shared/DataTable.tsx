@@ -79,7 +79,7 @@ export function DataTable<TData, TValue>({
           <Skeleton className="h-10 w-[250px]" />
           <Skeleton className="h-10 w-[100px]" />
         </div>
-        <div className="rounded-md border">
+        <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
           <Table>
             <TableHeader>
               <TableRow>
@@ -148,7 +148,7 @@ export function DataTable<TData, TValue>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

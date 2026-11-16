@@ -31,7 +31,7 @@ export default async function EditRolePage({ params }: EditRolePageProps) {
   }
 
   return (
-    <div className="flex-1 p-6">
+    <div>
       <div className="mx-auto max-w-2xl">
         <RoleForm initialData={role} />
       </div>

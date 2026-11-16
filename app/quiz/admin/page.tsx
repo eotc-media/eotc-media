@@ -65,7 +65,7 @@ export default function QuizAdminDashboard() {
   ]
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="space-y-6">
       <PageHeader title="Quiz admin dashboard" description="Overview of quiz questions and quick links." />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

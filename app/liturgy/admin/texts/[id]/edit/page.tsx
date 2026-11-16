@@ -31,7 +31,7 @@ export default async function EditTextPage({ params }: EditTextPageProps) {
   }
 
   return (
-    <div className="flex-1 p-6">
+    <div>
       <div className="mx-auto max-w-3xl">
         <TextForm initialData={text} />
       </div>

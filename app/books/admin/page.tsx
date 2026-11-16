@@ -12,7 +12,7 @@ export default async function BookAdminDashboard() {
   ])
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="space-y-6">
       <PageHeader title="Dashboard" description="Overview of book submissions." />
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatsCard title="Total books" value={total} icon={BookOpen} />

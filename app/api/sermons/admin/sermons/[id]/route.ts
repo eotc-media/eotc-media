@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { hasSermonAdminAccess } from '@/lib/auth-helpers'
+import { setSermonTopics } from '@/lib/sermon-topics'
 
 export async function GET(
   _req: NextRequest,
@@ -19,6 +20,7 @@ export async function GET(
       preachers: { include: { preacher: true } },
       approvalStatus: true,
       channel: true,
+      topics: { select: { topicId: true }, orderBy: { id: 'asc' } },
     },
   })
   if (!sermon) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -34,7 +36,7 @@ export async function PATCH(
   const { id } = await params
   const sermonId = parseInt(id)
   const body = await req.json()
-  const { title, preacher, description, publishedAt, approvalStatusId, channelId, categoryIds, subCategoryIds, languageIds, preacherIds } = body
+  const { title, preacher, description, publishedAt, approvalStatusId, channelId, categoryIds, subCategoryIds, languageIds, preacherIds, topicIds } = body
 
   await prisma.smSermon.update({
     where: { id: sermonId },
@@ -49,6 +51,12 @@ export async function PATCH(
     },
   })
 
+  // Topics chosen here are approved as they are saved.
+  if (Array.isArray(topicIds)) {
+    const ids = topicIds.filter((x: unknown) => Number.isInteger(x)) as number[]
+    const known = await prisma.smTopic.findMany({ where: { id: { in: ids } }, select: { id: true } })
+    await setSermonTopics(sermonId, ids.filter(i => known.some(k => k.id === i)))
+  }
   if (categoryIds !== undefined) {
     await prisma.smCategorySermon.deleteMany({ where: { sermonId } })
     if (categoryIds.length) await prisma.smCategorySermon.createMany({ data: categoryIds.map((cid: number) => ({ categoryId: cid, sermonId })) })

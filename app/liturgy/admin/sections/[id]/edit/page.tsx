@@ -31,7 +31,7 @@ export default async function EditSectionPage({ params }: EditSectionPageProps) 
   }
 
   return (
-    <div className="flex-1 p-6">
+    <div>
       <div className="mx-auto max-w-2xl">
         <SectionForm initialData={section} />
       </div>

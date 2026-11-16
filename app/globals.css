@@ -300,7 +300,8 @@ html body[data-scroll-locked] {
    every shadcn utility used inside without touching the public site.
    ========================================================================== */
 .admin-theme {
-  /* Core surfaces — slightly cool for a corporate feel */
+  /* After the owner's allcon app: cool near-white surfaces, one sky-blue
+     accent, thin rings instead of shadows. */
   --background: 210 20% 98%;
   --foreground: 222 47% 11%;
   --card: 0 0% 100%;
@@ -308,21 +309,19 @@ html body[data-scroll-locked] {
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
 
-  /* Corporate blue */
-  --primary: 217 91% 45%;
+  --primary: 206 75% 42%;
   --primary-foreground: 0 0% 100%;
   --secondary: 214 32% 91%;
   --secondary-foreground: 222 47% 11%;
   --muted: 210 40% 96%;
   --muted-foreground: 215 20% 45%;
-  --accent: 214 95% 93%;
-  --accent-foreground: 217 91% 35%;
+  --accent: 206 85% 93%;
+  --accent-foreground: 206 80% 30%;
 
   --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 217 91% 45%;
+  --input: 214 32% 88%;
+  --ring: 206 75% 50%;
 
-  /* Semantic status colors */
   --success: 142 76% 36%;
   --success-foreground: 0 0% 100%;
   --warning: 38 92% 50%;
@@ -332,17 +331,18 @@ html body[data-scroll-locked] {
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --radius: 0.375rem;
+  --radius: 0.5rem;
 
-  /* Dark gray sidebar */
-  --sidebar: hsl(215 14% 20%);
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 215 45% 48%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 215 14% 28%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 215 14% 27%;
-  --sidebar-ring: 215 45% 48%;
+  /* Light sidebar; the current page is a soft sky-blue pill */
+  --sidebar: hsl(210 33% 98%);
+  --sidebar-background: 210 33% 98%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-primary: 206 85% 91%;
+  --sidebar-primary-foreground: 206 80% 28%;
+  --sidebar-accent: 210 30% 93%;
+  --sidebar-accent-foreground: 222 47% 11%;
+  --sidebar-border: 214 32% 91%;
+  --sidebar-ring: 206 75% 50%;
 }
 
 /* Active sidebar item uses the vivid primary instead of the muted accent.
@@ -350,8 +350,8 @@ html body[data-scroll-locked] {
    Higher specificity than the component's hover/active utilities, so the
    active item stays blue even on hover. */
 .admin-theme [data-sidebar="menu-button"][data-active="true"] {
-  background-color: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  background-color: hsl(var(--sidebar-primary));
+  color: hsl(var(--sidebar-primary-foreground));
 }
 
 /* Typography utilities for the admin design */
@@ -379,4 +379,23 @@ html body[data-scroll-locked] {
 .text-caption {
   font-size: 0.75rem;
   color: hsl(var(--muted-foreground));
+}
+
+/* Admin cards and tables after allcon: a hairline ring rather than a border
+   and shadow; quiet column headings; rows tint on hover. */
+.admin-theme [data-slot="card"] {
+  border-color: transparent;
+  box-shadow: 0 0 0 1px hsl(var(--foreground) / 0.08);
+}
+.admin-theme [data-slot="table-head"] {
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+}
+.admin-theme [data-slot="table-row"]:hover {
+  background-color: hsl(var(--muted) / 0.6);
+}
+/* A card that only frames a table: no padding above and below the table. */
+.admin-theme [data-slot="card"]:not(:has(> [data-slot="card-header"])):has(> [data-slot="card-content"] > [data-slot="table-container"]) {
+  padding-block: 0;
+  gap: 0;
 }

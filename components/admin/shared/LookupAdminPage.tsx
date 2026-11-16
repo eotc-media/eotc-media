@@ -180,7 +180,7 @@ export function LookupAdminPage({
   const colCount = 1 + relations.length + 1
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="space-y-6">
       <PageHeader title={title} description={description} />
 
       {/* Create */}

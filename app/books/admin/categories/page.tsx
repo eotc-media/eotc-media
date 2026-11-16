@@ -72,7 +72,7 @@ export default function AdminBookCategoriesPage() {
   const selectCls = "h-9 px-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 bg-white"
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="max-w-2xl">
       <h1 className="text-2xl font-bold text-slate-900 mb-1">Categories</h1>
       <p className="text-sm text-slate-400 mb-6">Assign each category to a language so it appears under that language in the filters and upload form.</p>
 

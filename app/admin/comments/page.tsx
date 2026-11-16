@@ -28,7 +28,7 @@ export default async function AdminCommentsPage() {
   ])
 
   return (
-    <div className="space-y-4 p-4 lg:p-6">
+    <div className="space-y-4">
       <PageHeader
         title="Comments"
         description={

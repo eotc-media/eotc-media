@@ -132,7 +132,7 @@ export default function HymnDashboard({
     "rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] cursor-pointer"
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="space-y-6">
       <PageHeader title="Hymn dashboard" description="Overview of hymn submissions and engagement." />
 
       {/* Stat cards */}
