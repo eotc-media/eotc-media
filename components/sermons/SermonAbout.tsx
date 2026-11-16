@@ -20,7 +20,7 @@ export default function SermonAbout({ sermon }: { sermon: SmSermon }) {
     <div className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">
       {topics.length > 0 && (
         <>
-          <h2 className="text-sm font-semibold text-slate-900">{tr("ርዕሰ ጉዳዮች", "Topics")}</h2>
+          <h2 className="text-sm font-semibold text-slate-900">{tr("ርዕሶች", "Topics")}</h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {topics.map(t => (
               <Link key={t.id} href={`/sermons?topic=${t.slug}`} className="rounded-full bg-blue-50 px-3 py-1 text-[13px] font-medium text-blue-700 hover:bg-blue-100">
@@ -40,8 +40,8 @@ export default function SermonAbout({ sermon }: { sermon: SmSermon }) {
           <Link href={`/sermons/channels/${sermon.channel.slug}`} className="font-medium text-blue-700 hover:underline">{sermon.channel.name}</Link>
         ))}
         {sermon.languages && sermon.languages.length > 0 && row(tr("ቋንቋ", "Language"), sermon.languages.map(l => l.name).join(", "))}
-        {date && row(tr("የተለቀቀበት", "Published"), date)}
-        {sermon.clicksCount > 0 && row(tr("የታየው", "Watched"), tr(`${sermon.clicksCount.toLocaleString()} ጊዜ`, `${sermon.clicksCount.toLocaleString()} times`))}
+        {date && row(tr("ቀን", "Published"), date)}
+        {sermon.clicksCount > 0 && row(tr("ታይቷል", "Clicks"), sermon.clicksCount.toLocaleString())}
       </dl>
     </div>
   )

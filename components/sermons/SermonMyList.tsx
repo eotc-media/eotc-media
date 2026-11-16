@@ -5,6 +5,7 @@ import { ChevronRight, Plus, Video } from "lucide-react"
 import { SmSermon } from "@/types/models/sermon"
 import Pager from "@/components/ui/Pager"
 import { useTr } from "@/components/home/shared"
+import { useLocale } from "@/lib/i18n/LocaleContext"
 
 interface SermonMyListProps {
   sermons: SmSermon[]
@@ -17,28 +18,29 @@ interface SermonMyListProps {
 /** The sermons a member has added, newest first, with where each one stands. */
 export default function SermonMyList({ sermons, total, page, totalPages, baseUrl }: SermonMyListProps) {
   const { am, tr } = useTr()
-  const status = (name?: string) =>
-    name === "Accepted" ? { label: tr("ታትሟል", "Published"), cls: "bg-emerald-50 text-emerald-700" }
-    : name === "Declined" ? { label: tr("አልተቀበለም", "Declined"), cls: "bg-rose-50 text-rose-700" }
-    : { label: tr("በግምገማ ላይ", "In review"), cls: "bg-amber-50 text-amber-700" }
+  const { t } = useLocale()
+  // The status names as before: Accepted, Submitted, Declined.
+  const status = (name?: string) => ({
+    label: name ?? "Submitted",
+    cls: name === "Accepted" ? "bg-emerald-50 text-emerald-700" : name === "Declined" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700",
+  })
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{tr("ያስገባኋቸው ስብከቶች", "My sermons")}</h1>
-          <p className="mt-1 text-sm text-slate-500">{tr(`${total} ስብከቶች`, `${total.toLocaleString()} ${total === 1 ? "sermon" : "sermons"}`)}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{t("sermon_my_uploads")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{total.toLocaleString()} {t(total === 1 ? "sermon_singular" : "sermon_plural")}</p>
         </div>
         <Link href="/sermons/submit" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-          <Plus className="h-4 w-4" /> {tr("ስብከት ያስገቡ", "Add a sermon")}
+          <Plus className="h-4 w-4" /> {tr("ስብከት ያስገቡ", "Submit sermon")}
         </Link>
       </div>
 
       {sermons.length === 0 ? (
         <div className="flex flex-col items-center rounded-2xl bg-white px-6 py-20 text-center ring-1 ring-slate-200">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"><Video className="h-6 w-6" /></span>
-          <p className="mt-4 font-semibold text-slate-900">{tr("እስካሁን ምንም ስብከት አላስገቡም", "No sermons yet")}</p>
-          <p className="mt-1 text-sm text-slate-500">{tr("ከዩቲዩብ ያገኙትን ስብከት ያጋሩ።", "Share a sermon you found on YouTube.")}</p>
+          <p className="mt-4 font-semibold text-slate-900">{tr("እስካሁን ስብከት አላስገቡም", "No sermons yet")}</p>
         </div>
       ) : (
         <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">

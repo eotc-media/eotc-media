@@ -74,7 +74,7 @@ export default function SermonSidebar({ userId }: SermonSidebarProps) {
           }`}
         >
           <Plus className="w-4 h-4 flex-shrink-0" />
-          {am ? "ስብከት ያስገቡ" : "Add a sermon"}
+          {am ? "ስብከት ያስገቡ" : "Submit sermon"}
         </Link>
       </div>
     </aside>
