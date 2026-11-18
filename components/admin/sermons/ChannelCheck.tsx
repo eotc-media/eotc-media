@@ -34,7 +34,7 @@ export default function ChannelCheck({ videos }: { videos: CheckedVideo[] }) {
     const d = res ? await res.json().catch(() => null) : null
     setRunning(false)
     if (!res?.ok || !d) { setMessage("The check could not run. Try again in a minute."); return }
-    const note = `Looked at ${d.channels} channels: ${d.newVideos} new videos, ${d.sermons} added as sermons, ${d.notSermons} passed over.`
+    const note = `Looked at ${d.channels} channels: ${d.newVideos} new videos, ${d.sermons} sermons (${d.published ?? 0} published, ${d.sermons - (d.published ?? 0)} waiting for you), ${d.notSermons} passed over.`
     setMessage(d.errors?.length ? `${note} Problems: ${d.errors.slice(0, 3).join("; ")}` : note)
     if (d.newVideos > 0) setTimeout(() => window.location.reload(), 2500)
   }

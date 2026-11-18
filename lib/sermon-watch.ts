@@ -25,12 +25,14 @@ export interface WatchResult {
   channels: number
   newVideos: number
   sermons: number
+  /** Of those, published straight away (the rest wait under New sermons). */
+  published: number
   notSermons: number
   errors: string[]
 }
 
 export async function runChannelCheck(): Promise<WatchResult> {
-  const result: WatchResult = { channels: 0, newVideos: 0, sermons: 0, notSermons: 0, errors: [] }
+  const result: WatchResult = { channels: 0, newVideos: 0, sermons: 0, published: 0, notSermons: 0, errors: [] }
   if (!process.env.YOUTUBE_API_KEY) return { ...result, errors: ["YOUTUBE_API_KEY is not configured"] }
   if (!process.env.GEMINI_API_KEY) return { ...result, errors: ["GEMINI_API_KEY is not configured"] }
 
@@ -93,8 +95,9 @@ export async function runChannelCheck(): Promise<WatchResult> {
       const channelId = channelOf.get(v.videoId)!
       try {
         if (verdict.isSermon) {
-          await addPendingSermon(v, channelId, verdict, topics)
+          const added = await addPendingSermon(v, channelId, verdict, topics, verdict.confidence === "high")
           result.sermons++
+          if (added.published) result.published++
         } else {
           await record(v, channelId, "not_sermon", verdict.reason)
           result.notSermons++
@@ -108,7 +111,7 @@ export async function runChannelCheck(): Promise<WatchResult> {
   return result
 }
 
-interface Verdict { isSermon: boolean; language: string; preacher: string | null; topics: string[]; reason: string }
+interface Verdict { isSermon: boolean; confidence: string; language: string; preacher: string | null; topics: string[]; reason: string }
 
 async function classify(items: { video: YoutubeVideoDetails; channel: string }[], topics: Topic[]): Promise<{ map: Map<string, Verdict> } | { error: string }> {
   const model = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!).getGenerativeModel({
@@ -126,7 +129,7 @@ async function classify(items: { video: YoutubeVideoDetails; channel: string }[]
 
   const prompt = `You help a website of the Ethiopian Orthodox Tewahedo Church collect sermons from YouTube channels.
 
-For each video below, decide whether it is a sermon: one person teaching or preaching (a sermon, a homily, a Bible or doctrine lesson, a spiritual talk). These are NOT sermons: hymns or mezmur, a recorded liturgy or service, news, interviews or panel talks, film or drama, trailers, announcements, fundraising appeals, prayers alone, children's songs, or anything not Orthodox Tewahedo.
+For each video below, decide whether it is a sermon. A sermon is ONE person preaching, as from a pulpit, for the whole video (a short introduction by someone else is fine). Anything with more than one person talking is NOT a sermon: discussions, conversations, dialogues, interviews, panels, debates, podcasts, question-and-answer sessions (ጥያቄና መልስ), talk shows, testimonies told to a host. Also NOT sermons: hymns or mezmur, a recorded liturgy or service, news, film or drama, trailers, announcements, fundraising appeals, prayers alone, children's songs, or anything not Orthodox Tewahedo. Words such as "ውይይት", "ቆይታ", "ቃለ መጠይቅ", "ጥያቄና መልስ", "discussion", "interview", "podcast", "Q&A" or two names joined by "and"/"ከ…ጋር" mean it is not a sermon.
 
 For a sermon, also give:
 - language: "am" (Amharic), "en" (English) or "other"
@@ -135,20 +138,22 @@ For a sermon, also give:
 ${list}
 
 Give a short reason for every verdict. When unsure whether it is a sermon, say it is not.
+For a sermon, also say how sure you are of all of it (that it is a sermon, its language, preacher and topics): "high" only when the title and description make each of them plain; otherwise "medium" or "low".
 
 Videos (JSON):
 ${JSON.stringify(videos)}
 
 Answer with JSON only:
-{"videos": [{"id": "<id>", "is_sermon": true | false, "language": "am" | "en" | "other", "preacher": "<name>" | null, "topics": ["<slug>"], "reason": "<one short sentence>"}]}`
+{"videos": [{"id": "<id>", "is_sermon": true | false, "confidence": "high" | "medium" | "low", "language": "am" | "en" | "other", "preacher": "<name>" | null, "topics": ["<slug>"], "reason": "<one short sentence>"}]}`
 
   try {
     const res = await model.generateContent(prompt)
-    const parsed = JSON.parse(res.response.text()) as { videos?: { id: string; is_sermon: boolean; language?: string; preacher?: string | null; topics?: string[]; reason?: string }[] }
+    const parsed = JSON.parse(res.response.text()) as { videos?: { id: string; is_sermon: boolean; confidence?: string; language?: string; preacher?: string | null; topics?: string[]; reason?: string }[] }
     const slugs = new Set(topics.map(t => t.slug))
     return {
       map: new Map((parsed.videos ?? []).map(v => [String(v.id), {
         isSermon: v.is_sermon === true,
+        confidence: String(v.confidence ?? "low"),
         language: v.language ?? "other",
         preacher: typeof v.preacher === "string" && v.preacher.trim() ? v.preacher.trim().slice(0, 120) : null,
         topics: (Array.isArray(v.topics) ? v.topics.map(String) : []).filter(s => slugs.has(s)).slice(0, MAX_TOPICS),
@@ -187,24 +192,48 @@ export function sermonSlug(title: string): string {
   return title.trim().replace(/\s+/g, "-").replace(/[^\wሀ-፿-]/g, "").slice(0, 120) + "-" + Date.now().toString(36)
 }
 
-/** Add a video as a pending sermon, with what Gemini suggested, and record it. */
-export async function addPendingSermon(v: YoutubeVideoDetails, channelId: number, verdict: Pick<Verdict, "language" | "preacher" | "topics" | "reason">, topics?: Topic[]) {
-  const [userId, submitted, languages, allTopics] = await Promise.all([
+/** Lower case, without spaces or common titles, for matching a name. */
+const bare = (name: string) =>
+  name.toLowerCase().replace(/\b(abba|aba|memhir|mehir|deacon|dn|dr|kesis|qesis|liqe|megabe|rev|fr)\.?\b/g, "")
+    .replace(/(ብፁዕ|ቀሲስ|መምህር|ዲያቆን|ዲ\/ን|መ\/ር|አባ|ሊቀ|መጋቤ|ርእሰ|ሊቃውንት|ዶ\/ር|ዶክተር)/g, "").replace(/[\s.|,/()-]+/g, "")
+
+/** The preacher profile a name refers to, if exactly one matches. */
+async function matchPreacher(name: string | null): Promise<number | null> {
+  if (!name) return null
+  const want = bare(name)
+  if (want.length < 3) return null
+  const all = await prisma.smPreacher.findMany({ select: { id: true, name: true } })
+  const hits = all.filter(p => { const b = bare(p.name); return b.length >= 3 && (b === want || want.includes(b) || b.includes(want)) })
+  return hits.length === 1 ? hits[0].id : null
+}
+
+/**
+ * Add a found video as a sermon, with what Gemini suggested, and record it.
+ * With `auto`, a clear case is published straight away: Gemini was sure, and
+ * the language, topics and a known preacher are all there. Anything less
+ * waits under New sermons for an admin.
+ */
+export async function addPendingSermon(v: YoutubeVideoDetails, channelId: number, verdict: Pick<Verdict, "language" | "preacher" | "topics" | "reason">, topics?: Topic[], auto = false) {
+  const [userId, submitted, accepted, languages, allTopics, preacherId] = await Promise.all([
     botUserId(),
     prisma.smApprovalStatus.findFirst({ where: { name: "Submitted" }, select: { id: true } }),
+    prisma.smApprovalStatus.findFirst({ where: { name: "Accepted" }, select: { id: true } }),
     prisma.smLanguage.findMany({ select: { id: true, name: true } }),
     topics ? Promise.resolve(topics) : getTopics(),
+    auto ? matchPreacher(verdict.preacher) : Promise.resolve(null),
   ])
   if (!userId || !submitted) throw new Error("No super admin or no Submitted status to file the sermon under")
 
   const languageId = languages.find(l => (verdict.language === "am" ? l.name === "አማርኛ" : verdict.language === "en" ? l.name === "English" : false))?.id
   const topicIds = verdict.topics.map(s => allTopics.find(t => t.slug === s)?.id).filter((x): x is number => !!x)
+  const publish = auto && !!accepted && !!languageId && topicIds.length > 0 && preacherId !== null
+  const now = new Date()
 
   const sermon = await prisma.$transaction(async tx => {
     const s = await tx.smSermon.create({
       data: {
         userId,
-        approvalStatusId: submitted.id,
+        approvalStatusId: publish ? accepted!.id : submitted.id,
         channelId,
         slug: sermonSlug(v.title),
         videoId: v.videoId,
@@ -219,9 +248,10 @@ export async function addPendingSermon(v: YoutubeVideoDetails, channelId: number
       },
     })
     if (languageId) await tx.smLanguageSermon.create({ data: { sermonId: s.id, languageId } })
-    if (topicIds.length) await tx.smSermonTopic.createMany({ data: topicIds.map(topicId => ({ sermonId: s.id, topicId, source: "ai" })), skipDuplicates: true })
+    if (topicIds.length) await tx.smSermonTopic.createMany({ data: topicIds.map(topicId => ({ sermonId: s.id, topicId, source: "ai", approvedAt: publish ? now : null })), skipDuplicates: true })
+    if (publish) await tx.smPreacherSermon.create({ data: { sermonId: s.id, preacherId: preacherId! } })
     return s
   })
-  await record(v, channelId, "sermon", verdict.reason, sermon.id)
-  return sermon
+  await record(v, channelId, "sermon", (publish ? "Published automatically. " : "") + verdict.reason, sermon.id)
+  return { ...sermon, published: publish }
 }
