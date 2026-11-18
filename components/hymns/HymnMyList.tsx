@@ -1,18 +1,10 @@
+"use client"
+
 import Link from "next/link"
-import { Music, Plus } from "lucide-react"
+import { ChevronRight, Music, Plus } from "lucide-react"
 import { HmHymn } from "@/types/models/hymn"
 import Pager from "@/components/ui/Pager"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { useLocale } from "@/lib/i18n/LocaleContext"
 
 interface HymnMyListProps {
   hymns: HmHymn[]
@@ -22,76 +14,59 @@ interface HymnMyListProps {
   baseUrl: string
 }
 
-const statusVariant: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
-  Accepted: "success",
-  Submitted: "warning",
-  Declined: "destructive",
-}
-
+/** The hymns a member has added, newest first, with where each one stands. */
 export default function HymnMyList({ hymns, total, page, totalPages, baseUrl }: HymnMyListProps) {
-  const PAGE_SIZE = 24
+  const { t, locale } = useLocale()
+  const am = locale === "am"
+  // The status names as before: Accepted, Submitted, Declined.
+  const statusClass = (name?: string) =>
+    name === "Accepted" ? "bg-emerald-50 text-emerald-700" : name === "Declined" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700"
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">My hymns</h2>
-          <p className="text-xs text-muted-foreground">{total.toLocaleString()} hymn{total !== 1 ? "s" : ""}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{t("hymn_my_uploads")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{total.toLocaleString()} {t(total === 1 ? "hymn_singular" : "hymn_plural")}</p>
         </div>
-        <Button asChild>
-          <Link href="/hymns/submit">
-            <Plus className="h-4 w-4" />
-            Add hymn
-          </Link>
-        </Button>
+        <Link href="/hymns/submit" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+          <Plus className="h-4 w-4" /> {t("hymn_submit")}
+        </Link>
       </div>
 
-      <Pager page={page} totalPages={totalPages} baseUrl={baseUrl} />
-
       {hymns.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-          <Music className="mb-4 h-12 w-12 opacity-20" strokeWidth={1.5} />
-          <p className="font-semibold">No hymns yet</p>
-          <p className="mt-1 text-sm opacity-60">Submit your first hymn above</p>
+        <div className="flex flex-col items-center rounded-2xl bg-white px-6 py-20 text-center ring-1 ring-slate-200">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"><Music className="h-6 w-6" /></span>
+          <p className="mt-4 font-semibold text-slate-900">{am ? "እስካሁን መዝሙር አላስገቡም" : "No hymns yet"}</p>
         </div>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table className="whitespace-nowrap">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-4">#</TableHead>
-                  <TableHead className="px-4">Language</TableHead>
-                  <TableHead className="px-4">Category</TableHead>
-                  <TableHead className="px-4">Subcategory</TableHead>
-                  <TableHead className="px-4">Status</TableHead>
-                  <TableHead className="w-16 px-4" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {hymns.map((hymn, i) => (
-                  <TableRow key={hymn.id}>
-                    <TableCell className="px-4 text-xs text-muted-foreground">{(page - 1) * PAGE_SIZE + i + 1}</TableCell>
-                    <TableCell className="px-4 text-xs text-muted-foreground">{hymn.languages?.map(l => l.name).join(", ") || "—"}</TableCell>
-                    <TableCell className="px-4 text-xs text-muted-foreground">{hymn.categories?.map(c => c.name).join(", ") || "—"}</TableCell>
-                    <TableCell className="px-4 text-xs text-muted-foreground">{hymn.subCategories?.map(sc => sc.name).join(", ") || "—"}</TableCell>
-                    <TableCell className="px-4">
-                      <Badge variant={statusVariant[hymn.approvalStatus?.name ?? ""] ?? "secondary"}>
-                        {hymn.approvalStatus?.name ?? "Pending"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-4">
-                      <Link href={`/hymns/my-hymns/${hymn.id}`} prefetch={false} className="text-xs font-medium text-primary hover:underline">
-                        view
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+          {hymns.map(h => {
+            const tags = [...(h.categories?.map(c => c.name) ?? []), ...(h.subCategories?.map(s => s.name) ?? [])]
+            const status = h.approvalStatus?.name ?? "Submitted"
+            return (
+              <li key={h.id}>
+                <Link href={`/hymns/my-hymns/${h.id}`} prefetch={false} className="group flex items-center gap-4 p-3 hover:bg-slate-50 sm:p-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={h.thumbnailMedium} alt="" className="aspect-video w-28 flex-shrink-0 rounded-lg bg-slate-100 object-cover sm:w-36" />
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900 group-hover:text-blue-700">{h.title}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {[h.channel?.title, h.languages?.map(l => l.name).join(", "), new Date(h.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })].filter(Boolean).join(" · ")}
+                    </p>
+                    {tags.length > 0 && (
+                      <div className="mt-2 hidden flex-wrap gap-1.5 sm:flex">
+                        {tags.map(x => <span key={x} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{x}</span>)}
+                      </div>
+                    )}
+                  </div>
+                  <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${statusClass(status)}`}>{status}</span>
+                  <ChevronRight className="hidden h-4 w-4 flex-shrink-0 text-slate-300 sm:block" />
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
       )}
 
       <Pager page={page} totalPages={totalPages} baseUrl={baseUrl} />

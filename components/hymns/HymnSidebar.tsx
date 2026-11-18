@@ -2,7 +2,7 @@
 
 import Link from "@/components/NoPrefetchLink"
 import { usePathname } from "next/navigation"
-import { Music, Heart, User, Tv, ListMusic } from "lucide-react"
+import { Music, Heart, User, Tv, ListMusic, Plus } from "lucide-react"
 import { useLocale } from "@/lib/i18n/LocaleContext"
 
 interface HymnSidebarProps {
@@ -15,7 +15,7 @@ export default function HymnSidebar({ userId }: HymnSidebarProps) {
 
   const isActive = (path: string) => {
     if (path === "/hymns/channels") return pathname.startsWith("/hymns/channels")
-    if (path === "/hymns/my-hymns") return pathname === "/hymns/my-hymns" || pathname === "/hymns/submit"
+    if (path === "/hymns/my-hymns") return pathname.startsWith("/hymns/my-hymns")
     if (path === "/hymns/collections") return pathname.startsWith("/hymns/collections")
     return pathname === path
   }
@@ -70,12 +70,21 @@ export default function HymnSidebar({ userId }: HymnSidebarProps) {
           </Link>
         </>
       )}
+      <Link
+        href={userId ? "/hymns/submit" : "/auth/login"}
+        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer flex-shrink-0 lg:mt-3 ${
+          pathname === "/hymns/submit" ? "bg-blue-50 text-blue-700" : "text-blue-600 hover:bg-blue-50"
+        }`}
+      >
+        <Plus className="w-4 h-4 flex-shrink-0" />
+        {t("hymn_submit")}
+      </Link>
     </>
   )
 
   return (
     <aside className="
-      flex flex-row items-center gap-1 px-4 py-2 border-b border-slate-100
+      bg-white flex flex-row items-center gap-1 px-4 py-2 border-b border-slate-100
       overflow-x-auto scrollbar-none
       lg:flex-col lg:items-stretch lg:overflow-x-visible lg:border-b-0 lg:border-r lg:sticky lg:top-16 lg:self-start lg:h-[calc(100vh-4rem)] lg:px-3 lg:py-4
     ">

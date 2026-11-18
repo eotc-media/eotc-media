@@ -24,7 +24,7 @@ export default async function MyHymnsPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16">
         <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
