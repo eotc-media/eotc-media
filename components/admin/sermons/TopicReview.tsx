@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Check, Loader2, Plus, Sparkles, X } from "lucide-react"
+import { Check, CheckCheck, Loader2, Plus, Sparkles, X } from "lucide-react"
 import type { Topic } from "@/lib/sermon-topics"
 
 export interface ReviewSermon {
@@ -29,7 +29,7 @@ export default function TopicReview({ sermons, topics, groups }: {
   const [state, setState] = useState(() => new Map(sermons.map(s => [s.id, { topicIds: s.topicIds, approved: s.approved }])))
   const [tab, setTab] = useState<Tab>("review")
   const [page, setPage] = useState(0)
-  const [busy, setBusy] = useState<number | "all" | null>(null)
+  const [busy, setBusy] = useState<number | "all" | "every" | null>(null)
   const [suggesting, setSuggesting] = useState<{ remaining: number } | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -78,6 +78,23 @@ export default function TopicReview({ sermons, topics, groups }: {
     setBusy(null)
     if (res?.ok) update(id, { approved: true })
     else setMessage("Couldn't save that sermon. Try again.")
+  }
+
+  // Every suggestion still to review, as suggested (edited ones on other pages
+  // are saved first, as on a single page).
+  async function approveAll() {
+    if (!window.confirm(`Approve the suggested topics of all ${list.length} sermons as they are?`)) return
+    setBusy("every")
+    const edited = list.filter(s => s.topicIds.join() !== state.get(s.id)!.topicIds.join())
+    for (const s of edited) await save(s.id)
+    const plain = list.filter(s => !edited.includes(s) && state.get(s.id)!.topicIds.length > 0).map(s => s.id)
+    for (let i = 0; i < plain.length; i += 100) {
+      const ids = plain.slice(i, i + 100)
+      const res = await fetch("/api/sermons/admin/topics/approve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sermonIds: ids }) }).catch(() => null)
+      if (res?.ok) ids.forEach(id => update(id, { approved: true }))
+      else { setMessage("Couldn't approve them all. Try again."); break }
+    }
+    setBusy(null)
   }
 
   async function approvePage() {
@@ -130,10 +147,18 @@ export default function TopicReview({ sermons, topics, groups }: {
           ))}
         </div>
         {tab === "review" && shown.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+          {list.length > shown.length && (
+            <button onClick={approveAll} disabled={busy !== null} className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-60 cursor-pointer">
+              {busy === "every" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
+              Approve all {list.length}
+            </button>
+          )}
           <button onClick={approvePage} disabled={busy !== null} className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-60 cursor-pointer">
             {busy === "all" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Approve all {shown.length} on this page
           </button>
+          </div>
         )}
       </div>
 

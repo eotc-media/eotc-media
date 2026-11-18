@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { CheckCircle2, Loader2, Plus, Youtube } from "lucide-react"
 import TopicChooser from "@/components/sermons/TopicChooser"
+import VideoPreview from "@/components/VideoPreview"
+import { useVideoSuggestion } from "@/lib/use-video-suggestion"
+import type { SermonSuggestion } from "@/lib/video-suggest"
 import Navbar from "@/components/Navbar"
 import SermonSidebar from "@/components/sermons/SermonSidebar"
 import { useTr } from "@/components/home/shared"
@@ -65,6 +68,17 @@ export default function SubmitSermonPage() {
   }, [])
 
   const videoId = parseVideoId(videoInput)
+
+  // Fill in what is still empty from the video, once per pasted link.
+  const suggestion = useVideoSuggestion<SermonSuggestion>("sermons", videoId)
+  const [filledFor, setFilledFor] = useState("")
+  if (suggestion.data && filledFor !== videoId) {
+    const d = suggestion.data
+    setFilledFor(videoId)
+    if (!languageIds.length && d.languageId) setLanguageIds([d.languageId])
+    if (!preacher.trim() && d.preacher) setPreacher(d.preacher)
+    if (!topicIds.length && d.topicIds.length) setTopicIds(d.topicIds)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -141,10 +155,15 @@ export default function SubmitSermonPage() {
                     </div>
                     {videoInput.trim() && !videoId && <p className="mt-2 text-xs text-rose-600">{tr("ትክክለኛ የዩቲዩብ ሊንክ አይደለም።", "Not a YouTube link.")}</p>}
                     {videoId && (
-                      <div className="mt-3 flex items-center gap-3">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`} alt="" className="aspect-video w-32 rounded-lg bg-slate-100 object-cover ring-1 ring-slate-200" />
-                      </div>
+                      <VideoPreview
+                        videoId={videoId}
+                        title={suggestion.data?.video.title}
+                        channel={suggestion.data?.video.channel}
+                        loading={suggestion.loading}
+                        filled={filledFor === videoId && !!suggestion.data}
+                        existingHref={suggestion.data?.existing ? `/sermons/${encodeURIComponent(suggestion.data.existing)}` : null}
+                        am={am}
+                      />
                     )}
                   </div>
 
