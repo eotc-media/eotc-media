@@ -92,15 +92,15 @@ export default function SubmitSermonPage() {
     }
   }
 
-  const label = "text-sm font-semibold text-slate-900"
-  const input = "w-full rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 ring-1 ring-slate-200 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+  const label = "text-[15px] font-semibold text-slate-900"
+  const input = "w-full rounded-xl bg-slate-50 px-4 py-3 text-[15px] text-slate-900 ring-1 ring-slate-200 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="pt-16 lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
         <SermonSidebar userId={userId} />
-        <main className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6 lg:py-12">
+        <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:py-10">
           {submitted ? (
             <div className="flex flex-col items-center rounded-2xl bg-white px-6 py-16 text-center ring-1 ring-slate-200">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><CheckCircle2 className="h-7 w-7" /></span>
@@ -148,15 +148,16 @@ export default function SubmitSermonPage() {
                     )}
                   </div>
 
-                  {/* Language */}
+                  {/* Language and preacher, side by side on wider screens */}
+                  <div className="grid gap-6 sm:grid-cols-2">
                   <div>
                     <p className={label}>{tr("ቋንቋ", "Language")}</p>
-                    <div className="mt-2 inline-flex rounded-xl bg-slate-100 p-1">
+                    <div className="mt-2 flex rounded-xl bg-slate-100 p-1">
                       {languages.map(l => {
                         const on = languageIds.includes(l.id)
                         return (
                           <button type="button" key={l.id} onClick={() => setLanguageIds([l.id])} aria-pressed={on}
-                            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer ${on ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                            className={`flex-1 rounded-lg px-4 py-2 text-[15px] font-medium transition-colors cursor-pointer ${on ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
                             {l.name}
                           </button>
                         )
@@ -164,10 +165,10 @@ export default function SubmitSermonPage() {
                     </div>
                   </div>
 
-                  {/* Preacher */}
                   <div>
                     <label htmlFor="preacher" className={label}>{tr("ሰባኪ", "Preacher")}</label>
                     <input id="preacher" value={preacher} onChange={e => setPreacher(e.target.value)} placeholder={tr("የሰባኪው ስም (አማራጭ)", "Preacher name (optional)")} className={`${input} mt-2`} />
+                  </div>
                   </div>
 
                   {/* Topics */}

@@ -15,6 +15,9 @@ interface SermonSearchFiltersProps {
   basePath?: string
   /** Show only the search box, with the dropdowns behind a Filters toggle. */
   collapsible?: boolean
+  /** Approved topics in use. When there are any, one Topic dropdown takes the
+   *  place of the Category and Sub-category dropdowns. */
+  topics?: { slug: string; nameAm: string; nameEn: string; count: number }[]
 }
 
 export default function SermonSearchFilters({
@@ -24,15 +27,18 @@ export default function SermonSearchFilters({
   categoriesByLanguage,
   basePath = "/sermons",
   collapsible = false,
+  topics = [],
 }: SermonSearchFiltersProps) {
   const router = useRouter()
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
+  const useTopics = topics.length > 0
   const searchParams = useSearchParams()
 
   const activeLanguage = searchParams.get("language") ?? ""
   const activeCategory = searchParams.get("category") ?? ""
   const activeSubCategory = searchParams.get("subCategory") ?? ""
   const activeSearch = searchParams.get("search") ?? ""
+  const activeTopic = searchParams.get("topic") ?? ""
 
   const [searchValue, setSearchValue] = useState(activeSearch)
   const [showFilters, setShowFilters] = useState(false)
@@ -96,7 +102,12 @@ export default function SermonSearchFilters({
     ...visibleSubCategories.map(sc => ({ value: String(sc.id), label: sc.name })),
   ]
 
-  const activeFilterCount = [activeLanguage, activeCategory, activeSubCategory].filter(Boolean).length
+  const topicOptions = [
+    { value: "_", label: locale === "am" ? "ርዕስ ይምረጡ" : "Select topic" },
+    ...topics.map(x => ({ value: x.slug, label: `${locale === "am" ? x.nameAm : x.nameEn} (${x.count})` })),
+  ]
+
+  const activeFilterCount = [activeLanguage, activeCategory, activeSubCategory, activeTopic].filter(Boolean).length
 
   const searchBox = (
     <div className="relative flex-1 min-w-0 sm:min-w-[150px] sm:max-w-[480px]">
@@ -123,6 +134,16 @@ export default function SermonSearchFilters({
         searchPlaceholder={t("search_placeholder")}
         className="w-full sm:w-[145px]"
       />
+      {useTopics ? (
+        <ScrollableSelect
+          value={activeTopic || "_"}
+          onValueChange={raw => applyFilter("topic", raw === "_" ? "" : raw)}
+          options={topicOptions}
+          searchable
+          searchPlaceholder={t("search_placeholder")}
+          className="w-full sm:w-[220px]"
+        />
+      ) : (<>
       <ScrollableSelect
         value={activeCategory || "_"}
         onValueChange={raw => applyFilter("category", raw === "_" ? "" : raw)}
@@ -139,6 +160,7 @@ export default function SermonSearchFilters({
         searchPlaceholder={t("search_placeholder")}
         className="w-full sm:w-[185px]"
       />
+      </>)}
     </>
   )
 
@@ -167,7 +189,7 @@ export default function SermonSearchFilters({
           <div className="hidden sm:contents">{dropdowns}</div>
         </div>
         {showFilters && (
-          <div className="grid grid-cols-3 gap-2 sm:hidden">{dropdowns}</div>
+          <div className={`grid gap-2 sm:hidden ${useTopics ? "grid-cols-2" : "grid-cols-3"}`}>{dropdowns}</div>
         )}
       </div>
     )
@@ -176,7 +198,7 @@ export default function SermonSearchFilters({
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       {searchBox}
-      <div className="grid grid-cols-3 gap-2 sm:contents">
+      <div className={`grid gap-2 sm:contents ${useTopics ? "grid-cols-2" : "grid-cols-3"}`}>
         {dropdowns}
       </div>
     </div>

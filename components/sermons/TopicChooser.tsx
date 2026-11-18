@@ -37,13 +37,13 @@ export default function TopicChooser({ topics, value, onChange, am, max = 3 }: {
           ))}
         </div>
       )}
-      <div className="flex gap-1 overflow-x-auto border-b border-slate-100 px-2 pt-2 [scrollbar-width:none]">
+      <div className="flex gap-1 overflow-x-auto border-b border-slate-100 px-2 pt-2.5 [scrollbar-width:none]">
         {TOPIC_GROUPS.map(g => (
           <button
             type="button"
             key={g.key}
             onClick={() => setGroup(g.key)}
-            className={`-mb-px flex-shrink-0 border-b-2 px-2.5 pb-2 text-[13px] font-medium cursor-pointer ${
+            className={`-mb-px flex-shrink-0 border-b-2 px-3 pb-2.5 text-sm font-medium cursor-pointer ${
               group === g.key ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >
@@ -51,7 +51,7 @@ export default function TopicChooser({ topics, value, onChange, am, max = 3 }: {
           </button>
         ))}
       </div>
-      <div className="flex flex-wrap gap-1.5 p-2.5">
+      <div className="flex flex-wrap gap-2 p-3">
         {topics.filter(t => t.groupKey === group).map(t => {
           const on = value.includes(t.id)
           return (
@@ -61,7 +61,7 @@ export default function TopicChooser({ topics, value, onChange, am, max = 3 }: {
               onClick={() => toggle(t.id)}
               disabled={!on && full}
               aria-pressed={on}
-              className={`rounded-full px-3 py-1 text-[13px] font-medium ring-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
                 on ? "bg-blue-50 text-blue-700 ring-blue-200" : "bg-white text-slate-700 ring-slate-200 hover:ring-slate-300"
               }`}
             >

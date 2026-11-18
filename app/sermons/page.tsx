@@ -4,7 +4,7 @@ import { getSermons, getSermonsFilterData, getTopicsInUse } from "@/lib/api/serm
 import { prisma } from "@/lib/prisma"
 import Navbar from "@/components/Navbar"
 import SermonSidebar from "@/components/sermons/SermonSidebar"
-import SermonsHeader from "@/components/sermons/SermonsHeader"
+import SermonSearchFilters from "@/components/sermons/SermonSearchFilters"
 import SermonInfiniteGrid from "@/components/sermons/SermonInfiniteGrid"
 import SermonCard from "@/components/sermons/SermonCard"
 import { Star } from "lucide-react"
@@ -50,12 +50,11 @@ export default async function SermonsPage({ searchParams }: PageProps) {
   const session = await auth()
   const userId = session?.user?.id ? parseInt(session.user.id) : undefined
 
-  const filtered = !!(language || category || subCategory || search || topic)
-  const [{ sermons, total }, { languages }, featuredRecords, topics] =
+  const [{ sermons, total }, { categories, subCategories, languages, categoriesByLanguage }, featuredRecords, topics] =
     await Promise.all([
       getSermons({ languageId, categoryId, subCategoryId, search, sort, userId, topic }),
       getSermonsFilterData(),
-      filtered ? Promise.resolve([]) : prisma.featuredItem.findMany({ where: { moduleType: "sermon" }, orderBy: { orderBy: "asc" } }),
+      prisma.featuredItem.findMany({ where: { moduleType: "sermon" }, orderBy: { orderBy: "asc" } }),
       getTopicsInUse(),
     ])
 
@@ -72,7 +71,7 @@ export default async function SermonsPage({ searchParams }: PageProps) {
     <div className="min-h-screen bg-white">
       <Navbar />
       <div className="pt-16">
-        <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
+        <div className="max-w-full mx-auto lg:grid lg:grid-cols-[220px_1fr]">
           <SermonSidebar userId={userId} />
           <main className="min-w-0 px-4 sm:px-6 lg:px-8 py-6">
             {featuredSermons.length > 0 && (
@@ -87,8 +86,14 @@ export default async function SermonsPage({ searchParams }: PageProps) {
                 <div className="mt-6 border-t border-neutral-100" />
               </section>
             )}
-            <div className="mb-6">
-              <SermonsHeader topics={topics} languages={languages} current={{ search, topic, language, sort }} />
+            <div className="mb-5">
+              <SermonSearchFilters
+                categories={categories}
+                subCategories={subCategories}
+                languages={languages}
+                categoriesByLanguage={categoriesByLanguage}
+                topics={topics}
+              />
             </div>
             <SermonInfiniteGrid
               initialSermons={sermons}
