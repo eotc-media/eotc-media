@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, ChevronLeft, ChevronRight, NotebookPen } from "lucide-react"
 import type { BookReading } from "@/lib/books-reader"
+import NotesLayout from "@/components/home/NotesLayout"
 import NoteEditor from "@/components/home/NoteEditor"
 import { useTr } from "@/components/home/shared"
 
@@ -53,7 +54,27 @@ export default function BookReader({ reading }: { reading: BookReading }) {
         </label>
       </header>
 
-      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+      <NotesLayout
+        note={
+          <>
+          {reading.signedIn ? (
+            <NoteEditor url={`/api/fathers/notes/${current.sectionId}`} initial={reading.note} />
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
+              <p className="flex items-center gap-2 font-semibold text-slate-900">
+                <NotebookPen className="h-4 w-4 text-slate-400" /> {tr("ማስታወሻ", "Notes")}
+              </p>
+              <p className="mt-2">
+                <Link href={`/auth/login?callbackUrl=${encodeURIComponent(href(current.index))}`} className="font-medium text-blue-600 hover:underline">
+                  {tr("ይግቡ", "Sign in")}
+                </Link>{" "}
+                {tr("ማስታወሻ ለመያዝና ያቆሙበትን ለማስታወስ።", "to keep notes and pick up where you stopped.")}
+              </p>
+            </div>
+          )}
+          </>
+        }
+      >
         <div>
           <article className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
@@ -92,24 +113,7 @@ export default function BookReader({ reading }: { reading: BookReading }) {
           </nav>
         </div>
 
-        <aside className="lg:sticky lg:top-24">
-          {reading.signedIn ? (
-            <NoteEditor url={`/api/fathers/notes/${current.sectionId}`} initial={reading.note} />
-          ) : (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
-              <p className="flex items-center gap-2 font-semibold text-slate-900">
-                <NotebookPen className="h-4 w-4 text-slate-400" /> {tr("ማስታወሻ", "Notes")}
-              </p>
-              <p className="mt-2">
-                <Link href={`/auth/login?callbackUrl=${encodeURIComponent(href(current.index))}`} className="font-medium text-blue-600 hover:underline">
-                  {tr("ይግቡ", "Sign in")}
-                </Link>{" "}
-                {tr("ማስታወሻ ለመያዝና ያቆሙበትን ለማስታወስ።", "to keep notes and pick up where you stopped.")}
-              </p>
-            </div>
-          )}
-        </aside>
-      </div>
+      </NotesLayout>
     </div>
   )
 }

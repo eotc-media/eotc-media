@@ -8,6 +8,7 @@ import { planTitle } from "@/lib/reading-plan"
 import type { DayPassage, PassageVerse, PlanDayPage } from "@/lib/reading-plan-server"
 import { buildVerseGroups } from "@/lib/verse-groups"
 import { useTr, readingHref, readingText, longDate } from "./shared"
+import NotesLayout from "./NotesLayout"
 import NoteEditor from "./NoteEditor"
 
 // Same setting, and same storage key, as the Bible reader's "By verse /
@@ -97,7 +98,13 @@ export default function PlanDayReader({ data }: { data: PlanDayPage }) {
         </nav>
       )}
 
-      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+      <NotesLayout
+        note={
+          <>
+          <NoteEditor url={`/api/reading-plans/${data.planId}/days/${data.dayNumber}/note`} initial={data.note} />
+          </>
+        }
+      >
         <div>
           <div className="space-y-6">
             {data.passages.map((p, i) => (
@@ -131,10 +138,7 @@ export default function PlanDayReader({ data }: { data: PlanDayPage }) {
           </button>
         </div>
 
-        <aside className="lg:sticky lg:top-24">
-          <NoteEditor url={`/api/reading-plans/${data.planId}/days/${data.dayNumber}/note`} initial={data.note} />
-        </aside>
-      </div>
+      </NotesLayout>
     </div>
   )
 }
