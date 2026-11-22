@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { generateFromYoutubeVideo } from '@/lib/generate-lyrics'
+import { GeminiBusyError, generateFromYoutubeVideo } from '@/lib/generate-lyrics'
 
 // Reading a whole video takes longer than reading a subtitle file did.
 export const maxDuration = 60
@@ -33,6 +33,8 @@ export async function POST(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[generate-description]', sermon.videoId, msg)
+    // Gemini overloaded: say so plainly (the raw reply is only in the log).
+    if (err instanceof GeminiBusyError) return NextResponse.json({ error: err.message }, { status: 503 })
     return NextResponse.json({ error: `Could not generate description. ${msg}` }, { status: 502 })
   }
 }

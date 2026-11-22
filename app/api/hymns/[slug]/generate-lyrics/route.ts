@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { generateFromYoutubeVideo, stripCodeFence } from '@/lib/generate-lyrics'
+import { GeminiBusyError, generateFromYoutubeVideo, stripCodeFence } from '@/lib/generate-lyrics'
 import { transcriptionPrompt, reviewTranscript, lyricsToText, type HymnContext } from '@/lib/lyrics-check'
 import { sanitizeHtml } from '@/lib/sanitize-html'
 
@@ -50,6 +50,8 @@ export async function POST(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[generate-lyrics]', hymn.videoId, msg)
+    // Gemini overloaded: say so plainly (the raw reply is only in the log).
+    if (err instanceof GeminiBusyError) return NextResponse.json({ error: err.message }, { status: 503 })
     return NextResponse.json({ error: `Could not generate lyrics. ${msg}` }, { status: 502 })
   }
 
