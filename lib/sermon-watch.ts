@@ -95,7 +95,7 @@ export async function runChannelCheck(): Promise<WatchResult> {
       const channelId = channelOf.get(v.videoId)!
       try {
         if (verdict.isSermon) {
-          const added = await addPendingSermon(v, channelId, verdict, topics, verdict.confidence === "high")
+          const added = await addPendingSermon(v, channelId, verdict, topics, verdict.confidence === "high" && verdict.congregation === "yes")
           result.sermons++
           if (added.published) result.published++
         } else {
@@ -111,7 +111,7 @@ export async function runChannelCheck(): Promise<WatchResult> {
   return result
 }
 
-interface Verdict { isSermon: boolean; confidence: string; language: string; preacher: string | null; topics: string[]; reason: string }
+interface Verdict { isSermon: boolean; confidence: string; congregation: string; language: string; preacher: string | null; topics: string[]; reason: string }
 
 async function classify(items: { video: YoutubeVideoDetails; channel: string }[], topics: Topic[]): Promise<{ map: Map<string, Verdict> } | { error: string }> {
   const model = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!).getGenerativeModel({
@@ -129,7 +129,7 @@ async function classify(items: { video: YoutubeVideoDetails; channel: string }[]
 
   const prompt = `You help a website of the Ethiopian Orthodox Tewahedo Church collect sermons from YouTube channels.
 
-For each video below, decide whether it is a sermon. A sermon is ONE person preaching, as from a pulpit, for the whole video (a short introduction by someone else is fine). Anything with more than one person talking is NOT a sermon: discussions, conversations, dialogues, interviews, panels, debates, podcasts, question-and-answer sessions (ጥያቄና መልስ), talk shows, testimonies told to a host. Also NOT sermons: hymns or mezmur, a recorded liturgy or service, news, film or drama, trailers, announcements, fundraising appeals, prayers alone, children's songs, or anything not Orthodox Tewahedo. Words such as "ውይይት", "ቆይታ", "ቃለ መጠይቅ", "ጥያቄና መልስ", "discussion", "interview", "podcast", "Q&A" or two names joined by "and"/"ከ…ጋር" mean it is not a sermon.
+For each video below, decide whether it is a sermon. A sermon is ONE person preaching TO A CONGREGATION gathered in front of them (in a church, at ዐውደ ምሕረት, a ጉባኤ, a conference or a spiritual gathering), as from a pulpit, for the whole video (a short introduction by someone else is fine). A talk recorded at home or in a studio, a person speaking to the camera, advice, reflections or vlogs are NOT sermons, even when one person teaches. Anything with more than one person talking is NOT a sermon: discussions, conversations, dialogues, interviews, panels, debates, podcasts, question-and-answer sessions (ጥያቄና መልስ), talk shows, testimonies told to a host. Also NOT sermons: hymns or mezmur, a recorded liturgy or service, news, film or drama, trailers, announcements, fundraising appeals, prayers alone, children's songs, or anything not Orthodox Tewahedo. Words such as "ውይይት", "ቆይታ", "ቃለ መጠይቅ", "ጥያቄና መልስ", "discussion", "interview", "podcast", "Q&A" or two names joined by "and"/"ከ…ጋር" mean it is not a sermon.
 
 For a sermon, also give:
 - language: "am" (Amharic), "en" (English) or "other"
@@ -138,22 +138,26 @@ For a sermon, also give:
 ${list}
 
 Give a short reason for every verdict. When unsure whether it is a sermon, say it is not.
-For a sermon, also say how sure you are of all of it (that it is a sermon, its language, preacher and topics): "high" only when the title and description make each of them plain; otherwise "medium" or "low".
+For a sermon, also say:
+- congregation: "yes" if the title or description shows it was preached to a congregation (church, ዐውደ ምሕረት, ጉባኤ, conference, feast day, a named church or monastery), "no" if it shows home, studio or camera, "unknown" otherwise. With "no" it is not a sermon.
+- confidence: how sure you are of all of it (that it is a sermon, its language, preacher and topics): "high" only when the title and description make each of them plain; otherwise "medium" or "low".
 
 Videos (JSON):
 ${JSON.stringify(videos)}
 
 Answer with JSON only:
-{"videos": [{"id": "<id>", "is_sermon": true | false, "confidence": "high" | "medium" | "low", "language": "am" | "en" | "other", "preacher": "<name>" | null, "topics": ["<slug>"], "reason": "<one short sentence>"}]}`
+{"videos": [{"id": "<id>", "is_sermon": true | false, "congregation": "yes" | "no" | "unknown", "confidence": "high" | "medium" | "low", "language": "am" | "en" | "other", "preacher": "<name>" | null, "topics": ["<slug>"], "reason": "<one short sentence>"}]}`
 
   try {
     const res = await model.generateContent(prompt)
-    const parsed = JSON.parse(res.response.text()) as { videos?: { id: string; is_sermon: boolean; confidence?: string; language?: string; preacher?: string | null; topics?: string[]; reason?: string }[] }
+    const parsed = JSON.parse(res.response.text()) as { videos?: { id: string; is_sermon: boolean; confidence?: string; congregation?: string; language?: string; preacher?: string | null; topics?: string[]; reason?: string }[] }
     const slugs = new Set(topics.map(t => t.slug))
     return {
       map: new Map((parsed.videos ?? []).map(v => [String(v.id), {
-        isSermon: v.is_sermon === true,
+        // Preached at home, in a studio or to the camera: not a sermon.
+        isSermon: v.is_sermon === true && v.congregation !== "no",
         confidence: String(v.confidence ?? "low"),
+        congregation: String(v.congregation ?? "unknown"),
         language: v.language ?? "other",
         preacher: typeof v.preacher === "string" && v.preacher.trim() ? v.preacher.trim().slice(0, 120) : null,
         topics: (Array.isArray(v.topics) ? v.topics.map(String) : []).filter(s => slugs.has(s)).slice(0, MAX_TOPICS),

@@ -31,7 +31,7 @@ export default async function ChannelCheckPage() {
     <div className="space-y-6">
       <PageHeader
         title="Channel check"
-        description={`Every day the site looks at new videos on the ${channels} channels it has sermons from. Gemini picks out the sermons. Clear cases (Gemini is sure, and the preacher is one you already have) are published straight away; the rest wait under New sermons for you. Videos it passed over are listed too, in case it was wrong.`}
+        description={`Every day the site looks at new videos on the ${channels} channels it has sermons from. Gemini picks out the sermons. Clear cases (Gemini is sure, it was preached to a congregation, and the preacher is one you already have) are published straight away; the rest wait under New sermons for you. Videos it passed over are listed too, in case it was wrong.`}
       />
       <ChannelCheck videos={videos} />
     </div>
