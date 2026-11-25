@@ -362,7 +362,7 @@ export interface TopicInUse { id: number; slug: string; groupKey: string; nameAm
 export const getTopicsInUse = unstable_cache(
   async (): Promise<TopicInUse[]> => {
     const [topics, counts] = await Promise.all([
-      prisma.smTopic.findMany({ orderBy: { position: 'asc' }, select: { id: true, slug: true, groupKey: true, nameAm: true, nameEn: true } }),
+      prisma.smTopic.findMany({ orderBy: [{ position: 'asc' }, { id: 'asc' }], select: { id: true, slug: true, groupKey: true, nameAm: true, nameEn: true } }),
       prisma.smSermonTopic.groupBy({
         by: ['topicId'],
         where: { approvedAt: { not: null }, sermon: { approvalStatus: { name: 'Accepted' } } },

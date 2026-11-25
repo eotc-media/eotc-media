@@ -22,7 +22,7 @@ export async function getTopics(): Promise<Topic[]> {
   const rows = await prisma.smTopic.findMany({ select: { id: true, slug: true, groupKey: true, nameAm: true, nameEn: true, position: true } })
   const g = (k: string) => TOPIC_GROUPS.findIndex(x => x.key === k)
   return rows
-    .sort((a, b) => g(a.groupKey) - g(b.groupKey) || a.position - b.position)
+    .sort((a, b) => g(a.groupKey) - g(b.groupKey) || a.position - b.position || a.id - b.id)
     .map(({ id, slug, groupKey, nameAm, nameEn }) => ({ id, slug, groupKey, nameAm, nameEn }))
 }
 
