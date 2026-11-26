@@ -7,8 +7,7 @@ export interface ChooserCategory { id: number; name: string; subCategories: { id
 
 /**
  * A hymn's categories, quickly: the language's categories as tabs, and in each
- * one sub-category to tap. Choosing another sub-category in the same category
- * replaces the first.
+ * the sub-categories to tap (as many as fit).
  */
 export default function HymnCategoryChooser({ categories, value, onChange }: {
   categories: ChooserCategory[]
@@ -19,10 +18,8 @@ export default function HymnCategoryChooser({ categories, value, onChange }: {
   const current = categories.find(c => c.id === open) ?? categories[0]
   const chosen = categories.flatMap(c => c.subCategories.filter(s => value.includes(s.id)).map(s => ({ ...s, category: c.name })))
 
-  function pick(cat: ChooserCategory, subId: number) {
-    const others = value.filter(id => !cat.subCategories.some(s => s.id === id))
-    onChange(value.includes(subId) ? others : [...others, subId])
-  }
+  // Each tap adds or removes one; several in the same category are fine.
+  const pick = (subId: number) => onChange(value.includes(subId) ? value.filter(x => x !== subId) : [...value, subId])
 
   if (!current) return null
   return (
@@ -64,7 +61,7 @@ export default function HymnCategoryChooser({ categories, value, onChange }: {
             <button
               type="button"
               key={s.id}
-              onClick={() => pick(current, s.id)}
+              onClick={() => pick(s.id)}
               aria-pressed={on}
               className={`rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 cursor-pointer ${
                 on ? "bg-blue-50 text-blue-700 ring-blue-200" : "bg-white text-slate-700 ring-slate-200 hover:ring-slate-300"

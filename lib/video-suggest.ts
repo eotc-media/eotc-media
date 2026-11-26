@@ -88,7 +88,7 @@ export interface HymnSuggestion {
   existing: string | null
   languageId: number | null
   singer: string | null
-  /** At most one per category of the language. */
+  /** At most two per category of the language. */
   subCategoryIds: number[]
 }
 
@@ -108,7 +108,7 @@ export async function suggestHymn(videoId: string): Promise<HymnSuggestion | nul
 `An Ethiopian Orthodox Tewahedo hymn (mezmur) video is being added to a website. From what YouTube says about it, suggest:
 - language: the id of the language it is sung in, from ${JSON.stringify(languages)}
 - singer: the singer's or choir's name as written in the title or description, or null if not given
-- subcategories: for that language's categories below, the one best-fitting subcategory id in each category you can tell from the information (skip a category if you cannot tell; "recording type" is audio only, audio and video, or in a church gathering)
+- subcategories: for that language's categories below, the best-fitting subcategory id in each category you can tell from the information, or two when the hymn clearly fits both (skip a category if you cannot tell; "recording type" is audio only, audio and video, or in a church gathering)
 
 Categories by language (language id → categories with their subcategories):
 ${JSON.stringify(categories.map(c => ({ language: c.languageId, category: c.name, subcategories: c.subCategories })))}
@@ -117,12 +117,13 @@ Video: ${about(v, channel || "unknown")}
 
 Answer with JSON only: {"language": <id>, "singer": "<name>" | null, "subcategories": [<id>]}`)
   const languageId = languages.some(l => l.id === answer?.language) ? answer!.language! : null
-  // Keep only subcategories of the chosen language, one per category.
+  // Keep only subcategories of the chosen language, at most two per category.
   const ofLanguage = categories.filter(c => c.languageId === languageId)
   const picked: number[] = []
-  for (const id of answer?.subcategories ?? []) {
-    const cat = ofLanguage.find(c => c.subCategories.some(s => s.id === Number(id)))
-    if (cat && !picked.some(p => cat.subCategories.some(s => s.id === p))) picked.push(Number(id))
+  for (const raw of answer?.subcategories ?? []) {
+    const id = Number(raw)
+    const cat = ofLanguage.find(c => c.subCategories.some(s => s.id === id))
+    if (cat && !picked.includes(id) && picked.filter(p => cat.subCategories.some(s => s.id === p)).length < 2) picked.push(id)
   }
   return {
     video: basics(v, channel),
