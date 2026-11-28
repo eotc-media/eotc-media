@@ -6,7 +6,7 @@ import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
 import Underline from "@tiptap/extension-underline"
 import {
-  Music, Sparkles, Pencil, Plus, X, Check,
+  Music, Sparkles, Pencil, Plus, X, Check, RefreshCw, Loader2, Clock,
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   List, ListOrdered, Minus, Undo2, Redo2,
 } from "lucide-react"
@@ -166,7 +166,7 @@ export default function LyricsPanel({ lyrics, lyricsSuggestion, aiLyrics, hymnId
 
   const isLoggedIn = !!userId
 
-  const GEN_STEPS = ["Fetching transcript…", "Reading subtitles…", "Formatting with AI…", "Almost done…"]
+  const GEN_STEPS = ["Listening to the hymn…", "Writing the lyrics…", "Checking the words…", "Almost done…"]
 
   const startProgress = () => {
     setGenStep(0)
@@ -227,6 +227,29 @@ export default function LyricsPanel({ lyrics, lyricsSuggestion, aiLyrics, hymnId
   // Pre-fill editor: suggestion first (user's last edit), then aiLyrics (as starting point), then approved lyrics
   const editorInitialContent = localSuggestion ?? localAiLyrics ?? lyrics ?? ""
 
+  // The AI lyrics are what is shown (no approved lyrics, no member's edit).
+  const showingAi = !lyrics && !localSuggestion && !!localAiLyrics
+
+  const genButton = (label: string, icon: React.ReactNode) => (
+    <button
+      type="button"
+      onClick={handleGenerate}
+      disabled={generating}
+      className="relative flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-80 cursor-pointer overflow-hidden"
+    >
+      {generating && (
+        <span
+          className="absolute inset-0 bg-blue-200/60 transition-all duration-500 ease-out origin-left"
+          style={{ transform: `scaleX(${genProgress / 100})` }}
+        />
+      )}
+      <span className="relative flex items-center gap-1">
+        {generating ? <Loader2 className="w-3 h-3 animate-spin" /> : icon}
+        {generating ? GEN_STEPS[genStep] : label}
+      </span>
+    </button>
+  )
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -241,30 +264,7 @@ export default function LyricsPanel({ lyrics, lyricsSuggestion, aiLyrics, hymnId
             {/* When all empty: show both Generate + Add */}
             {allEmpty && (
               <>
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={generating}
-                  className="relative flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-80 cursor-pointer overflow-hidden"
-                >
-                  {generating && (
-                    <span
-                      className="absolute inset-0 bg-blue-200/60 transition-all duration-500 ease-out origin-left"
-                      style={{ transform: `scaleX(${genProgress / 100})` }}
-                    />
-                  )}
-                  <span className="relative flex items-center gap-1">
-                    {generating ? (
-                      <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                      </svg>
-                    ) : (
-                      <Sparkles className="w-3 h-3" />
-                    )}
-                    {generating ? GEN_STEPS[genStep] : "Generate with AI"}
-                  </span>
-                </button>
+                {genButton("Generate with AI", <Sparkles className="w-3 h-3" />)}
                 <button
                   type="button"
                   onClick={() => { setError(null); setEditing(true) }}
@@ -274,6 +274,9 @@ export default function LyricsPanel({ lyrics, lyricsSuggestion, aiLyrics, hymnId
                 </button>
               </>
             )}
+
+            {/* AI lyrics on show: they can be written again */}
+            {showingAi && genButton("Regenerate", <RefreshCw className="w-3 h-3" />)}
 
             {/* When aiLyrics or suggestion or lyrics exist: show Edit button */}
             {!allEmpty && (
@@ -310,10 +313,7 @@ export default function LyricsPanel({ lyrics, lyricsSuggestion, aiLyrics, hymnId
           ) : localSuggestion ? (
             // User suggestion pending review
             <>
-              <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block flex-shrink-0" />
-                Your suggestion is pending admin review
-              </div>
+              <Notice tone="amber" icon={<Clock className="h-3.5 w-3.5" />} title="ለግምገማ ቀርቧል" text="ያስተካከሉት ግጥም በአስተዳዳሪ እስኪጸድቅ እየጠበቀ ነው።" />
               <div
                 className="font-serif text-sm leading-relaxed text-slate-600 [&_p]:mb-2 [&_hr]:my-3 [&_hr]:border-slate-200"
                 dangerouslySetInnerHTML={{ __html: localSuggestion }}
@@ -322,10 +322,7 @@ export default function LyricsPanel({ lyrics, lyricsSuggestion, aiLyrics, hymnId
           ) : localAiLyrics ? (
             // AI-generated lyrics awaiting user review/edit
             <>
-              <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-2.5 py-1.5">
-                <Sparkles className="w-3 h-3 flex-shrink-0" />
-                በ AI የተጻፈ፣ እባክዎን "Edit" የሚለውን ተጭነው ጽሁፉን በማስተካከል ያግዙን
-              </div>
+              <Notice tone="blue" icon={<Sparkles className="h-3.5 w-3.5" />} title="በ AI የተጻፈ" text={<>ስህተት ካዩ «Edit» ተጭነው በማስተካከል ያግዙን።</>} />
               <div
                 className="font-serif text-sm leading-relaxed text-slate-600 [&_p]:mb-2 [&_hr]:my-3 [&_hr]:border-slate-200"
                 dangerouslySetInnerHTML={{ __html: localAiLyrics }}
@@ -343,6 +340,20 @@ export default function LyricsPanel({ lyrics, lyricsSuggestion, aiLyrics, hymnId
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** A small note above the lyrics: where they come from. */
+function Notice({ tone, icon, title, text }: { tone: "blue" | "amber"; icon: React.ReactNode; title: string; text: React.ReactNode }) {
+  const tile = tone === "blue" ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-700"
+  return (
+    <div className="mb-3 flex items-start gap-2.5 rounded-xl bg-white px-3 py-2.5 shadow-sm ring-1 ring-slate-200">
+      <span className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${tile}`}>{icon}</span>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-slate-800">{title}</p>
+        <p className="mt-0.5 text-xs leading-5 text-slate-500">{text}</p>
+      </div>
     </div>
   )
 }
