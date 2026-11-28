@@ -80,11 +80,13 @@ export async function generateFromYoutubeVideo(
         await new Promise(r => setTimeout(r, delay))
         continue
       }
-      throw new GeminiBusyError('Gemini is busy right now. Please try again in a few minutes.')
+      throw new GeminiBusyError('The service is busy right now. Please try again in a few minutes.')
     }
     if (!res.ok) {
+      // The provider's reply goes to the log only; members see a plain message.
       const detail = await res.text().catch(() => '')
-      throw new Error(`Gemini ${res.status}: ${detail.slice(0, 300)}`)
+      console.error('[generate] AI request failed', res.status, detail.slice(0, 300))
+      throw new Error('The AI service could not process this video right now. Please try again later.')
     }
 
     const data = await res.json()
@@ -93,7 +95,7 @@ export async function generateFromYoutubeVideo(
       .join('')
       .trim()
 
-    if (!text) throw new Error('The model returned no text for this video.')
+    if (!text) throw new Error('No text came back for this video. Please try again later.')
     return text
   }
 }

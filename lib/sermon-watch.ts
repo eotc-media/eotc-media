@@ -88,7 +88,7 @@ export async function runChannelCheck(): Promise<WatchResult> {
   for (let i = 0; i < rest.length; i += BATCH) {
     const batch = rest.slice(i, i + BATCH)
     const verdicts = await classify(batch.map(v => ({ video: v, channel: nameOf.get(channelOf.get(v.videoId)!) ?? "" })), topics)
-    if ("error" in verdicts) { result.errors.push(`Gemini: ${verdicts.error}`); continue } // tried again tomorrow
+    if ("error" in verdicts) { result.errors.push(`AI: ${verdicts.error}`); continue } // tried again tomorrow
     for (const v of batch) {
       const verdict = verdicts.map.get(v.videoId)
       if (!verdict) continue
@@ -165,7 +165,8 @@ Answer with JSON only:
       }])),
     }
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "request failed" }
+    console.error("[sermon-watch] AI request failed", e)
+    return { error: "the request failed; it will be tried again tomorrow" }
   }
 }
 

@@ -111,7 +111,8 @@ Answer with JSON only:
     const parsed = JSON.parse(res.response.text()) as { sermons?: { id: number; topics: string[] }[] }
     return { map: new Map((parsed.sermons ?? []).map(s => [Number(s.id), Array.isArray(s.topics) ? s.topics.map(String) : []])) }
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Gemini request failed" }
+    console.error("[sermon-topics] AI request failed", e)
+    return { error: "The AI request failed. Please try again in a minute." }
   }
 }
 

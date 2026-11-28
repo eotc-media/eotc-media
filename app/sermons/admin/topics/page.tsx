@@ -33,7 +33,7 @@ export default async function SermonTopicsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Topics"
-        description="Gemini suggests up to three topics per sermon from its title and description. Check them, change any that are wrong, and approve; only approved topics show on the site."
+        description="The AI suggests up to three topics per sermon from its title and description. Check them, change any that are wrong, and approve; only approved topics show on the site."
       />
       <TopicReview sermons={rows} topics={topics} groups={TOPIC_GROUPS.map(g => ({ key: g.key, en: g.en }))} />
     </div>
